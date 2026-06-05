@@ -101,8 +101,14 @@
           "idPrefix": "channel",
           "fields": {
             "name": "$payload.name",
-            "topic": "$payload.topic",
-            "group": "$payload.group",
+            "topic": {
+              "$expr": "$payload.topic",
+              "fallback": null
+            },
+            "group": {
+              "$expr": "$payload.group",
+              "fallback": null
+            },
             "createdAt": "$createdAt",
             "createdBy": "$actor.memberId",
             "archivedAt": null
@@ -219,11 +225,17 @@
             "body": "$payload.body",
             "authorId": "$actor.memberId",
             "createdAt": "$createdAt",
+            "replyToId": null,
             "editedAt": null,
             "deletedAt": null,
+            "deletedBy": null,
             "pinnedAt": null,
+            "pinnedBy": null,
             "reactions": {},
-            "embeds": "$payload.embeds"
+            "embeds": {
+              "$expr": "$payload.embeds",
+              "fallback": []
+            }
           },
           "activity": "created message"
         }
@@ -263,7 +275,13 @@
             "body": "$payload.body",
             "authorId": "$actor.memberId",
             "createdAt": "$createdAt",
-            "reactions": {}
+            "editedAt": null,
+            "deletedAt": null,
+            "deletedBy": null,
+            "pinnedAt": null,
+            "pinnedBy": null,
+            "reactions": {},
+            "embeds": []
           },
           "activity": "created message"
         }
@@ -494,8 +512,14 @@
           "idField": "roleId",
           "fields": {
             "name": "$payload.name",
-            "description": "$payload.description",
-            "color": "$payload.color",
+            "description": {
+              "$expr": "$payload.description",
+              "fallback": null
+            },
+            "color": {
+              "$expr": "$payload.color",
+              "fallback": null
+            },
             "rank": 1,
             "systemRole": false,
             "createdBy": "$actor.memberId",
@@ -625,9 +649,18 @@
           "idField": "memberId",
           "fields": {
             "memberId": "$payload.memberId",
-            "roleId": "$payload.roleId",
-            "roleIds": "$payload.roleIds",
-            "displayName": "$payload.displayName",
+            "roleId": {
+              "$expr": "$payload.roleId",
+              "fallback": null
+            },
+            "roleIds": {
+              "$expr": "$payload.roleIds",
+              "fallback": []
+            },
+            "displayName": {
+              "$expr": "$payload.displayName",
+              "fallback": null
+            },
             "assignedBy": "$actor.memberId",
             "assignedAt": "$createdAt"
           },

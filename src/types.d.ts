@@ -24,68 +24,70 @@ export namespace Chord {
   export type RoleAccessGrant = "editor" | "readonly";
   export type RoomRoleAccess = Record<RoleId, RoleAccessGrant>;
   export type AccessLevel = "hidden" | RoleAccessGrant;
+  export type ScopedRole = "none" | "viewer" | "editor" | "moderator" | "admin" | "owner";
   export type PresenceStatus = "online" | "idle" | "dnd" | "offline" | (string & {});
   export interface MediaFlags { audio?: boolean; video?: boolean; screen?: boolean; }
   export interface MessageEmbed { id?: EmbedId; url: string; provider?: string; kind?: string; title?: string; thumbnailUrl?: string; renderMode?: string; }
   export interface Member { id?: MemberId; memberId?: MemberId; name?: string; displayName?: string; role?: Role | (string & {}); status?: string; avatarUrl?: string; revokedAt?: number | null; bannedAt?: number | null; }
   export interface MediaRoomParticipant { memberId: MemberId; name?: string; media?: MediaFlags; joinedAt?: number; }
   export interface MediaRoom { id: RoomId; name: string; group: string | null; allowsVideo: boolean; scopeType?: ScopeType; scopeId?: string; roleAccess: RoomRoleAccess; locked: boolean; spotlightMemberId?: MemberId | null; archivedAt: number | null; participants: Record<MemberId, MediaRoomParticipant>; participantCount: number; createdBy?: MemberId; createdAt?: number; }
+
   export interface PresenceMember { memberId: MemberId; name?: string; status: PresenceStatus; activity: string | null; location: string | null; updatedAt?: number; lastPingAt?: number; visible?: boolean; avatarUrl?: string; }
+
   export interface CommentThread { id: ThreadId; scopeType: ScopeType; scopeId: string; title: string | null; resolved: boolean; createdAt: number; lastCommentAt?: number; archivedAt: number | null; }
   export interface Comment { id: CommentId; threadId: ThreadId; scopeType?: ScopeType; scopeId?: string; parentId?: CommentId | null; body: string; authorId: MemberId; authorName?: string; createdAt: number; deletedAt: number | null; reactions: Reactions; }
+
   export interface Embed { id: EmbedId; scopeType: ScopeType; scopeId: string; url: string; provider?: string; kind?: string; title?: string; note: string | null; addedBy?: MemberId; addedByName?: string; addedAt: number; removedAt: number | null; }
+
   export interface ScopedReaction { scopeType: ScopeType; scopeId: string; reactions: Reactions; updatedAt?: number; }
+
   export interface ScreenShare { id: ShareId; scopeType?: ScopeType; scopeId?: string; roomId: RoomId | null; title: string | null; presenterId: MemberId; presenterName?: string; startedAt: number; stoppedAt: number | null; stoppedBy?: MemberId; }
-  export interface Attachment { id: string; scopeType?: ScopeType; scopeId?: string; url?: string; title?: string; mimeType?: string | null; sizeBytes?: number | null; provider?: string | null; note?: string | null; addedAt?: number; removedAt?: number | null; }
-  export interface Label { id: string; name: string; color?: string | null; description?: string | null; archivedAt?: number | null; }
-  export interface Checklist { id: string; scopeType?: ScopeType; scopeId?: string; title?: string; items?: Array<{ id: string; text: string; completed?: boolean; completedAt?: number | null }>; archivedAt?: number | null; }
-  export interface CalendarEvent { id: string; scopeType?: ScopeType; scopeId?: string; title: string; startsAt?: number; endsAt?: number | null; location?: string | null; description?: string | null; cancelledAt?: number | null; }
-  export interface LocationPin { id: string; scopeType?: ScopeType; scopeId?: string; label?: string; lat?: number; lng?: number; createdAt?: number; removedAt?: number | null; }
+
   export interface DirectThread { id: ThreadId; protocol?: string; userIds: MemberId[]; topicKey?: string; topic: string | null; createdAt: number; archivedAt: number | null; }
-  export interface DirectMessage { id: MessageId; protocol?: string; threadId: ThreadId; userIds?: MemberId[]; topicKey?: string; channelId?: ChannelId; authorId: MemberId; body: string; reactions: Reactions; embeds: MessageEmbed[]; replyToId?: MessageId | null; pinnedAt?: number | null; pinnedBy?: MemberId | null; editedAt?: number | null; deletedAt?: number | null; deletedBy?: MemberId | null; createdAt: number; encrypted?: boolean; }
-  export interface Actor { memberId: MemberId; deviceId: string; role: Role | (string & {}); displayName?: string; avatarUrl?: string; }
+  export interface DirectMessage { id: MessageId; protocol?: string; threadId: ThreadId; userIds?: MemberId[]; topicKey?: string; authorId: MemberId; body: string; reactions: Reactions; embeds: MessageEmbed[]; replyToId?: MessageId | null; pinnedAt?: number | null; pinnedBy?: MemberId | null; editedAt?: number | null; deletedAt?: number | null; deletedBy?: MemberId | null; createdAt: number; encrypted?: boolean; }
+  export interface Actor { memberId: MemberId; deviceId: string; role: Role | (string & {}); displayName?: string; avatar?: string; avatarUrl?: string; profileImageUrl?: string; }
   export interface Activity { id: string; operationId?: string; actorId?: MemberId; actorName?: string; message: string; createdAt?: number; }
   export interface Channel {
     archivedAt: null | number;
     createdAt: number;
     createdBy: MemberId;
-    group?: null | string;
+    group: null | string;
     id: ChannelId;
     name: string;
-    topic?: null | string;
+    topic: null | string;
     updatedAt?: number;
   }
   export interface MemberRole {
     assignedAt: number;
     assignedBy: MemberId;
-    displayName?: null | string;
+    displayName: null | string;
     id: string;
     memberId: MemberId;
-    roleId?: RoleId | null;
-    roleIds?: RoleId[];
+    roleId: RoleId | null;
+    roleIds: RoleId[];
   }
   export interface Message {
     authorId: MemberId;
     body: string;
     channelId: ChannelId;
     createdAt: number;
-    deletedAt?: null | number;
-    deletedBy?: MemberId;
-    editedAt?: null | number;
-    embeds?: MessageEmbed[];
+    deletedAt: null | number;
+    deletedBy: MemberId | null;
+    editedAt: null | number;
+    embeds: MessageEmbed[];
     id: MessageId;
-    pinnedAt?: null | number;
-    pinnedBy?: MemberId | null;
+    pinnedAt: null | number;
+    pinnedBy: MemberId | null;
     reactions: Reactions;
-    replyToId?: MessageId;
+    replyToId: MessageId | null;
   }
   export interface RoleDefinition {
     archivedAt: null | number;
     archivedBy?: MemberId;
-    color?: null | string;
+    color: null | string;
     createdAt?: number;
     createdBy?: MemberId;
-    description?: null | string;
+    description: null | string;
     id: RoleId;
     name: string;
     rank: number;
@@ -224,6 +226,7 @@ export namespace Chord {
   export type RouteComponent = "ChatRoomPage" | "DirectMessagesPage" | "MediaRoomsPage";
   export type ConnectionStatus = "connecting" | "connected" | "saving" | "offline" | "error";
   export type DispatchResult = { ok: true; state: State } | { ok: false; reason: string; state?: State };
+  export type ActionHelpers = { [K in ActionName]: (payload: Actions[K]) => Promise<DispatchResult>; };
   export interface Core {
     sendPresence(input: { status: PresenceStatus; activity?: string; at?: number }): Promise<boolean>;
   }
@@ -233,11 +236,29 @@ export namespace Chord {
     readonly actor: Actor;
     readonly status: ConnectionStatus;
     readonly ready: boolean;
+    readonly envelope: LaunchEnvelope;
+    readonly message: string;
+    readonly lastOperation?: string;
+    readonly mediaHost?: unknown;
+    readonly actions: ActionHelpers;
     dispatch<K extends ActionName>(action: K, payload: Actions[K]): Promise<DispatchResult>;
     query<K extends QueryName>(name: K, ...input: QueryInput[K] extends void ? [] : [QueryInput[K]]): Queries[K];
     getDMs(topicPattern?: RegExp): DirectMessageThread[];
     subscribeDMs(listener: (threads: DirectMessageThread[]) => void): () => void;
     subscribeDMs(topicPattern: RegExp, listener: (threads: DirectMessageThread[]) => void): () => void;
+    refresh(): Promise<State | undefined>;
     core: Core;
   }
+}
+export interface Chord {
+  State: Chord.State;
+  Actions: Chord.Actions;
+  Queries: Chord.Queries;
+  QueryInput: Chord.QueryInput;
+  Actor: Chord.Actor;
+  Core: Chord.Core;
+  LaunchEnvelope: Chord.LaunchEnvelope;
+  DispatchResult: Chord.DispatchResult;
+  DirectMessageThread: Chord.DirectMessageThread;
+  Client: Chord.Client;
 }

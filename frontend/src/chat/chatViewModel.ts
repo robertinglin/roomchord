@@ -138,7 +138,10 @@ export function draftDirectThreadForUsers(actorId: string, userIds: string[]): D
   return {
     id: directThreadIdForUsers(participants),
     protocol: CHAT_DIRECT_PROTOCOL,
-    userIds: participants
+    userIds: participants,
+    topic: null,
+    createdAt: 0,
+    archivedAt: null
   };
 }
 

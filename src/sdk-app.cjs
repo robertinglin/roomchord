@@ -6,7 +6,6 @@
 // produce the same declarative effect/guard
 // descriptors that model/effects.cjs interprets, so no app code runs on a node.
 
-const fs = require("node:fs");
 const path = require("node:path");
 const {
   p, op, q, defineModel, defineApp
@@ -53,7 +52,7 @@ const operations = {
     ({ ref, fx }) => ({
       effects: [fx.create(channels, {
         id: ref.newId("channel"),
-        fields: { name: ref.payload("name"), topic: ref.payload("topic"), group: ref.payload("group"), createdAt: ref.now(), createdBy: ref.actor("memberId"), archivedAt: null },
+        fields: { name: ref.payload("name"), topic: ref.payload("topic", null), group: ref.payload("group", null), createdAt: ref.now(), createdBy: ref.actor("memberId"), archivedAt: null },
         activity: "created channel"
       })]
     })
@@ -78,7 +77,7 @@ const operations = {
     ({ ref, fx }) => ({
       effects: [fx.create(messages, {
         id: ref.newId("message"),
-        fields: { channelId: ref.payload("channelId"), body: ref.payload("body"), authorId: ref.actor("memberId"), createdAt: ref.now(), editedAt: null, deletedAt: null, pinnedAt: null, reactions: {}, embeds: ref.payload("embeds") },
+        fields: { channelId: ref.payload("channelId"), body: ref.payload("body"), authorId: ref.actor("memberId"), createdAt: ref.now(), replyToId: null, editedAt: null, deletedAt: null, deletedBy: null, pinnedAt: null, pinnedBy: null, reactions: {}, embeds: ref.payload("embeds", []) },
         activity: "created message"
       })]
     })
@@ -89,7 +88,7 @@ const operations = {
     ({ ref, fx }) => ({
       effects: [fx.create(messages, {
         id: ref.newId("message"),
-        fields: { channelId: ref.payload("channelId"), replyToId: ref.payload("replyToId"), body: ref.payload("body"), authorId: ref.actor("memberId"), createdAt: ref.now(), reactions: {} },
+        fields: { channelId: ref.payload("channelId"), replyToId: ref.payload("replyToId"), body: ref.payload("body"), authorId: ref.actor("memberId"), createdAt: ref.now(), editedAt: null, deletedAt: null, deletedBy: null, pinnedAt: null, pinnedBy: null, reactions: {}, embeds: [] },
         activity: "created message"
       })]
     })
@@ -134,7 +133,7 @@ const operations = {
     ({ ref, fx }) => ({
       effects: [fx.create(roleDefinitions, {
         id: ref.payload("roleId"),
-        fields: { name: ref.payload("name"), description: ref.payload("description"), color: ref.payload("color"), rank: 1, systemRole: false, createdBy: ref.actor("memberId"), createdAt: ref.now(), archivedAt: null },
+        fields: { name: ref.payload("name"), description: ref.payload("description", null), color: ref.payload("color", null), rank: 1, systemRole: false, createdBy: ref.actor("memberId"), createdAt: ref.now(), archivedAt: null },
         activity: "created role"
       })]
     })
@@ -157,7 +156,7 @@ const operations = {
     ({ ref, fx }) => ({
       effects: [fx.create(memberRoles, {
         id: ref.payload("memberId"),
-        fields: { memberId: ref.payload("memberId"), roleId: ref.payload("roleId"), roleIds: ref.payload("roleIds"), displayName: ref.payload("displayName"), assignedBy: ref.actor("memberId"), assignedAt: ref.now() },
+        fields: { memberId: ref.payload("memberId"), roleId: ref.payload("roleId", null), roleIds: ref.payload("roleIds", []), displayName: ref.payload("displayName", null), assignedBy: ref.actor("memberId"), assignedAt: ref.now() },
         activity: "assigned role"
       })]
     })
@@ -234,8 +233,9 @@ module.exports = app;
 
 if (require.main === module) {
   const out = app.emitRoomKitBundle({ outDir: packageRoot });
-  const artifacts = app.emit({ outDir: path.join(packageRoot, "src", "chat") });
-  fs.copyFileSync(artifacts.typesPath, path.join(packageRoot, "src", "types.d.ts"));
-  fs.rmSync(artifacts.typesPath, { force: true });
+  app.emit({
+    outDir: path.join(packageRoot, "src", "chat"),
+    typesFile: "../types.d.ts"
+  });
   console.log("emitted:", out.bundlePath);
 }
