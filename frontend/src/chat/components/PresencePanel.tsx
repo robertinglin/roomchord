@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { roomkitDisplayName } from "roomkit-sdk/browser/displayName";
-import type { RoomKitEphemeralToken } from "../../../../shared/frontend/liveHost";
+import type { RoomKitEphemeralToken } from "roomkit-sdk/browser/liveRoomConnector";
 import type { Actor, ChatEmbed, CommentThread, MediaRoom, MemberRoleAssignment, Presence, RoleDefinition, RoomMember, ScreenShare } from "../types";
 import { assignedRoleIds, roleNames } from "../roles";
 import { Avatar } from "./Avatar";

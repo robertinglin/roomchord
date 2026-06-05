@@ -1,6 +1,6 @@
 import type { CallSignal, CallSignalAuth, PeerJsPeer, RelaySfuInfo } from "roomkit-sdk/browser/types";
 import type { PeerJsSignalingConfig } from "roomkit-sdk/browser/relayAddress";
-import type { RoomKitEphemeralToken, RoomKitEphemeralTokenHandle } from "../../../shared/frontend/liveHost";
+import type { RoomKitEphemeralToken, RoomKitEphemeralTokenHandle } from "roomkit-sdk/browser/liveRoomConnector";
 import { EncryptedRoomPayload } from "roomkit-sdk/browser/crypto";
 
 export type ChatMediaBridge = {

@@ -42,7 +42,7 @@ function memberIdFromEntry(key: string, member?: (RoomMember | Presence) & { id?
   return member?.memberId || member?.id || key;
 }
 
-function uniqueRoleIds(roleIds: Array<string | undefined>) {
+function uniqueRoleIds(roleIds: Array<string | null | undefined>) {
   return [...new Set(roleIds.map((roleId) => roleId?.trim()).filter((roleId): roleId is string => Boolean(roleId)))];
 }
 

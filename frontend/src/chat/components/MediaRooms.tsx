@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import type { CallMediaSettings } from "roomkit-sdk/browser/types";
-import type { RoomKitEphemeralToken } from "../../../../shared/frontend/liveHost";
+import type { RoomKitEphemeralToken } from "roomkit-sdk/browser/liveRoomConnector";
 import { groupedChannelItems, optionalChannelGroup } from "../channelGroups";
 import type { ChatState, MediaRoom } from "../types";
 import { canEditRoom, canViewRoom } from "../roles";

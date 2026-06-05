@@ -9,6 +9,9 @@ export default defineConfig({
     "process.env.NODE_ENV": JSON.stringify("production")
   },
   plugins: [react()],
+  resolve: {
+    dedupe: ["react", "react-dom"]
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true,

@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import type { CallMediaSettings, SfuCallState } from "roomkit-sdk/browser/types";
 import { mediaWithVoicePreferences, type VoicePreferences } from "../localVoicePreferences";
 import type { MediaRoom, ScreenShare } from "../types";
-import { Avatar } from "./Avatar";
-import { GearIcon, HeadphonesIcon, HeadphonesOffIcon, MicIcon, MicOffIcon, PhoneIcon, ScreenIcon, SpeakerIcon, StatusIcon, VideoIcon, VideoOffIcon } from "./Icons";
 import { VoiceSettingsDialog } from "./VoiceSettingsDialog";
+import { ReconnectPrompt } from "./userControls/ReconnectPrompt";
+import { SelfAccountRow } from "./userControls/SelfAccountRow";
+import { StatusMenu } from "./userControls/StatusMenu";
+import { VoiceControlPanel } from "./userControls/VoiceControlPanel";
 
-type Props = {
+export type UserControlsProps = {
   actorName: string;
   actorAvatar?: string;
   actorRole: string;
@@ -63,7 +65,7 @@ export function UserControls({
   onUpdateVoicePreferences,
   onVoiceSettingsOpenChange,
   onUpdateStatus
-}: Props) {
+}: UserControlsProps) {
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [voiceTestActive, setVoiceTestActive] = useState(false);
@@ -78,7 +80,6 @@ export function UserControls({
   const currentShare = joined ? activeScreenShare(screenShares, room?.id) : undefined;
   const shareActive = screenOn || Boolean(currentShare);
   const canUseVideo = joined && room?.allowsVideo !== false;
-  const voiceTitle = sfuActive && sfu.status === "connecting" ? "Voice connecting" : sfuActive ? "Voice connected" : "Voice joined";
 
   function updateRoomMedia(media: CallMediaSettings) {
     if (room && joined) onUpdateMedia(room, media);
@@ -171,133 +172,38 @@ export function UserControls({
 
   return (
     <footer className="self-panel" aria-label="User controls">
-      {statusMenuOpen ? (
-        <div className="status-menu" role="menu" aria-label="Set status">
-          <button type="button" role="menuitem" aria-label="Set online" onClick={() => setStatus("online", "available")}>
-            <StatusIcon status="online" />
-            <span>
-              <strong>Online</strong>
-              <small>Available to chat</small>
-            </span>
-          </button>
-          <button type="button" role="menuitem" aria-label="Set busy" onClick={() => setStatus("busy", "in a room")}>
-            <StatusIcon status="busy" />
-            <span>
-              <strong>Busy</strong>
-              <small>Limit notifications</small>
-            </span>
-          </button>
-          <button type="button" role="menuitem" aria-label="Set away" onClick={() => setStatus("away", "away")}>
-            <StatusIcon status="away" />
-            <span>
-              <strong>Away</strong>
-              <small>Back later</small>
-            </span>
-          </button>
-        </div>
-      ) : null}
+      {statusMenuOpen ? <StatusMenu onSetStatus={setStatus} /> : null}
 
       {joined && room ? (
-        <section className={`voice-panel${sfuActive ? " connected" : " joined"}`} aria-label="Voice controls">
-          <div className="voice-panel-header">
-            <SpeakerIcon className="ui-icon voice-status-icon" />
-            <span>
-              <strong>{voiceTitle}</strong>
-              <small>{room.name}</small>
-            </span>
-            <button className="voice-leave-button" type="button" aria-label="Leave voice room" onClick={() => onLeave(room.id)}>
-              <PhoneIcon />
-            </button>
-          </div>
-
-          <div className="voice-control-row">
-            <button
-              className={`voice-control-button${videoOn ? " active" : ""}`}
-              type="button"
-              aria-label={videoOn ? "Turn camera off" : "Turn camera on"}
-              disabled={!canUseVideo}
-              onClick={() => updateRoomMedia({ audio: audioOn, video: !videoOn, screen: screenOn })}
-            >
-              {videoOn ? <VideoIcon /> : <VideoOffIcon />}
-              <span>{videoOn ? "Video on" : "Video off"}</span>
-            </button>
-            <button
-              className={`voice-control-button${shareActive ? " active" : ""}`}
-              type="button"
-              aria-label={shareActive ? "Stop screen share" : "Share screen"}
-              onClick={toggleScreenShare}
-            >
-              <ScreenIcon />
-              <span>{shareActive ? "Stop share" : "Share"}</span>
-            </button>
-          </div>
-
-          {error ? <p className="call-error">{error}</p> : null}
-        </section>
+        <VoiceControlPanel
+          canUseVideo={canUseVideo}
+          error={error}
+          roomName={room.name}
+          sfuActive={sfuActive}
+          sfuStatus={sfu.status}
+          shareActive={shareActive}
+          videoOn={videoOn}
+          onLeave={() => onLeave(room.id)}
+          onToggleScreenShare={toggleScreenShare}
+          onToggleVideo={() => updateRoomMedia({ audio: audioOn, video: !videoOn, screen: screenOn })}
+        />
       ) : null}
 
       {!joined && reconnectRoom ? (
-        <section className="voice-reconnect-panel" aria-label="Voice reconnect prompt">
-          <span>
-            <strong>Reconnect to {reconnectRoom.name}?</strong>
-            <small>Recent voice session</small>
-          </span>
-          <span className="voice-reconnect-actions">
-            <button type="button" className="secondary-action" onClick={() => onReconnect(reconnectRoom)}>
-              Reconnect
-            </button>
-            <button type="button" className="ghost-action" onClick={onDismissReconnect}>
-              Dismiss
-            </button>
-          </span>
-        </section>
+        <ReconnectPrompt room={reconnectRoom} onDismiss={onDismissReconnect} onReconnect={onReconnect} />
       ) : null}
 
-      <div className="self-account-row">
-        <button
-          className="self-identity"
-          type="button"
-          aria-haspopup="menu"
-          aria-expanded={statusMenuOpen}
-          aria-label="Open status menu"
-          onClick={() => setStatusMenuOpen((open) => !open)}
-        >
-          <Avatar name={actorName} avatar={actorAvatar} />
-          <span>
-            <strong>{actorName}</strong>
-            <small>{actorRole}</small>
-          </span>
-        </button>
-        <div className="self-audio-controls" aria-label="Local voice preferences">
-          <button
-            className={`self-icon-button${voicePreferences.muted ? " active" : ""}`}
-            type="button"
-            aria-label={voicePreferences.muted ? "Unmute mic" : "Mute mic"}
-            title={voicePreferences.muted ? "Unmute mic" : "Mute mic"}
-            onClick={toggleMute}
-          >
-            {voicePreferences.muted || voicePreferences.deafened ? <MicOffIcon /> : <MicIcon />}
-          </button>
-          <button
-            className={`self-icon-button${voicePreferences.deafened ? " active" : ""}`}
-            type="button"
-            aria-label={voicePreferences.deafened ? "Undeafen" : "Deafen"}
-            title={voicePreferences.deafened ? "Undeafen" : "Deafen"}
-            onClick={toggleDeafen}
-          >
-            {voicePreferences.deafened ? <HeadphonesOffIcon /> : <HeadphonesIcon />}
-          </button>
-          <button
-            className="self-icon-button"
-            type="button"
-            aria-label="Open voice settings"
-            title="Voice settings"
-            onClick={openVoiceSettings}
-          >
-            <GearIcon />
-          </button>
-        </div>
-      </div>
+      <SelfAccountRow
+        actorAvatar={actorAvatar}
+        actorName={actorName}
+        actorRole={actorRole}
+        statusMenuOpen={statusMenuOpen}
+        voicePreferences={voicePreferences}
+        onOpenVoiceSettings={openVoiceSettings}
+        onToggleDeafen={toggleDeafen}
+        onToggleMute={toggleMute}
+        onToggleStatusMenu={() => setStatusMenuOpen((open) => !open)}
+      />
 
       {settingsOpen ? (
         <VoiceSettingsDialog

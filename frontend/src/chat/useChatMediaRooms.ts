@@ -3,13 +3,13 @@ import { MeshRoomCallController, type MeshRoomParticipant } from "roomkit-sdk/br
 import { SfuCallController } from "roomkit-sdk/browser/sfuCalls";
 import { mediaStreamForTrackRole, normalizeCallMediaSettings, publicCallMediaSettings, startScreenPreviewSnapshots } from "roomkit-sdk/browser/mediaCapture";
 import type { CallMediaSettings, PeerJsMediaConnection, SfuCallState, ScreenPreviewSnapshot } from "roomkit-sdk/browser/types";
+import type { RoomKitEphemeralToken, RoomKitEphemeralTokenHandle } from "roomkit-sdk/browser/liveRoomConnector";
 import { mediaBridgeFromHost } from "./callBridge";
-import type { RoomKitEphemeralToken, RoomKitEphemeralTokenHandle } from "../../../shared/frontend/liveHost";
 import type { Actor, MediaRoom } from "./types";
 
 type LiveInput = {
   actor: Actor;
-  host?: unknown;
+  mediaHost?: unknown;
 };
 
 type Input = {
@@ -29,7 +29,7 @@ function actorAvatar(actor: Actor) {
 }
 
 export function useChatMediaRooms(input: Input) {
-  const bridge = useMemo(() => mediaBridgeFromHost(input.live.host), [input.live.host]);
+  const bridge = useMemo(() => mediaBridgeFromHost(input.live.mediaHost), [input.live.mediaHost]);
   const clientId = bridge?.clientId || input.live.actor.memberId;
   const [sfuState, setSfuState] = useState<SfuCallState>({ status: "unavailable", remoteStreams: [] });
   const [meshState, setMeshState] = useState<SfuCallState>({ status: "idle", remoteStreams: [] });
@@ -275,3 +275,5 @@ export function useChatMediaRooms(input: Input) {
     stopWatchingScreenShare
   };
 }
+
+export type ChatMediaRooms = ReturnType<typeof useChatMediaRooms>;

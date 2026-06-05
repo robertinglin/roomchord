@@ -9,6 +9,7 @@ import {
 } from "roomkit-sdk/browser/voiceOutboundRecordingTest";
 import { pttKeyFromKeyboardEvent, voiceProcessingSettingsFromPreferences, type VoicePreferences } from "../localVoicePreferences";
 import { CloseIcon } from "./Icons";
+import { CleanupSettingsSection, GainSettingsSection, InputModeSettingsSection, VoiceTestSettingsSection } from "./voiceSettings/VoiceSettingsSections";
 
 type Props = {
   preferences: VoicePreferences;
@@ -17,45 +18,9 @@ type Props = {
 };
 
 type VoiceTestPhase = "idle" | "recording" | "playback";
-const MIN_POSITIVE_INPUT_GAIN = 0.01;
-const MAX_INPUT_GAIN = 3;
-
-function inputGainPercent(preferences: VoicePreferences) {
-  return Math.round(Math.max(0, Math.min(MAX_INPUT_GAIN, preferences.inputGain)) * 100);
-}
-
-function inputGainSliderValue(preferences: VoicePreferences) {
-  const gain = Math.max(0, Math.min(MAX_INPUT_GAIN, preferences.inputGain));
-  if (gain <= 0) return 0;
-  if (gain < 1) return Math.round(Math.log(gain / MIN_POSITIVE_INPUT_GAIN) / Math.log(1 / MIN_POSITIVE_INPUT_GAIN) * 100);
-  return 100 + Math.round(Math.log(gain) / Math.log(MAX_INPUT_GAIN) * 100);
-}
-
-function inputGainFromSliderValue(value: number) {
-  const sliderValue = Math.max(0, Math.min(200, value));
-  if (sliderValue <= 0) return 0;
-  if (sliderValue <= 100) return MIN_POSITIVE_INPUT_GAIN * Math.pow(1 / MIN_POSITIVE_INPUT_GAIN, sliderValue / 100);
-  return Math.pow(MAX_INPUT_GAIN, (sliderValue - 100) / 100);
-}
-
-function thresholdSliderValue(preferences: VoicePreferences) {
-  return Math.round(preferences.vadThreshold * 1000);
-}
-
-function keyLabel(key: string) {
-  return key.replace(/^Key/, "").replace(/^Digit/, "");
-}
 
 function stopVoiceTestSession(session: VoiceProcessingRecordingTestSession | undefined) {
   stopVoiceProcessingRecordingTest(session);
-}
-
-function diagnosticSummary(result: VoicePipelineDiagnosticResult): string {
-  const dropout = `${(result.metrics.dropoutRatio * 100).toFixed(1)}% dropout`;
-  const rms = `${Math.round(result.metrics.rmsRatio * 100)}% level`;
-  const latency = `${Math.round(result.metrics.latencyMs)}ms latency`;
-  if (result.passed) return `Passed · ${rms}, ${dropout}, ${latency}`;
-  return `Failed · ${result.reasons[0] || `${rms}, ${dropout}, ${latency}`}`;
 }
 
 export function VoiceSettingsDialog({ preferences, onChange, onClose }: Props) {
@@ -187,126 +152,25 @@ export function VoiceSettingsDialog({ preferences, onChange, onClose }: Props) {
         </header>
 
         <div className="voice-settings-body">
-          <section className="voice-settings-section" aria-labelledby="voice-gain-heading">
-            <h3 id="voice-gain-heading">Gain</h3>
-            <label className="settings-check-row">
-              <input
-                type="checkbox"
-                checked={draftPreferences.dynamicGainControl}
-                onChange={(event) => update({ dynamicGainControl: event.target.checked })}
-              />
-              <span>
-                <strong>Dynamic gain control</strong>
-                <small>Use browser input gain correction when supported</small>
-              </span>
-            </label>
-            <label className="settings-range-row">
-              <span>
-                <strong>Input gain</strong>
-                <small>{inputGainPercent(draftPreferences)}%</small>
-              </span>
-              <input
-                aria-label="Input gain"
-                type="range"
-                min="0"
-                max="200"
-                value={inputGainSliderValue(draftPreferences)}
-                onChange={(event) => update({ inputGain: inputGainFromSliderValue(Number(event.target.value)) })}
-              />
-            </label>
-          </section>
-
-          <section className="voice-settings-section" aria-labelledby="voice-input-heading">
-            <h3 id="voice-input-heading">Input mode</h3>
-            <label className="settings-check-row">
-              <input
-                type="checkbox"
-                checked={draftPreferences.pushToTalk}
-                onChange={(event) => update({ pushToTalk: event.target.checked })}
-              />
-              <span>
-                <strong>Push to talk</strong>
-                <small>Hold the key before audio is sent</small>
-              </span>
-            </label>
-            <div className={`settings-keybind${draftPreferences.pushToTalk ? "" : " disabled"}`}>
-              <span>
-                <strong>Keybind</strong>
-                <small>{recordingKey ? "Press any key" : keyLabel(draftPreferences.pttKey)}</small>
-              </span>
-              <button className="secondary-action" type="button" disabled={!draftPreferences.pushToTalk || recordingKey} onClick={() => setRecordingKey(true)}>
-                {recordingKey ? "Listening" : "Change"}
-              </button>
-            </div>
-          </section>
-
-          <section className="voice-settings-section" aria-labelledby="voice-test-heading">
-            <h3 id="voice-test-heading">Test</h3>
-            <div className="settings-test-row">
-              <span>
-                <strong>{testTitle}</strong>
-                <small>{testDescription}</small>
-              </span>
-              <button className="secondary-action" type="button" onClick={testButtonAction}>
-                {testButtonLabel}
-              </button>
-            </div>
-            <p className="voice-test-note">Opening voice settings disconnects your outbound audio while keeping you in the channel. This test records unprocessed mic audio, then loops that fixed sample through a live copy of the outbound processing graph, so slider and toggle changes update what you hear immediately.</p>
-            <div className="settings-test-row">
-              <span>
-                <strong>Processing pipeline quality check</strong>
-                <small>Sends a synthetic signal through the processing graph and checks level, clipping, and dropouts</small>
-              </span>
-              <button className="secondary-action" type="button" disabled={diagnosticRunning} onClick={() => void runPipelineCheck()}>
-                {diagnosticRunning ? "Checking" : "Run check"}
-              </button>
-            </div>
-            {diagnosticResult ? <p className={`voice-test-diagnostic${diagnosticResult.passed ? " pass" : " fail"}`}>{diagnosticSummary(diagnosticResult)}</p> : null}
-            {diagnosticError ? <p className="voice-test-error">{diagnosticError}</p> : null}
-            {testError ? <p className="voice-test-error">{testError}</p> : null}
-          </section>
-
-          <section className="voice-settings-section" aria-labelledby="voice-cleanup-heading">
-            <h3 id="voice-cleanup-heading">Cleanup</h3>
-            <label className="settings-check-row">
-              <input
-                type="checkbox"
-                checked={draftPreferences.sileroVad}
-                disabled={draftPreferences.pushToTalk}
-                onChange={(event) => update({ sileroVad: event.target.checked })}
-              />
-              <span>
-                <strong>Silero VAD</strong>
-                <small>Gate speech with the Silero model when push to talk is off</small>
-              </span>
-            </label>
-            <label className={`settings-range-row${draftPreferences.sileroVad && !draftPreferences.pushToTalk ? "" : " disabled"}`}>
-              <span>
-                <strong>VAD threshold</strong>
-                <small>{draftPreferences.vadThreshold.toFixed(3)}</small>
-              </span>
-              <input
-                aria-label="VAD threshold"
-                type="range"
-                min="1"
-                max="1000"
-                value={thresholdSliderValue(draftPreferences)}
-                disabled={!draftPreferences.sileroVad || draftPreferences.pushToTalk}
-                onChange={(event) => update({ vadThreshold: Number(event.target.value) / 1000 })}
-              />
-            </label>
-            <label className="settings-check-row">
-              <input
-                type="checkbox"
-                checked={draftPreferences.dtlnNoiseSuppression}
-                onChange={(event) => update({ dtlnNoiseSuppression: event.target.checked })}
-              />
-              <span>
-                <strong>DTLN noise suppression</strong>
-                <small>Use the bundled neural denoiser worklet when available</small>
-              </span>
-            </label>
-          </section>
+          <GainSettingsSection preferences={draftPreferences} onUpdate={update} />
+          <InputModeSettingsSection
+            preferences={draftPreferences}
+            recordingKey={recordingKey}
+            onRecordKey={() => setRecordingKey(true)}
+            onUpdate={update}
+          />
+          <VoiceTestSettingsSection
+            diagnosticError={diagnosticError}
+            diagnosticResult={diagnosticResult}
+            diagnosticRunning={diagnosticRunning}
+            onRunDiagnostic={() => void runPipelineCheck()}
+            onToggleTest={testButtonAction}
+            testButtonLabel={testButtonLabel}
+            testDescription={testDescription}
+            testError={testError}
+            testTitle={testTitle}
+          />
+          <CleanupSettingsSection preferences={draftPreferences} onUpdate={update} />
         </div>
       </section>
     </div>

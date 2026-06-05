@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { MeshRoomCallController } from "roomkit-sdk/browser/meshRoomCalls";
 import { SfuCallController } from "roomkit-sdk/browser/sfuCalls";
 import { markMediaTrackRole } from "roomkit-sdk/browser/mediaCapture";
+import { getDirectMessageThreads } from "roomkit-sdk/browser/directMessages";
 import { ChatApp } from "./chat/ChatApp";
 import { MarkdownMessage } from "./chat/components/MarkdownMessage";
 import { UserControls } from "./chat/components/UserControls";
@@ -17,7 +18,7 @@ import type { ChatState } from "./chat/types";
 const state: ChatState = {
   channels: [{ id: "general", name: "general", topic: "Room coordination" }],
   messages: { m1: { id: "m1", channelId: "general", authorName: "Mina", authorId: "mina", body: "Welcome to the live chat app", reactions: {}, pinnedAt: null, deletedAt: null, createdAt: 1 } },
-  directThreads: { dm_alice__lee: { id: "dm_alice__lee", protocol: "nostr.nip17", userIds: ["alice", "lee"], topicKey: "Backchannel" } },
+  directThreads: { dm_alice__lee: { id: "dm_alice__lee", protocol: "nostr.nip17", userIds: ["alice", "lee"] } },
   directMessages: { dm_msg_1: { id: "dm_msg_1", protocol: "nostr.nip17", threadId: "dm_alice__lee", body: "Private hello", authorName: "Lee", authorId: "lee", reactions: {}, createdAt: 2 } },
   rooms: [{ id: "media1", name: "Launch Room", allowsVideo: true, participants: {} }],
   screenShares: {},
@@ -232,6 +233,23 @@ function stateWithMessage(body: string): ChatState {
 }
 
 describe("ChatApp", () => {
+  it("filters direct messages by the default lane or a topic regex", () => {
+    const dmState: ChatState = {
+      ...state,
+      directThreads: {
+        ...state.directThreads,
+        dm_groups_launch: { id: "dm_groups_launch", protocol: "nostr.nip17", userIds: ["alice", "lee"], topicKey: "groups.launch" }
+      },
+      directMessages: {
+        ...state.directMessages,
+        dm_msg_group: { id: "dm_msg_group", protocol: "nostr.nip17", threadId: "dm_groups_launch", body: "Group note", authorId: "lee", reactions: {}, createdAt: 3 }
+      }
+    };
+
+    expect(getDirectMessageThreads(dmState).map((group) => group.thread.id)).toEqual(["dm_alice__lee"]);
+    expect(getDirectMessageThreads(dmState, /^groups\./).map((group) => group.thread.id)).toEqual(["dm_groups_launch"]);
+  });
+
   it("renders a real backend-connected team chat surface", async () => {
     renderChat();
     expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
@@ -1518,7 +1536,6 @@ describe("ChatApp", () => {
   it("forwards messages to other channels and direct messages", async () => {
     const user = userEvent.setup();
     const sent: any[] = [];
-    const directSent: any[] = [];
     const twoChannelState = {
       ...state,
       channels: [
@@ -1528,9 +1545,7 @@ describe("ChatApp", () => {
     };
     renderChat(
       vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: twoChannelState, operation }; }),
-      twoChannelState,
-      undefined,
-      { sendDirectMessage: vi.fn(async (message) => { directSent.push(message); return { ok: true, state: twoChannelState }; }) }
+      twoChannelState
     );
 
     await user.click(await screen.findByRole("button", { name: "Forward message from Mina" }));
@@ -1538,13 +1553,12 @@ describe("ChatApp", () => {
     await user.click(screen.getByRole("button", { name: "Forward message from Mina" }));
     await user.click(screen.getByRole("button", { name: "Forward to Lee" }));
 
-    await waitFor(() => expect(sent.map((op) => op.schemaAction)).toEqual(["messageSend"]));
-    await waitFor(() => expect(directSent).toHaveLength(1));
+    await waitFor(() => expect(sent.map((op) => op.schemaAction)).toEqual(["messageSend", "directMessageSend"]));
     expect(sent[0]).toMatchObject({ type: "messageSend", schemaAction: "messageSend", payload: { channelId: "random" } });
     expect(sent[0].payload.body).toContain("Forwarded from Mina:");
     expect(sent[0].payload.body).toContain("Welcome to the live chat app");
-    expect(directSent[0]).toMatchObject({ userIds: ["alice", "lee"], schemaAction: "directMessageSend" });
-    expect(directSent[0].body).toContain("Forwarded from Mina:");
+    expect(sent[1]).toMatchObject({ type: "directMessageSend", schemaAction: "directMessageSend", payload: { userIds: ["alice", "lee"] } });
+    expect(sent[1].payload.body).toContain("Forwarded from Mina:");
   });
 
   it("sends status changes as transient presence when the injected bridge supports it", async () => {
@@ -1599,20 +1613,18 @@ describe("ChatApp", () => {
 
   it("commits direct messages from the active DM view", async () => {
     const user = userEvent.setup();
-    const directSent: any[] = [];
+    const sent: any[] = [];
     renderChat(
-      undefined,
-      state,
-      undefined,
-      { sendDirectMessage: vi.fn(async (message) => { directSent.push(message); return { ok: true, state }; }) }
+      vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }),
+      state
     );
 
     await user.click(await screen.findByRole("button", { name: "Lee, 1 unread DM" }));
     await user.type(screen.getByLabelText("Message Lee"), "Private update");
     await user.keyboard("{Enter}");
 
-    await waitFor(() => expect(directSent).toHaveLength(1));
-    expect(directSent[0]).toMatchObject({ userIds: ["alice", "lee"], body: "Private update", schemaAction: "directMessageSend" });
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({ type: "directMessageSend", schemaAction: "directMessageSend", payload: { userIds: ["alice", "lee"], body: "Private update" } });
   });
 
   it("toggles camera, local mute, and sharing from the bottom-left controls", async () => {
@@ -2052,12 +2064,10 @@ describe("ChatApp", () => {
   it("creates the direct-message thread only when the first message is sent", async () => {
     const user = userEvent.setup();
     const initialState = { ...state, directThreads: {}, directMessages: {} };
-    const directSent: any[] = [];
+    const sent: any[] = [];
     renderChat(
-      undefined,
-      initialState,
-      undefined,
-      { sendDirectMessage: vi.fn(async (message) => { directSent.push(message); return { ok: true, state: initialState }; }) }
+      vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: initialState, operation }; }),
+      initialState
     );
 
     fireEvent.contextMenu(await memberRailAvatar("Lee", "Lee, online"), { clientX: 80, clientY: 90 });
@@ -2067,8 +2077,8 @@ describe("ChatApp", () => {
     if (!composer) throw new Error("Expected direct-message composer");
     await user.click(within(composer).getByRole("button", { name: "Send DM" }));
 
-    await waitFor(() => expect(directSent).toHaveLength(1));
-    expect(directSent[0]).toMatchObject({ userIds: ["alice", "lee"], body: "Private update", schemaAction: "directMessageSend" });
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({ type: "directMessageSend", schemaAction: "directMessageSend", payload: { userIds: ["alice", "lee"], body: "Private update" } });
   });
 
   it("hides direct message threads that are not core NIP-17 threads", async () => {

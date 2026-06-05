@@ -1,40 +1,106 @@
-import type { RoomKitLaunchEnvelope } from "../../../shared/reactLive/types";
+import type { Chord } from "../../../src/types";
 
 export type AvatarSource = { avatar?: string; avatarUrl?: string; profileImageUrl?: string };
-export type Actor = { memberId: string; deviceId: string; role: string; displayName?: string } & AvatarSource;
-export type RoomMember = { id?: string; memberId?: string; name?: string; displayName?: string; role?: string; status?: string; revokedAt?: number | null; bannedAt?: number | null } & AvatarSource;
-export type Channel = { id: string; name: string; topic?: string | null; group?: string | null; archivedAt?: number | null; createdBy?: string; createdAt?: number; updatedAt?: number | null };
-export type Message = { id: string; protocol?: string; channelId?: string; threadId?: string; authorName?: string; authorId?: string; authorAvatar?: string; authorAvatarUrl?: string; authorImageUrl?: string; body: string; reactions?: Record<string, string[]>; pinnedAt?: number | null; pinnedBy?: string | null; replyToId?: string | null; deletedAt?: number | null; createdAt?: number; embeds?: unknown[]; encrypted?: boolean };
-export type DirectThread = { id: string; protocol?: string; userIds?: string[]; topicKey?: string; topic?: string | null; archivedAt?: number | null; createdAt?: number };
-export type MediaRoomParticipant = { memberId?: string; name?: string; media?: { audio?: boolean; video?: boolean; screen?: boolean }; joinedAt?: number };
-export type RoomRoleAccessLevel = "hidden" | "readonly" | "editor";
-export type RoomRoleAccess = Record<string, RoomRoleAccessLevel>;
-export type MediaRoom = { id: string; name: string; group?: string | null; allowsVideo?: boolean; participants?: Record<string, MediaRoomParticipant> | string[]; participantCount?: number; archivedAt?: number | null; channelId?: string | null; scopeId?: string | null; locked?: boolean; roleAccess?: RoomRoleAccess };
-export type ScreenShare = { id: string; roomId?: string; scopeId?: string; ownerId?: string; ownerName?: string; presenterId?: string; presenterName?: string; title?: string | null; stoppedAt?: number | null };
-export type Presence = { memberId?: string; name?: string; status: string; activity?: string | null; updatedAt?: number; visible?: boolean } & AvatarSource;
-export type ChatEmbed = { id: string; scopeType?: string; scopeId?: string; title?: string; url?: string; provider?: string; kind?: string; note?: string | null; addedByName?: string; addedAt?: number; removedAt?: number | null };
-export type CommentThread = { id: string; scopeType?: string; scopeId?: string; title?: string | null; resolved?: boolean; lastCommentAt?: number; createdAt?: number };
-export type ThreadComment = { id: string; threadId: string; authorName?: string; authorId?: string; body: string; deletedAt?: number | null; createdAt?: number; reactions?: Record<string, string[]> };
-export type CommentsState = { threads: Record<string, CommentThread>; comments: Record<string, ThreadComment>; activity: Array<{ id: string; message: string }> };
-export type ScopedReaction = { scopeType?: string; scopeId?: string; reactions?: Record<string, string[]>; updatedAt?: number };
-export type RoleDefinition = { id: string; name: string; description?: string | null; color?: string | null; rank?: number; systemRole?: boolean; archivedAt?: number | null; createdBy?: string; createdAt?: number; updatedAt?: number; archivedBy?: string };
-export type MemberRoleAssignment = { id?: string; memberId: string; roleId?: string; roleIds?: string[]; displayName?: string | null; assignedBy?: string; assignedAt?: number };
-export type ChatState = {
-  channels: Channel[];
-  messages: Record<string, Message>;
-  directThreads: Record<string, DirectThread>;
-  directMessages: Record<string, Message>;
-  directKeys?: Record<string, unknown>;
-  rooms: MediaRoom[];
-  screenShares: Record<string, ScreenShare>;
-  members: Record<string, RoomMember>;
-  presence: Record<string, Presence>;
+export type Actor = Chord.Actor & AvatarSource;
+export type RoomMember = Chord.Member & AvatarSource;
+export type Channel = Partial<Chord.Channel> & { id: string; name: string };
+export type RoomRoleAccessLevel = Chord.AccessLevel;
+export type RoomRoleAccess = Chord.RoomRoleAccess;
+
+export type Message = Omit<Chord.Message | Chord.DirectMessage, "authorId" | "createdAt" | "reactions" | "embeds"> & {
+  id: string;
+  body: string;
+  protocol?: string;
+  channelId?: string;
+  threadId?: string;
+  authorName?: string;
+  authorId?: string;
+  authorAvatar?: string;
+  authorAvatarUrl?: string;
+  authorImageUrl?: string;
+  reactions?: Chord.Reactions;
+  createdAt?: number;
+  embeds?: unknown[];
+};
+
+export type DirectThread = Partial<Chord.DirectThread> & {
+  id: string;
+  protocol?: string;
+  userIds?: string[];
+};
+export type DirectMessageThread = { thread: DirectThread; messages: Message[] };
+
+export type MediaRoomParticipant = Partial<Chord.MediaRoomParticipant>;
+export type MediaRoom = Omit<Partial<Chord.MediaRoom>, "participants" | "roleAccess"> & {
+  id: string;
+  name: string;
+  participants?: Record<string, MediaRoomParticipant> | string[];
+  roleAccess?: RoomRoleAccess;
+};
+
+export type ScreenShare = Partial<Chord.ScreenShare> & {
+  id: string;
+  ownerId?: string;
+  ownerName?: string;
+};
+
+export type Presence = Partial<Chord.PresenceMember> & {
+  status: Chord.PresenceStatus;
+} & AvatarSource;
+
+export type ChatEmbed = Partial<Chord.Embed> & { id: string };
+export type CommentThread = Partial<Chord.CommentThread> & { id: string };
+export type ThreadComment = Omit<Partial<Chord.Comment>, "reactions"> & {
+  id: string;
+  threadId: string;
+  body: string;
+  reactions?: Chord.Reactions;
+};
+export type CommentsState = Omit<Chord.CommentsPluginState, "threads" | "comments"> & {
+  threads: Record<string, CommentThread>;
+  comments: Record<string, ThreadComment>;
+};
+export type ScopedReaction = Partial<Chord.ScopedReaction>;
+export type RoleDefinition = Partial<Chord.RoleDefinition> & { id: string; name: string };
+export type MemberRoleAssignment = Partial<Chord.MemberRole> & { memberId: string };
+
+export type ChatState = Omit<
+  Chord.State,
+  | "activity"
+  | "channels"
+  | "comments"
+  | "directMessages"
+  | "directThreads"
+  | "embeds"
+  | "memberRoles"
+  | "members"
+  | "messages"
+  | "presence"
+  | "reactions"
+  | "roleDefinitions"
+  | "rooms"
+  | "screenShares"
+> & {
   activity: Array<{ id: string; message: string }>;
+  channels: Channel[];
   comments: CommentsState;
+  directMessages: Record<string, Message>;
+  directThreads: Record<string, DirectThread>;
+  directKeys?: Record<string, unknown>;
   embeds: Record<string, ChatEmbed>;
+  memberRoles?: Record<string, MemberRoleAssignment>;
+  members: Record<string, RoomMember>;
+  messages: Record<string, Message>;
+  presence: Record<string, Presence>;
   reactions: Record<string, ScopedReaction>;
   roleDefinitions?: Record<string, RoleDefinition>;
-  memberRoles?: Record<string, MemberRoleAssignment>;
+  rooms: MediaRoom[];
+  screenShares: Record<string, ScreenShare>;
   access?: unknown;
 };
-export type ChatProps = { envelope?: RoomKitLaunchEnvelope; initialState?: ChatState };
+
+export type ChatProps = { envelope?: Chord.LaunchEnvelope; initialState?: ChatState };
+export type ChatActionName = Chord.ActionName;
+export type ChatActionPayload<K extends ChatActionName> = Chord.Actions[K];
+export type ChatDispatchResult = { ok: true; state: ChatState } | { ok: false; reason: string; state?: ChatState };
+export type ChatCore = Chord.Core;

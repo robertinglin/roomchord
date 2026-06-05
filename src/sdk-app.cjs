@@ -236,5 +236,6 @@ if (require.main === module) {
   const out = app.emitRoomKitBundle({ outDir: packageRoot });
   const artifacts = app.emit({ outDir: path.join(packageRoot, "src", "chat") });
   fs.copyFileSync(artifacts.typesPath, path.join(packageRoot, "src", "types.d.ts"));
+  fs.rmSync(artifacts.typesPath, { force: true });
   console.log("emitted:", out.bundlePath);
 }

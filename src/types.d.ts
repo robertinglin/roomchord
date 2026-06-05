@@ -9,138 +9,235 @@
 
 export namespace Chord {
   export type Role = "guest" | "member" | "moderator" | "admin" | "owner";
-  export interface Actor { memberId: string; deviceId?: string; role: Role | string; displayName?: string; avatar?: string; avatarUrl?: string; profileImageUrl?: string; [key: string]: unknown; }
-  export interface Activity { id: string; operationId?: string; actorId?: string; actorName?: string; message: string; createdAt?: number; [key: string]: unknown; }
-  export interface MediaRoomParticipant { memberId: string; name?: string; media?: { audio?: boolean; video?: boolean; screen?: boolean }; joinedAt?: number; }
-  export interface MediaRoom { id: string; name: string; group?: string | null; allowsVideo?: boolean; scopeType?: string; scopeId?: string; roleAccess?: Record<string, "editor" | "readonly" | "hidden">; locked?: boolean; spotlightMemberId?: string; archivedAt?: number; participants?: Record<string, MediaRoomParticipant>; participantCount?: number; createdBy?: string; createdAt?: number; }
-  export interface PresenceMember { memberId: string; name?: string; status?: string; activity?: string | null; location?: string | null; updatedAt?: number; lastPingAt?: number; visible?: boolean; }
-  export interface CommentThread { id: string; scopeType?: string; scopeId?: string; title?: string | null; resolved?: boolean; createdAt?: number; lastCommentAt?: number; archivedAt?: number | null; }
-  export interface Comment { id: string; threadId?: string; scopeType?: string; scopeId?: string; body: string; authorId?: string; authorName?: string; createdAt?: number; deletedAt?: number | null; reactions?: Record<string, string[]>; }
-  export interface Embed { id?: string; scopeType?: string; scopeId?: string; url: string; provider?: string; kind?: string; title?: string; note?: string | null; addedBy?: string; addedByName?: string; addedAt?: number; removedAt?: number | null; }
-  export interface ScopedReaction { scopeType?: string; scopeId?: string; reactions: Record<string, string[]>; updatedAt?: number; }
-  export interface ScreenShare { id: string; scopeType?: string; scopeId?: string; roomId?: string | null; title?: string | null; presenterId?: string; presenterName?: string; startedAt?: number; stoppedAt?: number | null; stoppedBy?: string; }
-  export interface Attachment { id: string; scopeType?: string; scopeId?: string; url?: string; title?: string; mimeType?: string | null; sizeBytes?: number | null; provider?: string | null; note?: string | null; addedAt?: number; removedAt?: number | null; }
+  export type ChannelId = string;
+  export type MessageId = string;
+  export type RoleId = string;
+  export type RoomId = string;
+  export type MemberId = string;
+  export type ThreadId = string;
+  export type CommentId = string;
+  export type EmbedId = string;
+  export type ShareId = string;
+  export type Reactions = Record<string, MemberId[]>;
+  export type ScopeType = "channel" | (string & {});
+  export interface ScopeRef { scopeType: ScopeType; scopeId: string; }
+  export type RoleAccessGrant = "editor" | "readonly";
+  export type RoomRoleAccess = Record<RoleId, RoleAccessGrant>;
+  export type AccessLevel = "hidden" | RoleAccessGrant;
+  export type PresenceStatus = "online" | "idle" | "dnd" | "offline" | (string & {});
+  export interface MediaFlags { audio?: boolean; video?: boolean; screen?: boolean; }
+  export interface MessageEmbed { id?: EmbedId; url: string; provider?: string; kind?: string; title?: string; thumbnailUrl?: string; renderMode?: string; }
+  export interface Member { id?: MemberId; memberId?: MemberId; name?: string; displayName?: string; role?: Role | (string & {}); status?: string; avatarUrl?: string; revokedAt?: number | null; bannedAt?: number | null; }
+  export interface MediaRoomParticipant { memberId: MemberId; name?: string; media?: MediaFlags; joinedAt?: number; }
+  export interface MediaRoom { id: RoomId; name: string; group: string | null; allowsVideo: boolean; scopeType?: ScopeType; scopeId?: string; roleAccess: RoomRoleAccess; locked: boolean; spotlightMemberId?: MemberId | null; archivedAt: number | null; participants: Record<MemberId, MediaRoomParticipant>; participantCount: number; createdBy?: MemberId; createdAt?: number; }
+  export interface PresenceMember { memberId: MemberId; name?: string; status: PresenceStatus; activity: string | null; location: string | null; updatedAt?: number; lastPingAt?: number; visible?: boolean; avatarUrl?: string; }
+  export interface CommentThread { id: ThreadId; scopeType: ScopeType; scopeId: string; title: string | null; resolved: boolean; createdAt: number; lastCommentAt?: number; archivedAt: number | null; }
+  export interface Comment { id: CommentId; threadId: ThreadId; scopeType?: ScopeType; scopeId?: string; parentId?: CommentId | null; body: string; authorId: MemberId; authorName?: string; createdAt: number; deletedAt: number | null; reactions: Reactions; }
+  export interface Embed { id: EmbedId; scopeType: ScopeType; scopeId: string; url: string; provider?: string; kind?: string; title?: string; note: string | null; addedBy?: MemberId; addedByName?: string; addedAt: number; removedAt: number | null; }
+  export interface ScopedReaction { scopeType: ScopeType; scopeId: string; reactions: Reactions; updatedAt?: number; }
+  export interface ScreenShare { id: ShareId; scopeType?: ScopeType; scopeId?: string; roomId: RoomId | null; title: string | null; presenterId: MemberId; presenterName?: string; startedAt: number; stoppedAt: number | null; stoppedBy?: MemberId; }
+  export interface Attachment { id: string; scopeType?: ScopeType; scopeId?: string; url?: string; title?: string; mimeType?: string | null; sizeBytes?: number | null; provider?: string | null; note?: string | null; addedAt?: number; removedAt?: number | null; }
   export interface Label { id: string; name: string; color?: string | null; description?: string | null; archivedAt?: number | null; }
-  export interface Checklist { id: string; scopeType?: string; scopeId?: string; title?: string; items?: Array<{ id: string; text: string; completed?: boolean; completedAt?: number | null }>; archivedAt?: number | null; }
-  export interface CalendarEvent { id: string; scopeType?: string; scopeId?: string; title: string; startsAt?: number; endsAt?: number | null; location?: string | null; description?: string | null; cancelledAt?: number | null; }
-  export interface LocationPin { id: string; scopeType?: string; scopeId?: string; label?: string; lat?: number; lng?: number; createdAt?: number; removedAt?: number | null; }
+  export interface Checklist { id: string; scopeType?: ScopeType; scopeId?: string; title?: string; items?: Array<{ id: string; text: string; completed?: boolean; completedAt?: number | null }>; archivedAt?: number | null; }
+  export interface CalendarEvent { id: string; scopeType?: ScopeType; scopeId?: string; title: string; startsAt?: number; endsAt?: number | null; location?: string | null; description?: string | null; cancelledAt?: number | null; }
+  export interface LocationPin { id: string; scopeType?: ScopeType; scopeId?: string; label?: string; lat?: number; lng?: number; createdAt?: number; removedAt?: number | null; }
+  export interface DirectThread { id: ThreadId; protocol?: string; userIds: MemberId[]; topicKey?: string; topic: string | null; createdAt: number; archivedAt: number | null; }
+  export interface DirectMessage { id: MessageId; protocol?: string; threadId: ThreadId; userIds?: MemberId[]; topicKey?: string; channelId?: ChannelId; authorId: MemberId; body: string; reactions: Reactions; embeds: MessageEmbed[]; replyToId?: MessageId | null; pinnedAt?: number | null; pinnedBy?: MemberId | null; editedAt?: number | null; deletedAt?: number | null; deletedBy?: MemberId | null; createdAt: number; encrypted?: boolean; }
+  export interface Actor { memberId: MemberId; deviceId: string; role: Role | (string & {}); displayName?: string; avatarUrl?: string; }
+  export interface Activity { id: string; operationId?: string; actorId?: MemberId; actorName?: string; message: string; createdAt?: number; }
   export interface Channel {
     archivedAt: null | number;
     createdAt: number;
-    createdBy: string;
+    createdBy: MemberId;
     group?: null | string;
-    id: string;
-    name: null | string;
+    id: ChannelId;
+    name: string;
     topic?: null | string;
     updatedAt?: number;
   }
   export interface MemberRole {
     assignedAt: number;
-    assignedBy: string;
+    assignedBy: MemberId;
     displayName?: null | string;
     id: string;
-    memberId: string;
-    roleId?: null | string;
-    roleIds?: string[];
+    memberId: MemberId;
+    roleId?: RoleId | null;
+    roleIds?: RoleId[];
   }
   export interface Message {
-    authorId: string;
+    authorId: MemberId;
     body: string;
-    channelId: string;
+    channelId: ChannelId;
     createdAt: number;
     deletedAt?: null | number;
-    deletedBy?: string;
+    deletedBy?: MemberId;
     editedAt?: null | number;
-    embeds?: unknown[];
-    id: string;
+    embeds?: MessageEmbed[];
+    id: MessageId;
     pinnedAt?: null | number;
-    pinnedBy?: null | string;
-    reactions: Record<string, unknown>;
-    replyToId?: string;
+    pinnedBy?: MemberId | null;
+    reactions: Reactions;
+    replyToId?: MessageId;
   }
   export interface RoleDefinition {
     archivedAt: null | number;
-    archivedBy?: string;
+    archivedBy?: MemberId;
     color?: null | string;
     createdAt?: number;
-    createdBy?: string;
+    createdBy?: MemberId;
     description?: null | string;
-    id: string;
-    name: null | string;
+    id: RoleId;
+    name: string;
     rank: number;
     systemRole: boolean;
     updatedAt?: number;
-    updatedBy?: string;
+    updatedBy?: MemberId;
   }
   export interface CommentsPluginState {
-    [key: string]: unknown;
+    activity: Activity[];
+    comments: Record<CommentId, Comment>;
+    threads: Record<ThreadId, CommentThread>;
   }
   export interface PresencePluginState {
-    [key: string]: unknown;
+    activity: Activity[];
+    members: Record<MemberId, PresenceMember>;
   }
   export interface MediaRoomsPluginState {
-    [key: string]: unknown;
+    activity: Activity[];
+    rooms: Record<RoomId, MediaRoom>;
   }
   export interface ScreenSharePluginState {
-    [key: string]: unknown;
+    activity: Activity[];
+    shares: Record<ShareId, ScreenShare>;
   }
   export interface EmbedsPluginState {
-    [key: string]: unknown;
+    activity: Activity[];
+    embeds: Record<EmbedId, Embed>;
   }
   export interface ReactionsPluginState {
-    [key: string]: unknown;
-  }
-  export interface Plugins {
-    "com.roomkit.examples.plugins.comments": CommentsPluginState;
-    "com.roomkit.examples.plugins.presence": PresencePluginState;
-    "com.roomkit.examples.plugins.media-rooms": MediaRoomsPluginState;
-    "com.roomkit.examples.plugins.screen-share": ScreenSharePluginState;
-    "com.roomkit.examples.plugins.embeds": EmbedsPluginState;
-    "com.roomkit.examples.plugins.reactions": ReactionsPluginState;
-  }
-  export interface PluginAliases {
-    comments: Plugins["com.roomkit.examples.plugins.comments"];
-    presence: Plugins["com.roomkit.examples.plugins.presence"];
-    mediaRooms: Plugins["com.roomkit.examples.plugins.media-rooms"];
-    screenShare: Plugins["com.roomkit.examples.plugins.screen-share"];
-    embeds: Plugins["com.roomkit.examples.plugins.embeds"];
-    reactions: Plugins["com.roomkit.examples.plugins.reactions"];
+    activity: Activity[];
+    reactions: Record<string, ScopedReaction>;
   }
   export interface State {
     activity: Activity[];
     channels: Channel[];
-    memberRoles: Record<string, MemberRole>;
-    messages: Record<string, Message>;
-    plugins: Plugins;
-    roleDefinitions: Record<string, RoleDefinition>;
+    comments: CommentsPluginState;
+    directMessages: Record<MessageId, DirectMessage>;
+    directThreads: Record<ThreadId, DirectThread>;
+    embeds: Record<EmbedId, Embed>;
+    memberRoles: Record<MemberId, MemberRole>;
+    members: Record<MemberId, Member>;
+    messages: Record<MessageId, Message>;
+    presence: Record<MemberId, PresenceMember>;
+    reactions: Record<string, ScopedReaction>;
+    roleDefinitions: Record<RoleId, RoleDefinition>;
+    rooms: MediaRoom[];
+    screenShares: Record<ShareId, ScreenShare>;
   }
-  export interface Operations {
-    "channel.archive": { channelId: string };
-    "channel.create": { name: string; topic?: null | string; group?: null | string };
-    "channel.rename": { channelId: string; name?: null | string; topic?: null | string; group?: null | string };
-    "member.role.assign": { memberId: string; roleId?: null | string; roleIds?: string[]; displayName?: null | string };
-    "message.delete": { messageId: string };
-    "message.edit": { messageId: string; body: string; embeds?: unknown[] };
-    "message.pin": { messageId: string };
-    "message.react": { messageId: string; emoji: string };
-    "message.reply": { channelId: string; replyToId: string; body: string };
-    "message.send": { channelId: string; body: string; embeds?: unknown[] };
-    "message.unpin": { messageId: string };
-    "role.archive": { roleId: string };
-    "role.create": { roleId: string; name: string; description?: null | string; color?: null | string };
-    "role.update": { roleId: string; name?: null | string; description?: null | string; color?: null | string };
+  export interface DirectMessageThread { thread: DirectThread; messages: DirectMessage[]; }
+  export interface Actions {
+    channelArchive: { channelId: ChannelId };
+    channelCreate: { name: string; topic?: null | string; group?: null | string };
+    channelRename: { channelId: ChannelId; name?: null | string; topic?: null | string; group?: null | string };
+    memberRoleAssign: { memberId: MemberId; roleId?: RoleId | null; roleIds?: RoleId[]; displayName?: null | string };
+    messageDelete: { messageId: MessageId };
+    messageEdit: { messageId: MessageId; body: string; embeds?: MessageEmbed[] };
+    messagePin: { messageId: MessageId };
+    messageReact: { messageId: MessageId; emoji: string };
+    messageReply: { channelId: ChannelId; replyToId: MessageId; body: string };
+    messageSend: { channelId: ChannelId; body: string; embeds?: MessageEmbed[] };
+    messageUnpin: { messageId: MessageId };
+    roleArchive: { roleId: RoleId };
+    roleCreate: { roleId: RoleId; name: string; description?: null | string; color?: null | string };
+    roleUpdate: { roleId: RoleId; name?: null | string; description?: null | string; color?: null | string };
+    commentsAdd: { body: string; threadId?: ThreadId; parentId?: CommentId } & Partial<ScopeRef>;
+    commentsDelete: { commentId: CommentId; reason?: string };
+    commentsEdit: { commentId: CommentId; body: string };
+    commentsReact: { commentId: CommentId; emoji: string };
+    commentsResolve: { threadId: ThreadId; resolved?: boolean };
+    commentsThreadCreate: { title?: string; visibility?: string } & ScopeRef;
+    presenceClear: { memberId?: MemberId };
+    presencePing: { status?: PresenceStatus };
+    presenceUpdate: { status: PresenceStatus; activity?: string; location?: string };
+    mediaRoomArchive: { roomId: RoomId };
+    mediaRoomCreate: { name: string; allowsVideo?: boolean; group?: null | string; roleAccess?: RoomRoleAccess } & Partial<ScopeRef>;
+    mediaRoomJoin: { roomId: RoomId; media?: MediaFlags };
+    mediaRoomLeave: { roomId: RoomId };
+    mediaRoomUpdate: { roomId: RoomId; locked?: boolean; allowsVideo?: boolean; spotlightMemberId?: string; name?: string; group?: null | string; roleAccess?: RoomRoleAccess };
+    screenshareStart: { roomId?: RoomId; title?: string } & ScopeRef;
+    screenshareStop: { shareId: ShareId };
+    embedAdd: { url: string; title?: string; provider?: string; note?: string } & ScopeRef;
+    embedRemove: { embedId: EmbedId };
+    reactionToggle: { emoji: string } & ScopeRef;
+    directMessageSend: { userIds: MemberId[]; body: string; topicKey?: string };
   }
-  export type OpName = keyof Operations;
-  export type Payload<K extends OpName> = Operations[K];
+  export type ActionName = keyof Actions;
+  export type ActionPayload<K extends ActionName> = Actions[K];
+  export type OperationType = {
+    channelArchive: "channel.archive";
+    channelCreate: "channel.create";
+    channelRename: "channel.rename";
+    memberRoleAssign: "member.role.assign";
+    messageDelete: "message.delete";
+    messageEdit: "message.edit";
+    messagePin: "message.pin";
+    messageReact: "message.react";
+    messageReply: "message.reply";
+    messageSend: "message.send";
+    messageUnpin: "message.unpin";
+    roleArchive: "role.archive";
+    roleCreate: "role.create";
+    roleUpdate: "role.update";
+    commentsAdd: "comments.add";
+    commentsDelete: "comments.delete";
+    commentsEdit: "comments.edit";
+    commentsReact: "comments.react";
+    commentsResolve: "comments.resolve";
+    commentsThreadCreate: "comments.thread.create";
+    presenceClear: "presence.clear";
+    presencePing: "presence.ping";
+    presenceUpdate: "presence.update";
+    mediaRoomArchive: "media.room.archive";
+    mediaRoomCreate: "media.room.create";
+    mediaRoomJoin: "media.room.join";
+    mediaRoomLeave: "media.room.leave";
+    mediaRoomUpdate: "media.room.update";
+    screenshareStart: "screenshare.start";
+    screenshareStop: "screenshare.stop";
+    embedAdd: "embed.add";
+    embedRemove: "embed.remove";
+    reactionToggle: "reaction.toggle";
+    directMessageSend: "dm.message";
+  };
   export interface Queries {
     channelSummary: Channel[];
     roomDirectory: MediaRoom[];
-    onlineMembers: Actor[];
+    onlineMembers: PresenceMember[];
   }
   export type QueryName = keyof Queries;
+  export interface QueryInput {
+    channelSummary: void;
+    roomDirectory: void;
+    onlineMembers: void;
+  }
   export type RoutePath = "/" | "/dms" | "/rooms";
   export type RouteComponent = "ChatRoomPage" | "DirectMessagesPage" | "MediaRoomsPage";
+  export type ConnectionStatus = "connecting" | "connected" | "saving" | "offline" | "error";
+  export type DispatchResult = { ok: true; state: State } | { ok: false; reason: string; state?: State };
+  export interface Core {
+    sendPresence(input: { status: PresenceStatus; activity?: string; at?: number }): Promise<boolean>;
+  }
   export interface LaunchEnvelope { room?: { id?: string; name?: string }; actor?: Actor; credentialGrant?: { credentialId?: string }; initialState?: State; }
-  export interface HostResult { ok: boolean; state?: State; reason?: string; operation?: unknown; }
-  export interface Client { state: State; status: "connecting" | "connected" | "saving" | "offline" | "error"; dispatch<K extends OpName>(type: K, payload: Operations[K]): Promise<HostResult>; query<K extends QueryName>(name: K, input?: Record<string, unknown>): Queries[K]; }
+  export interface Client {
+    readonly state: State;
+    readonly actor: Actor;
+    readonly status: ConnectionStatus;
+    readonly ready: boolean;
+    dispatch<K extends ActionName>(action: K, payload: Actions[K]): Promise<DispatchResult>;
+    query<K extends QueryName>(name: K, ...input: QueryInput[K] extends void ? [] : [QueryInput[K]]): Queries[K];
+    getDMs(topicPattern?: RegExp): DirectMessageThread[];
+    subscribeDMs(listener: (threads: DirectMessageThread[]) => void): () => void;
+    subscribeDMs(topicPattern: RegExp, listener: (threads: DirectMessageThread[]) => void): () => void;
+    core: Core;
+  }
 }
