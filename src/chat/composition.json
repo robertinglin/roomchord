@@ -1,0 +1,117 @@
+{
+  "$schema": "roomkit-sdk/schemas/app-composition.schema.json",
+  "$imports": [
+    {
+      "path": "./model.json",
+      "into": "primaryPlugin.model"
+    },
+    {
+      "path": "./actions.json",
+      "into": "actions"
+    }
+  ],
+  "kind": "roomkit.app-composition.schema",
+  "schemaVersion": 1,
+  "app": {
+    "id": "com.roomkit.chord",
+    "version": "1.0.0",
+    "name": "Chord"
+  },
+  "primaryPlugin": {
+    "id": "com.roomkit.chord.plugin",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "key": "comments",
+      "id": "com.roomkit.examples.plugins.comments",
+      "version": "1.0.0",
+      "required": true
+    },
+    {
+      "key": "presence",
+      "id": "com.roomkit.examples.plugins.presence",
+      "version": "1.0.0",
+      "required": true
+    },
+    {
+      "key": "mediaRooms",
+      "id": "com.roomkit.examples.plugins.media-rooms",
+      "version": "1.0.0",
+      "required": true,
+      "config": {
+        "defaultRooms": [
+          {
+            "id": "general_voice",
+            "name": "General",
+            "group": "General",
+            "allowsVideo": true,
+            "scopeType": "channel",
+            "scopeId": "general"
+          }
+        ]
+      }
+    },
+    {
+      "key": "screenShare",
+      "id": "com.roomkit.examples.plugins.screen-share",
+      "version": "1.0.0",
+      "required": true
+    },
+    {
+      "key": "embeds",
+      "id": "com.roomkit.examples.plugins.embeds",
+      "version": "1.0.0",
+      "required": true
+    },
+    {
+      "key": "reactions",
+      "id": "com.roomkit.examples.plugins.reactions",
+      "version": "1.0.0",
+      "required": true
+    }
+  ],
+  "views": [
+    {
+      "name": "channelSummary",
+      "plugin": "primary",
+      "kind": "collection",
+      "query": "channelSummary",
+      "collection": "channels"
+    },
+    {
+      "name": "roomDirectory",
+      "plugin": "mediaRooms",
+      "query": "roomDirectory"
+    },
+    {
+      "name": "onlineMembers",
+      "plugin": "presence",
+      "query": "onlineMembers"
+    }
+  ],
+  "routes": [
+    {
+      "path": "/",
+      "component": "ChatRoomPage",
+      "requiredPlugins": [
+        "com.roomkit.chord.plugin"
+      ]
+    },
+    {
+      "path": "/dms",
+      "component": "DirectMessagesPage",
+      "requiredPlugins": [
+        "com.roomkit.chord.plugin"
+      ]
+    },
+    {
+      "path": "/rooms",
+      "component": "MediaRoomsPage",
+      "requiredPlugins": [
+        "com.roomkit.examples.plugins.media-rooms",
+        "com.roomkit.examples.plugins.screen-share"
+      ]
+    }
+  ]
+}

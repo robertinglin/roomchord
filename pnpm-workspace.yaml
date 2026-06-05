@@ -1,0 +1,7 @@
+packages:
+  - "."
+overrides:
+  roomkit-sdk: link:../roomkit/packages/roomkit-sdk
+allowBuilds:
+  esbuild: true
+  protobufjs: true

@@ -1,0 +1,464 @@
+{
+  "channelArchive": {
+    "plugin": "primary",
+    "type": "channel.archive"
+  },
+  "channelCreate": {
+    "plugin": "primary",
+    "type": "channel.create"
+  },
+  "channelRename": {
+    "plugin": "primary",
+    "type": "channel.rename"
+  },
+  "memberRoleAssign": {
+    "plugin": "primary",
+    "type": "member.role.assign"
+  },
+  "messageDelete": {
+    "plugin": "primary",
+    "type": "message.delete"
+  },
+  "messageEdit": {
+    "plugin": "primary",
+    "type": "message.edit"
+  },
+  "messagePin": {
+    "plugin": "primary",
+    "type": "message.pin"
+  },
+  "messageReact": {
+    "plugin": "primary",
+    "type": "message.react"
+  },
+  "messageReply": {
+    "plugin": "primary",
+    "type": "message.reply"
+  },
+  "messageSend": {
+    "plugin": "primary",
+    "type": "message.send"
+  },
+  "messageUnpin": {
+    "plugin": "primary",
+    "type": "message.unpin"
+  },
+  "roleArchive": {
+    "plugin": "primary",
+    "type": "role.archive"
+  },
+  "roleCreate": {
+    "plugin": "primary",
+    "type": "role.create"
+  },
+  "roleUpdate": {
+    "plugin": "primary",
+    "type": "role.update"
+  },
+  "commentsAdd": {
+    "plugin": "comments",
+    "type": "comments.add",
+    "payloadSchema": {
+      "required": [
+        "body"
+      ],
+      "optional": [
+        "threadId",
+        "scopeType",
+        "scopeId",
+        "parentId"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "commentsDelete": {
+    "plugin": "comments",
+    "type": "comments.delete",
+    "payloadSchema": {
+      "required": [
+        "commentId"
+      ],
+      "optional": [
+        "reason"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "commentsEdit": {
+    "plugin": "comments",
+    "type": "comments.edit",
+    "payloadSchema": {
+      "required": [
+        "commentId",
+        "body"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "commentsReact": {
+    "plugin": "comments",
+    "type": "comments.react",
+    "payloadSchema": {
+      "required": [
+        "commentId",
+        "emoji"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "commentsResolve": {
+    "plugin": "comments",
+    "type": "comments.resolve",
+    "payloadSchema": {
+      "required": [
+        "threadId"
+      ],
+      "optional": [
+        "resolved"
+      ],
+      "authorize": {
+        "roles": [
+          "moderator"
+        ]
+      }
+    }
+  },
+  "commentsThreadCreate": {
+    "plugin": "comments",
+    "type": "comments.thread.create",
+    "payloadSchema": {
+      "required": [
+        "scopeType",
+        "scopeId"
+      ],
+      "optional": [
+        "title",
+        "visibility"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "presenceClear": {
+    "plugin": "presence",
+    "type": "presence.clear",
+    "payloadSchema": {
+      "optional": [
+        "memberId"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "presencePing": {
+    "plugin": "presence",
+    "type": "presence.ping",
+    "payloadSchema": {
+      "optional": [
+        "status"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "presenceUpdate": {
+    "plugin": "presence",
+    "type": "presence.update",
+    "payloadSchema": {
+      "required": [
+        "status"
+      ],
+      "optional": [
+        "activity",
+        "location"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "mediaRoomArchive": {
+    "plugin": "mediaRooms",
+    "type": "media.room.archive",
+    "payloadSchema": {
+      "required": {
+        "roomId": {
+          "type": "string",
+          "max": 200
+        }
+      },
+      "authorize": {
+        "roles": [
+          "moderator"
+        ]
+      }
+    }
+  },
+  "mediaRoomCreate": {
+    "plugin": "mediaRooms",
+    "type": "media.room.create",
+    "payloadSchema": {
+      "required": {
+        "name": {
+          "type": "string",
+          "max": 100
+        }
+      },
+      "optional": {
+        "allowsVideo": {
+          "type": "boolean",
+          "default": true
+        },
+        "group": {
+          "type": "string",
+          "max": 80,
+          "nullable": true,
+          "nonEmpty": false
+        },
+        "scopeType": {
+          "type": "string",
+          "max": 80
+        },
+        "scopeId": {
+          "type": "string",
+          "max": 160
+        },
+        "roleAccess": {
+          "type": "record",
+          "values": {
+            "type": "enum",
+            "values": [
+              "editor",
+              "readonly"
+            ]
+          }
+        }
+      },
+      "authorize": {
+        "roles": [
+          "moderator"
+        ]
+      }
+    }
+  },
+  "mediaRoomJoin": {
+    "plugin": "mediaRooms",
+    "type": "media.room.join",
+    "payloadSchema": {
+      "required": {
+        "roomId": {
+          "type": "string",
+          "max": 200
+        }
+      },
+      "optional": {
+        "media": {
+          "type": "object",
+          "required": {},
+          "optional": {
+            "audio": {
+              "type": "boolean",
+              "default": true
+            },
+            "video": {
+              "type": "boolean",
+              "default": false
+            },
+            "screen": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "additional": false
+        }
+      },
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "mediaRoomLeave": {
+    "plugin": "mediaRooms",
+    "type": "media.room.leave",
+    "payloadSchema": {
+      "required": {
+        "roomId": {
+          "type": "string",
+          "max": 200
+        }
+      },
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "mediaRoomUpdate": {
+    "plugin": "mediaRooms",
+    "type": "media.room.update",
+    "payloadSchema": {
+      "required": {
+        "roomId": {
+          "type": "string",
+          "max": 200
+        }
+      },
+      "optional": {
+        "locked": {
+          "type": "boolean"
+        },
+        "allowsVideo": {
+          "type": "boolean"
+        },
+        "spotlightMemberId": {
+          "type": "string",
+          "max": 120
+        },
+        "name": {
+          "type": "string",
+          "max": 100
+        },
+        "group": {
+          "type": "string",
+          "max": 80,
+          "nullable": true,
+          "nonEmpty": false
+        },
+        "roleAccess": {
+          "type": "record",
+          "values": {
+            "type": "enum",
+            "values": [
+              "editor",
+              "readonly"
+            ]
+          }
+        }
+      },
+      "authorize": {
+        "roles": [
+          "moderator"
+        ]
+      }
+    }
+  },
+  "screenshareStart": {
+    "plugin": "screenShare",
+    "type": "screenshare.start",
+    "payloadSchema": {
+      "required": [
+        "scopeType",
+        "scopeId"
+      ],
+      "optional": [
+        "roomId",
+        "title"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "screenshareStop": {
+    "plugin": "screenShare",
+    "type": "screenshare.stop",
+    "payloadSchema": {
+      "required": [
+        "shareId"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "embedAdd": {
+    "plugin": "embeds",
+    "type": "embed.add",
+    "payloadSchema": {
+      "required": [
+        "scopeType",
+        "scopeId",
+        "url"
+      ],
+      "optional": [
+        "title",
+        "provider",
+        "note"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "embedRemove": {
+    "plugin": "embeds",
+    "type": "embed.remove",
+    "payloadSchema": {
+      "required": [
+        "embedId"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "reactionToggle": {
+    "plugin": "reactions",
+    "type": "reaction.toggle",
+    "payloadSchema": {
+      "required": [
+        "scopeType",
+        "scopeId",
+        "emoji"
+      ],
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      }
+    }
+  },
+  "directMessageSend": {
+    "plugin": "core",
+    "type": "dm.message",
+    "requiredRole": "member"
+  }
+}

@@ -1,0 +1,640 @@
+{
+  "kind": "roomkit.primary-model.schema",
+  "schemaVersion": 1,
+  "state": {
+    "initial": {
+      "channels": [
+        {
+          "id": "general",
+          "name": "general",
+          "topic": "Room coordination",
+          "group": "General",
+          "createdAt": 0,
+          "createdBy": "system",
+          "archivedAt": null
+        }
+      ],
+      "messages": {},
+      "memberRoles": {},
+      "roleDefinitions": {
+        "guest": {
+          "id": "guest",
+          "name": "Guest",
+          "description": "Can view public room activity",
+          "color": "#6b7280",
+          "rank": 0,
+          "systemRole": true,
+          "archivedAt": null
+        },
+        "member": {
+          "id": "member",
+          "name": "Member",
+          "description": "Can send messages and join voice channels",
+          "color": "#22c55e",
+          "rank": 1,
+          "systemRole": true,
+          "archivedAt": null
+        },
+        "moderator": {
+          "id": "moderator",
+          "name": "Moderator",
+          "description": "Can manage channels, messages, and voice channels",
+          "color": "#38bdf8",
+          "rank": 2,
+          "systemRole": true,
+          "archivedAt": null
+        },
+        "admin": {
+          "id": "admin",
+          "name": "Admin",
+          "description": "Can create channels and manage roles",
+          "color": "#a78bfa",
+          "rank": 3,
+          "systemRole": true,
+          "archivedAt": null
+        },
+        "owner": {
+          "id": "owner",
+          "name": "Owner",
+          "description": "Full room ownership",
+          "color": "#f59e0b",
+          "rank": 4,
+          "systemRole": true,
+          "archivedAt": null
+        }
+      },
+      "activity": []
+    }
+  },
+  "operations": {
+    "channel.create": {
+      "authorize": {
+        "roles": [
+          "admin"
+        ]
+      },
+      "payload": {
+        "required": {
+          "name": {
+            "type": "string",
+            "max": 80
+          }
+        },
+        "optional": {
+          "topic": {
+            "type": "string",
+            "max": 240,
+            "nullable": true
+          },
+          "group": {
+            "type": "string",
+            "max": 80,
+            "nullable": true
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "createRecord",
+          "collection": "channels",
+          "storage": "array",
+          "idPrefix": "channel",
+          "fields": {
+            "name": "$payload.name",
+            "topic": "$payload.topic",
+            "group": "$payload.group",
+            "createdAt": "$createdAt",
+            "createdBy": "$actor.memberId",
+            "archivedAt": null
+          },
+          "activity": "created channel"
+        }
+      ]
+    },
+    "channel.rename": {
+      "authorize": {
+        "roles": [
+          "moderator"
+        ]
+      },
+      "payload": {
+        "required": {
+          "channelId": {
+            "type": "string",
+            "max": 200
+          }
+        },
+        "optional": {
+          "name": {
+            "type": "string",
+            "max": 80,
+            "nullable": true
+          },
+          "topic": {
+            "type": "string",
+            "max": 240,
+            "nullable": true
+          },
+          "group": {
+            "type": "string",
+            "max": 80,
+            "nullable": true
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "updateRecord",
+          "collection": "channels",
+          "storage": "array",
+          "idField": "channelId",
+          "fields": {
+            "name": "$payload.name",
+            "topic": "$payload.topic",
+            "group": "$payload.group",
+            "updatedAt": "$createdAt"
+          },
+          "activity": "updated record"
+        }
+      ]
+    },
+    "channel.archive": {
+      "authorize": {
+        "roles": [
+          "moderator"
+        ]
+      },
+      "payload": {
+        "required": {
+          "channelId": {
+            "type": "string",
+            "max": 200
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "markRecord",
+          "collection": "channels",
+          "storage": "array",
+          "idField": "channelId",
+          "fields": {
+            "archivedAt": "$createdAt"
+          },
+          "activity": "marked record"
+        }
+      ]
+    },
+    "message.send": {
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      },
+      "payload": {
+        "required": {
+          "channelId": {
+            "type": "string",
+            "max": 200
+          },
+          "body": {
+            "type": "string",
+            "max": 4000
+          }
+        },
+        "optional": {
+          "embeds": {
+            "type": "array"
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "createRecord",
+          "collection": "messages",
+          "storage": "map",
+          "idPrefix": "message",
+          "fields": {
+            "channelId": "$payload.channelId",
+            "body": "$payload.body",
+            "authorId": "$actor.memberId",
+            "createdAt": "$createdAt",
+            "editedAt": null,
+            "deletedAt": null,
+            "pinnedAt": null,
+            "reactions": {},
+            "embeds": "$payload.embeds"
+          },
+          "activity": "created message"
+        }
+      ]
+    },
+    "message.reply": {
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      },
+      "payload": {
+        "required": {
+          "channelId": {
+            "type": "string",
+            "max": 200
+          },
+          "replyToId": {
+            "type": "string",
+            "max": 200
+          },
+          "body": {
+            "type": "string",
+            "max": 4000
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "createRecord",
+          "collection": "messages",
+          "storage": "map",
+          "idPrefix": "message",
+          "fields": {
+            "channelId": "$payload.channelId",
+            "replyToId": "$payload.replyToId",
+            "body": "$payload.body",
+            "authorId": "$actor.memberId",
+            "createdAt": "$createdAt",
+            "reactions": {}
+          },
+          "activity": "created message"
+        }
+      ]
+    },
+    "message.edit": {
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      },
+      "payload": {
+        "required": {
+          "messageId": {
+            "type": "string",
+            "max": 200
+          },
+          "body": {
+            "type": "string",
+            "max": 4000
+          }
+        },
+        "optional": {
+          "embeds": {
+            "type": "array"
+          }
+        }
+      },
+      "guards": [
+        {
+          "kind": "recordOwnerOrRole",
+          "collection": "messages",
+          "storage": "map",
+          "idField": "messageId",
+          "ownerField": "authorId",
+          "roles": [],
+          "message": "Only message authors can edit messages."
+        },
+        {
+          "kind": "recordFlagClear",
+          "collection": "messages",
+          "storage": "map",
+          "idField": "messageId",
+          "flag": "deletedAt",
+          "message": "Deleted messages cannot be edited."
+        }
+      ],
+      "effects": [
+        {
+          "kind": "updateRecord",
+          "collection": "messages",
+          "storage": "map",
+          "idField": "messageId",
+          "fields": {
+            "body": "$payload.body",
+            "editedAt": "$createdAt",
+            "embeds": "$payload.embeds"
+          },
+          "activity": "updated record"
+        }
+      ]
+    },
+    "message.react": {
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      },
+      "payload": {
+        "required": {
+          "messageId": {
+            "type": "string",
+            "max": 200
+          },
+          "emoji": {
+            "type": "string",
+            "max": 64
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "toggleReaction",
+          "collection": "messages",
+          "storage": "map",
+          "idField": "messageId",
+          "emojiField": "emoji"
+        }
+      ]
+    },
+    "message.pin": {
+      "authorize": {
+        "roles": [
+          "moderator"
+        ]
+      },
+      "payload": {
+        "required": {
+          "messageId": {
+            "type": "string",
+            "max": 200
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "markRecord",
+          "collection": "messages",
+          "storage": "map",
+          "idField": "messageId",
+          "fields": {
+            "pinnedAt": "$createdAt",
+            "pinnedBy": "$actor.memberId"
+          },
+          "activity": "marked record"
+        }
+      ]
+    },
+    "message.unpin": {
+      "authorize": {
+        "roles": [
+          "moderator"
+        ]
+      },
+      "payload": {
+        "required": {
+          "messageId": {
+            "type": "string",
+            "max": 200
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "markRecord",
+          "collection": "messages",
+          "storage": "map",
+          "idField": "messageId",
+          "fields": {
+            "pinnedAt": null,
+            "pinnedBy": null
+          },
+          "activity": "marked record"
+        }
+      ]
+    },
+    "message.delete": {
+      "authorize": {
+        "roles": [
+          "member"
+        ]
+      },
+      "payload": {
+        "required": {
+          "messageId": {
+            "type": "string",
+            "max": 200
+          }
+        }
+      },
+      "guards": [
+        {
+          "kind": "recordOwnerOrRole",
+          "collection": "messages",
+          "storage": "map",
+          "idField": "messageId",
+          "ownerField": "authorId",
+          "roles": [
+            "moderator"
+          ],
+          "message": "Only message authors or moderators can delete messages."
+        }
+      ],
+      "effects": [
+        {
+          "kind": "markRecord",
+          "collection": "messages",
+          "storage": "map",
+          "idField": "messageId",
+          "fields": {
+            "body": "",
+            "embeds": [],
+            "reactions": {},
+            "pinnedAt": null,
+            "pinnedBy": null,
+            "deletedAt": "$createdAt",
+            "deletedBy": "$actor.memberId"
+          },
+          "activity": "marked record"
+        }
+      ]
+    },
+    "role.create": {
+      "authorize": {
+        "roles": [
+          "admin"
+        ]
+      },
+      "payload": {
+        "required": {
+          "roleId": {
+            "type": "string",
+            "max": 80
+          },
+          "name": {
+            "type": "string",
+            "max": 80
+          }
+        },
+        "optional": {
+          "description": {
+            "type": "string",
+            "max": 240,
+            "nullable": true
+          },
+          "color": {
+            "type": "string",
+            "max": 40,
+            "nullable": true
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "createRecord",
+          "collection": "roleDefinitions",
+          "storage": "map",
+          "idField": "roleId",
+          "fields": {
+            "name": "$payload.name",
+            "description": "$payload.description",
+            "color": "$payload.color",
+            "rank": 1,
+            "systemRole": false,
+            "createdBy": "$actor.memberId",
+            "createdAt": "$createdAt",
+            "archivedAt": null
+          },
+          "activity": "created role"
+        }
+      ]
+    },
+    "role.update": {
+      "authorize": {
+        "roles": [
+          "admin"
+        ]
+      },
+      "payload": {
+        "required": {
+          "roleId": {
+            "type": "string",
+            "max": 80
+          }
+        },
+        "optional": {
+          "name": {
+            "type": "string",
+            "max": 80,
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "max": 240,
+            "nullable": true
+          },
+          "color": {
+            "type": "string",
+            "max": 40,
+            "nullable": true
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "updateRecord",
+          "collection": "roleDefinitions",
+          "storage": "map",
+          "idField": "roleId",
+          "fields": {
+            "name": "$payload.name",
+            "description": "$payload.description",
+            "color": "$payload.color",
+            "updatedAt": "$createdAt",
+            "updatedBy": "$actor.memberId"
+          },
+          "activity": "updated role",
+          "recordLabel": "Role"
+        }
+      ]
+    },
+    "role.archive": {
+      "authorize": {
+        "roles": [
+          "admin"
+        ]
+      },
+      "payload": {
+        "required": {
+          "roleId": {
+            "type": "string",
+            "max": 80
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "markRecord",
+          "collection": "roleDefinitions",
+          "storage": "map",
+          "idField": "roleId",
+          "fields": {
+            "archivedAt": "$createdAt",
+            "archivedBy": "$actor.memberId"
+          },
+          "activity": "archived role",
+          "recordLabel": "Role"
+        }
+      ]
+    },
+    "member.role.assign": {
+      "authorize": {
+        "roles": [
+          "admin"
+        ]
+      },
+      "payload": {
+        "required": {
+          "memberId": {
+            "type": "string",
+            "max": 120
+          }
+        },
+        "optional": {
+          "roleId": {
+            "type": "string",
+            "max": 80,
+            "nullable": true
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "max": 80
+            }
+          },
+          "displayName": {
+            "type": "string",
+            "max": 120,
+            "nullable": true
+          }
+        }
+      },
+      "effects": [
+        {
+          "kind": "createRecord",
+          "collection": "memberRoles",
+          "storage": "map",
+          "idField": "memberId",
+          "fields": {
+            "memberId": "$payload.memberId",
+            "roleId": "$payload.roleId",
+            "roleIds": "$payload.roleIds",
+            "displayName": "$payload.displayName",
+            "assignedBy": "$actor.memberId",
+            "assignedAt": "$createdAt"
+          },
+          "activity": "assigned role"
+        }
+      ]
+    }
+  },
+  "views": {}
+}
