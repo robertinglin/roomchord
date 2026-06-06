@@ -77,6 +77,8 @@ test("Chat exports schema-only RoomKit manifests", () => {
   assert.equal(typeof app.appPack.composition.primaryPlugin.model, "object");
   assert.equal(app.roomkitApp.roomkit.bridgeGlobalName, "ROOMKIT_CHORD_HOST");
   assert.equal(app.roomkitApp.roomkit.frontendProjection, "chat");
+  assert.equal(app.roomkitApp.frontend.backgroundColor, "oklch(0.205 0.008 260)");
+  assert.deepEqual(app.roomkitApp.frontend.icon, { path: "src/chord-icon.svg" });
 });
 
 test("Chat primary plugin runs through trusted schema interpreter", async () => {

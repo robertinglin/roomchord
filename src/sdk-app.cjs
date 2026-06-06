@@ -176,6 +176,8 @@ const app = defineApp({
   exportPrefix: "chord",
   constantPrefix: "CHORD",
   frontend: {
+    backgroundColor: "oklch(0.205 0.008 260)",
+    icon: "src/chord-icon.svg",
     port: 42732,
     devEntry: "src/index.tsx",
     builtEntry: "roomkit-chord.js",

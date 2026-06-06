@@ -2,7 +2,7 @@
 
 Discord-style collaboration room with text channels, threaded replies, reactions, pins, edits/deletes, moderator controls, core RoomKit direct messages, presence, camera-capable media rooms, and screen-share state.
 
-This example has three layers:
+This example has three runtime areas:
 
 1. `src/index.cjs` exports the app pack, host plugin, player pack, player actions, replayable demo scenario, and summary helpers.
 2. `src/preview.mjs` exports browser-safe fixture data and preview summaries.
@@ -35,3 +35,16 @@ pnpm exec roomkit . test-chord --serve dev
 ```
 
 This app links the local `roomkit-sdk` from `../roomkit/packages/roomkit-sdk` during development. RoomKit APIs are imported through `roomkit-sdk` only.
+
+## Frontend Architecture
+
+`frontend/src` uses Feature-Sliced Design:
+
+- `app` for bootstrapping, global styles, and app-level types.
+- `pages` for route-level chat composition.
+- `widgets` for the chat shell.
+- `features` for interactive chat capabilities.
+- `entities` for chat state, actions, business types, and RoomKit client hooks.
+- `shared` for reusable UI, shims, and test setup.
+
+Run `pnpm run check` to validate TypeScript and dependency-cruiser FSD boundaries. Lower layers may not import higher layers, and slices inside the same layer are isolated from sibling slices.
