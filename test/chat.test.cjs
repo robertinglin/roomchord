@@ -103,13 +103,13 @@ test("Chat generated TypeScript contract stays flattened across SDK export helpe
     sdkApp.toTypes(),
     exports.generatedTypes,
     exports.roomkitApp.types.declaration,
-    exports.roomkitApp.artifacts.types,
-    bundle.types.declaration,
-    bundle.artifacts.types
+    exports.roomkitApp.artifacts.types
   ]) {
     assertCleanChordTypes(types);
   }
 
+  assert.equal("types" in bundle, false);
+  assert.equal("types" in bundle.artifacts, false);
   assert.equal(sdkApp.toJSON().kind, "roomkit.app-composition.schema");
   assert.deepEqual(Object.keys(sdkApp.toJSONFragments()).sort(), ["actions", "composition", "model"]);
 });
@@ -119,9 +119,10 @@ test("Chat emit writes flattened TypeScript contract artifacts", () => {
   const bundleOut = sdkApp.emitRoomKitBundle({ outDir });
   const emittedBundle = JSON.parse(fs.readFileSync(bundleOut.bundlePath, "utf8"));
 
-  assertCleanChordTypes(bundleOut.bundle.types.declaration);
-  assertCleanChordTypes(emittedBundle.types.declaration);
-  assertCleanChordTypes(emittedBundle.artifacts.types);
+  assert.equal("types" in bundleOut.bundle, false);
+  assert.equal("types" in bundleOut.bundle.artifacts, false);
+  assert.equal("types" in emittedBundle, false);
+  assert.equal("types" in emittedBundle.artifacts, false);
 
   const emitOut = sdkApp.emit({ outDir: path.join(outDir, "chat"), typesFile: "../types.d.ts" });
   assertCleanChordTypes(fs.readFileSync(emitOut.typesPath, "utf8"));
