@@ -2,11 +2,11 @@ import { roomkitDisplayName } from "roomkit-sdk/browser/displayName";
 import type { Actor, MediaRoom, MemberRoleAssignment, Presence, RoleDefinition, RoomMember, RoomRoleAccessLevel } from "@entities/chat/model/types";
 
 export const DEFAULT_ROLES: Record<string, RoleDefinition> = {
-  guest: { id: "guest", name: "Guest", description: "Read-only access", color: "#6b7280", rank: 0, systemRole: true },
-  member: { id: "member", name: "Member", description: "Messages and voice joins", color: "#22c55e", rank: 1, systemRole: true },
-  moderator: { id: "moderator", name: "Moderator", description: "Channel, message, and voice settings", color: "#38bdf8", rank: 2, systemRole: true },
-  admin: { id: "admin", name: "Admin", description: "Channel creation and role management", color: "#a78bfa", rank: 3, systemRole: true },
-  owner: { id: "owner", name: "Owner", description: "Full room ownership", color: "#f59e0b", rank: 4, systemRole: true }
+  guest: { id: "guest", name: "Guest", description: "Read-only access", color: "#6b7280", rank: 0, systemRole: true, archivedAt: null },
+  member: { id: "member", name: "Member", description: "Messages and voice joins", color: "#22c55e", rank: 1, systemRole: true, archivedAt: null },
+  moderator: { id: "moderator", name: "Moderator", description: "Channel, message, and voice settings", color: "#38bdf8", rank: 2, systemRole: true, archivedAt: null },
+  admin: { id: "admin", name: "Admin", description: "Channel creation and role management", color: "#a78bfa", rank: 3, systemRole: true, archivedAt: null },
+  owner: { id: "owner", name: "Owner", description: "Full room ownership", color: "#f59e0b", rank: 4, systemRole: true, archivedAt: null }
 };
 
 export type MemberOption = {

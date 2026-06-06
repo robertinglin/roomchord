@@ -24,7 +24,6 @@ export namespace Chord {
   export type RoleAccessGrant = "editor" | "readonly";
   export type RoomRoleAccess = Record<RoleId, RoleAccessGrant>;
   export type AccessLevel = "hidden" | RoleAccessGrant;
-  export type ScopedRole = "none" | "viewer" | "editor" | "moderator" | "admin" | "owner";
   export type PresenceStatus = "online" | "idle" | "dnd" | "offline" | (string & {});
   export interface MediaFlags { audio?: boolean; video?: boolean; screen?: boolean; }
   export interface MessageEmbed { id?: EmbedId; url: string; provider?: string; kind?: string; title?: string; thumbnailUrl?: string; renderMode?: string; }
@@ -95,35 +94,11 @@ export namespace Chord {
     updatedAt?: number;
     updatedBy?: MemberId;
   }
-  export interface CommentsPluginState {
-    activity: Activity[];
-    comments: Record<CommentId, Comment>;
-    threads: Record<ThreadId, CommentThread>;
-  }
-  export interface PresencePluginState {
-    activity: Activity[];
-    members: Record<MemberId, PresenceMember>;
-  }
-  export interface MediaRoomsPluginState {
-    activity: Activity[];
-    rooms: Record<RoomId, MediaRoom>;
-  }
-  export interface ScreenSharePluginState {
-    activity: Activity[];
-    shares: Record<ShareId, ScreenShare>;
-  }
-  export interface EmbedsPluginState {
-    activity: Activity[];
-    embeds: Record<EmbedId, Embed>;
-  }
-  export interface ReactionsPluginState {
-    activity: Activity[];
-    reactions: Record<string, ScopedReaction>;
-  }
   export interface State {
     activity: Activity[];
     channels: Channel[];
-    comments: CommentsPluginState;
+    comments: Record<CommentId, Comment>;
+    commentThreads: Record<ThreadId, CommentThread>;
     directMessages: Record<MessageId, DirectMessage>;
     directThreads: Record<ThreadId, DirectThread>;
     embeds: Record<EmbedId, Embed>;

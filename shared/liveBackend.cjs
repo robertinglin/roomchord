@@ -260,7 +260,8 @@ function projectStateForFrontend(app, runtimeState) {
   if (reactions?.reactions) projected.reactions = clone(reactions.reactions);
 
   if (lowerId.includes('chat')) {
-    projected.comments = clone(comments || { threads: {}, comments: {}, activity: [] });
+    projected.commentThreads = clone(comments?.threads || {});
+    projected.comments = clone(comments?.comments || {});
     projected.embeds = clone(embeds?.embeds || {});
     projected.reactions = clone(reactions?.reactions || {});
     projected.members = publicMembersView(runtimeState?.members || {});

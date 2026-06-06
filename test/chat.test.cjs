@@ -15,6 +15,7 @@ const {
   ensureOperationIdentity
 } = require("roomkit-sdk");
 const { createLiveExampleBackend } = require("../shared/liveBackend.cjs");
+const sdkApp = require("../src/sdk-app.cjs");
 const app = require("../src/index.cjs");
 
 function primaryAction(type) {
@@ -64,6 +65,13 @@ async function runtime() {
   return rt;
 }
 
+function assertCleanChordTypes(types) {
+  assert.equal(types.includes("ScopedRole"), false);
+  assert.equal(types.includes("PluginState"), false);
+  assert.match(types, /commentThreads: Record<ThreadId, CommentThread>;/);
+  assert.match(types, /comments: Record<CommentId, Comment>;/);
+}
+
 test("Chat exports schema-only RoomKit manifests", () => {
   assert.equal(validateAppPackManifest(app.appPack).id, app.CHORD_APP_ID);
   assert.equal(validateHostPackManifest(app.hostPack).appPackId, app.appPack.id);
@@ -79,6 +87,44 @@ test("Chat exports schema-only RoomKit manifests", () => {
   assert.equal(app.roomkitApp.roomkit.frontendProjection, "chat");
   assert.equal(app.roomkitApp.frontend.backgroundColor, "oklch(0.205 0.008 260)");
   assert.deepEqual(app.roomkitApp.frontend.icon, { path: "src/chord-icon.svg" });
+});
+
+test("Chat generated TypeScript contract stays flattened across SDK export helpers", () => {
+  const checkedInTypes = fs.readFileSync(path.join(__dirname, "..", "src", "types.d.ts"), "utf8");
+  const exports = sdkApp.toRoomKitExports();
+  const bundle = sdkApp.toRoomKitBundle();
+
+  for (const types of [
+    checkedInTypes,
+    app.generatedTypes,
+    app.schemaArtifacts.types,
+    app.roomkitApp.types.declaration,
+    app.roomkitApp.artifacts.types,
+    sdkApp.toTypes(),
+    exports.generatedTypes,
+    exports.roomkitApp.types.declaration,
+    exports.roomkitApp.artifacts.types,
+    bundle.types.declaration,
+    bundle.artifacts.types
+  ]) {
+    assertCleanChordTypes(types);
+  }
+
+  assert.equal(sdkApp.toJSON().kind, "roomkit.app-composition.schema");
+  assert.deepEqual(Object.keys(sdkApp.toJSONFragments()).sort(), ["actions", "composition", "model"]);
+});
+
+test("Chat emit writes flattened TypeScript contract artifacts", () => {
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "roomkit-chord-emit-"));
+  const bundleOut = sdkApp.emitRoomKitBundle({ outDir });
+  const emittedBundle = JSON.parse(fs.readFileSync(bundleOut.bundlePath, "utf8"));
+
+  assertCleanChordTypes(bundleOut.bundle.types.declaration);
+  assertCleanChordTypes(emittedBundle.types.declaration);
+  assertCleanChordTypes(emittedBundle.artifacts.types);
+
+  const emitOut = sdkApp.emit({ outDir: path.join(outDir, "chat"), typesFile: "../types.d.ts" });
+  assertCleanChordTypes(fs.readFileSync(emitOut.typesPath, "utf8"));
 });
 
 test("Chat primary plugin runs through trusted schema interpreter", async () => {

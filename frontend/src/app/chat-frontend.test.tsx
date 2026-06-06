@@ -31,7 +31,8 @@ const state: ChatState = {
     lee: { memberId: "lee", name: "Lee", status: "online", activity: "available", updatedAt: 1 }
   },
   activity: [],
-  comments: { threads: {}, comments: {}, activity: [] },
+  commentThreads: {},
+  comments: {},
   embeds: {},
   reactions: {}
 };

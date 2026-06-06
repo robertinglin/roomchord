@@ -13,7 +13,8 @@ export function emptyChatState(): ChatState {
     members: {},
     presence: {},
     activity: [],
-    comments: { threads: {}, comments: {}, activity: [] },
+    commentThreads: {},
+    comments: {},
     embeds: {},
     reactions: {},
     roleDefinitions: {},
@@ -98,7 +99,7 @@ export function channelEmbeds(state: ChatState, channelId?: string): ChatEmbed[]
 
 export function channelThreads(state: ChatState, channelId?: string): CommentThread[] {
   if (!channelId) return [];
-  return Object.values(state.comments?.threads || {})
+  return Object.values(state.commentThreads || {})
     .filter((thread) => thread.scopeType === "channel" && thread.scopeId === channelId)
     .sort((left, right) => (right.lastCommentAt || right.createdAt || 0) - (left.lastCommentAt || left.createdAt || 0));
 }

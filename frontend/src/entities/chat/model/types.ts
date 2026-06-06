@@ -17,39 +17,24 @@ export type Message = (Chord.Message | Chord.DirectMessage) & {
 export type DirectThread = Chord.DirectThread;
 export type DirectMessageThread = Chord.DirectMessageThread;
 
-export type MediaRoomParticipant = Partial<Chord.MediaRoomParticipant>;
-export type MediaRoom = Omit<Partial<Chord.MediaRoom>, "participants" | "roleAccess"> & {
-  id: string;
-  name: string;
+export type MediaRoomParticipant = Chord.MediaRoomParticipant;
+export type MediaRoom = Omit<Chord.MediaRoom, "participants"> & {
   participants?: Record<string, MediaRoomParticipant> | string[];
-  roleAccess?: RoomRoleAccess;
 };
 
-export type ScreenShare = Partial<Chord.ScreenShare> & {
-  id: string;
+export type ScreenShare = Chord.ScreenShare & {
   ownerId?: string;
   ownerName?: string;
 };
 
-export type Presence = Partial<Chord.PresenceMember> & {
-  status: Chord.PresenceStatus;
-} & AvatarSource;
+export type Presence = Chord.PresenceMember & AvatarSource;
 
-export type ChatEmbed = Partial<Chord.Embed> & { id: string };
-export type CommentThread = Partial<Chord.CommentThread> & { id: string };
-export type ThreadComment = Omit<Partial<Chord.Comment>, "reactions"> & {
-  id: string;
-  threadId: string;
-  body: string;
-  reactions?: Chord.Reactions;
-};
-export type CommentsState = Omit<Chord.CommentsPluginState, "threads" | "comments"> & {
-  threads: Record<string, CommentThread>;
-  comments: Record<string, ThreadComment>;
-};
-export type ScopedReaction = Partial<Chord.ScopedReaction>;
-export type RoleDefinition = Partial<Chord.RoleDefinition> & { id: string; name: string };
-export type MemberRoleAssignment = Partial<Chord.MemberRole> & { memberId: string };
+export type ChatEmbed = Chord.Embed;
+export type CommentThread = Chord.CommentThread;
+export type ThreadComment = Chord.Comment;
+export type ScopedReaction = Chord.ScopedReaction;
+export type RoleDefinition = Chord.RoleDefinition;
+export type MemberRoleAssignment = Chord.MemberRole;
 
 export type ChatState = Chord.State;
 
