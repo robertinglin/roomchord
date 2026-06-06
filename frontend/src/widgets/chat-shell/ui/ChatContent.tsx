@@ -54,7 +54,7 @@ export function ChatContent() {
       onDelete={view.showingDm ? undefined : actions.deleteMessage}
       onEdit={view.showingDm ? undefined : actions.editMessage}
       onDirectMessage={actions.openDirectThreadForMember}
-      canDeleteMessage={(message) => canDeleteMessage(live.actor, message)}
+      canDeleteMessage={(message) => canDeleteMessage(live.actor, message, live.can("messagePin"))}
       canEditMessage={(message) => isMessageAuthor(live.actor, message)}
     />
   );

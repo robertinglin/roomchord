@@ -1,6 +1,6 @@
 import { roomkitDisplayName } from "roomkit-sdk/browser/displayName";
 import { parseRoomkitMarkdown, type RoomkitMarkdownEmbed } from "roomkit-sdk/browser/markdown";
-import type { Actor, AvatarSource, ChatState, DirectThread, Message, RoomMember } from "@entities/chat/model/types";
+import type { Actor, AvatarSource, ChatState, DirectThread, MemberId, Message, MessageId, RoomMember, ThreadId } from "@entities/chat/model/types";
 import {
   CHAT_DIRECT_PROTOCOL,
   channelEmbeds,
@@ -16,8 +16,6 @@ import type { MessageForwardTarget } from "@entities/chat/model/messageForwardin
 export type LinkedMessageLocation =
   | { messageId: string; view: "channel"; channelId: string }
   | { messageId: string; view: "dm"; threadId: string };
-
-const ROOM_ROLE_RANKS: Record<string, number> = { guest: 0, member: 1, user: 1, moderator: 2, admin: 3, owner: 4 };
 
 export function currentHash() {
   return typeof window === "undefined" ? "" : window.location.hash;
@@ -39,11 +37,11 @@ export function messageEmbeds(body: string): RoomkitMarkdownEmbed[] {
 export function linkedMessageLocation(state: ChatState, hash: string, messageIdFromHash: (hash: string) => string | undefined): LinkedMessageLocation | undefined {
   const messageId = messageIdFromHash(hash);
   if (!messageId) return undefined;
-  const channelMessage = state.messages?.[messageId];
+  const channelMessage = state.messages?.[messageId as MessageId];
   if (channelMessage?.channelId && !channelMessage.deletedAt) {
     return { messageId, view: "channel", channelId: channelMessage.channelId };
   }
-  const directMessage = state.directMessages?.[messageId];
+  const directMessage = state.directMessages?.[messageId as MessageId];
   if (directMessage?.threadId && !directMessage.deletedAt && isCoreDirectMessage(directMessage)) {
     return { messageId, view: "dm", threadId: directMessage.threadId };
   }
@@ -62,7 +60,7 @@ export function memberNamesForState(state: ChatState, actor: Actor): Record<stri
   }
   for (const [key, item] of Object.entries(state.presence || {})) {
     const id = item.memberId || key;
-    if (id) names[id] = roomkitDisplayName({ presence: item, member: state.members?.[id], fallback: names[id], fallbackId: id });
+    if (id) names[id] = roomkitDisplayName({ presence: item, member: state.members?.[id as MemberId], fallback: names[id], fallbackId: id });
   }
   names[actor.memberId] = roomkitDisplayName({ actor, fallback: names[actor.memberId], fallbackId: actor.memberId });
   return names;
@@ -93,28 +91,12 @@ export function memberAvatarsForState(state: ChatState, actor: Actor): Record<st
   return avatars;
 }
 
-function roomRoleRank(role: string) {
-  return ROOM_ROLE_RANKS[role] ?? ROOM_ROLE_RANKS.guest;
-}
-
-export function canManageRooms(role: string) {
-  return roomRoleRank(role) >= ROOM_ROLE_RANKS.moderator;
-}
-
-export function canCreateChannels(role: string) {
-  return roomRoleRank(role) >= ROOM_ROLE_RANKS.admin;
-}
-
-export function canManageRoles(role: string) {
-  return roomRoleRank(role) >= ROOM_ROLE_RANKS.admin;
-}
-
 export function isMessageAuthor(actor: Actor, message: Message) {
   return Boolean(message.authorId && message.authorId === actor.memberId);
 }
 
-export function canDeleteMessage(actor: Actor, message: Message) {
-  return isMessageAuthor(actor, message) || canManageRooms(actor.role);
+export function canDeleteMessage(actor: Actor, message: Message, canManageMessages: boolean) {
+  return isMessageAuthor(actor, message) || canManageMessages;
 }
 
 export function hasDirectMessages(state: ChatState, threadId: string) {
@@ -136,9 +118,9 @@ export function draftDirectThreadForUsers(actorId: string, userIds: string[]): D
   const participants = normalizeUserIds([actorId, ...targetUserIds]);
   if (participants.length < 2) return undefined;
   return {
-    id: directThreadIdForUsers(participants),
+    id: directThreadIdForUsers(participants) as ThreadId,
     protocol: CHAT_DIRECT_PROTOCOL,
-    userIds: participants,
+    userIds: participants as MemberId[],
     topic: null,
     createdAt: 0,
     archivedAt: null

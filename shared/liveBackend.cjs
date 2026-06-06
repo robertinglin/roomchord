@@ -429,7 +429,16 @@ async function createLiveExampleBackend(options = {}) {
     seq += 1;
     const operation = operationFromDraft(app, roomId, draft, seq, Date.now());
     const result = await runtime.handleOperation(operation);
-    if (!result.ok) return { ok: false, reason: result.reason || result.error || 'Operation rejected', state: await projectedState(operation.actor), operation };
+    if (!result.ok) {
+      return {
+        ok: false,
+        code: result.code,
+        field: result.field,
+        reason: result.reason || result.error || 'Operation rejected',
+        state: await projectedState(operation.actor),
+        operation
+      };
+    }
     operations.push(operation);
     savePersisted(persistedFile, operations);
     return { ok: true, state: await projectedState(operation.actor), operation };

@@ -87,6 +87,17 @@ const sdkRawVoiceTestAudioConstraints = {
   sampleRate: 48000
 };
 
+const testAppMetadata = {
+  composition: {
+    actions: [
+      { name: "channelCreate", type: "channel.create", authorize: { roles: ["admin"] } },
+      { name: "mediaRoomCreate", type: "media.room.create", authorize: { roles: ["moderator"] } },
+      { name: "messagePin", type: "message.pin", authorize: { roles: ["moderator"] } },
+      { name: "roleCreate", type: "role.create", authorize: { roles: ["admin"] } }
+    ]
+  }
+};
+
 const fakeMediaRecorders: FakeMediaRecorder[] = [];
 
 class FakeMediaRecorder {
@@ -214,7 +225,7 @@ function renderChat(
   hostOverrides: Record<string, unknown> = {}
 ) {
   const sender = sendOperation || vi.fn(async (operation) => ({ ok: true, state: initialState, operation }));
-  window.ROOMKIT_CHORD_HOST = { getState: vi.fn(async () => initialState), sendOperation: sender, ...hostOverrides } as any;
+  window.ROOMKIT_CHORD_HOST = { appMetadata: testAppMetadata, getAppMetadata: () => testAppMetadata, getState: vi.fn(async () => initialState), sendOperation: sender, ...hostOverrides } as any;
   return { ...render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor }} />), sendOperation: sender };
 }
 

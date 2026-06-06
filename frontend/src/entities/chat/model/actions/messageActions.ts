@@ -1,5 +1,5 @@
 import { latestDirectMessageTime } from "@entities/chat/model/state";
-import type { Message } from "@entities/chat/model/types";
+import type { ChannelId, MemberId, Message, MessageId } from "@entities/chat/model/types";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
 import {
   directThreadForUsers,
@@ -16,7 +16,7 @@ export function messageActions(input: ChatActionHandlersInput) {
 
   async function sendChannelMessageToChannel(channelId: string, body: string) {
     const embeds = messageEmbeds(body);
-    await dispatch("messageSend", { channelId, body, embeds });
+    await dispatch("messageSend", { channelId: channelId as ChannelId, body, embeds });
     for (const embed of embeds) {
       if (embed.provider === "link") continue;
       await dispatch("embedAdd", { scopeType: "channel", scopeId: channelId, url: embed.url, title: embed.title, provider: embed.provider });
@@ -29,7 +29,7 @@ export function messageActions(input: ChatActionHandlersInput) {
   }
 
   async function sendDirectMessageToThread(threadId: string, userIds: string[], body: string) {
-    const result = await dispatch("directMessageSend", { userIds, body });
+    const result = await dispatch("directMessageSend", { userIds: userIds as MemberId[], body });
     if (result.ok === false) return;
     const committedThread = result.state ? directThreadForUsers(result.state, userIds) : directThreadForUsers(state, userIds);
     const committedThreadId = committedThread?.id || threadId;
@@ -55,27 +55,27 @@ export function messageActions(input: ChatActionHandlersInput) {
 
   async function replyToMessage(replyToId: string, body: string) {
     if (!view.currentChannelId) return;
-    await dispatch("messageReply", { channelId: view.currentChannelId, replyToId, body });
+    await dispatch("messageReply", { channelId: view.currentChannelId as ChannelId, replyToId: replyToId as MessageId, body });
   }
 
   async function reactToMessage(messageId: string, emoji: string) {
-    await dispatch("messageReact", { messageId, emoji });
+    await dispatch("messageReact", { messageId: messageId as MessageId, emoji });
   }
 
   async function pinMessage(messageId: string) {
-    await dispatch("messagePin", { messageId });
+    await dispatch("messagePin", { messageId: messageId as MessageId });
   }
 
   async function unpinMessage(messageId: string) {
-    await dispatch("messageUnpin", { messageId });
+    await dispatch("messageUnpin", { messageId: messageId as MessageId });
   }
 
   async function deleteMessage(messageId: string) {
-    await dispatch("messageDelete", { messageId });
+    await dispatch("messageDelete", { messageId: messageId as MessageId });
   }
 
   async function editMessage(messageId: string, body: string) {
-    await dispatch("messageEdit", { messageId, body, embeds: messageEmbeds(body) });
+    await dispatch("messageEdit", { messageId: messageId as MessageId, body, embeds: messageEmbeds(body) });
   }
 
   function closeDirectThread(threadId: string) {

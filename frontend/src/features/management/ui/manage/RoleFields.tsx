@@ -1,14 +1,14 @@
 import React from "react";
-import type { RoleDefinition, RoomRoleAccess, RoomRoleAccessLevel } from "@entities/chat/model/types";
+import type { RoleDefinition, RoleId, RoomRoleAccess, RoomRoleAccessLevel } from "@entities/chat/model/types";
 
 function roomAccessValue(roleAccess: RoomRoleAccess | undefined, roleId: string): RoomRoleAccessLevel {
-  return roleAccess?.[roleId] || "hidden";
+  return roleAccess?.[roleId as RoleId] || "hidden";
 }
 
 function setRoleAccessValue(roleAccess: RoomRoleAccess, roleId: string, level: RoomRoleAccessLevel) {
   const next = { ...roleAccess };
-  if (level === "hidden") delete next[roleId];
-  else next[roleId] = level;
+  if (level === "hidden") delete next[roleId as RoleId];
+  else next[roleId as RoleId] = level;
   return next;
 }
 

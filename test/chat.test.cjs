@@ -68,8 +68,16 @@ async function runtime() {
 function assertCleanChordTypes(types) {
   assert.equal(types.includes("ScopedRole"), false);
   assert.equal(types.includes("PluginState"), false);
+  assert.doesNotMatch(types, /ActionHelpers|ConnectionStatus|export interface Client|Chord\.DispatchResult/);
+  assert.doesNotMatch(types, /dispatch<K extends ActionName>|subscribeDMs/);
+  assert.match(types, /export type ChannelId = string & \{ readonly __brand: "ChannelId" \};/);
+  assert.match(types, /export type MessageId = string & \{ readonly __brand: "MessageId" \};/);
+  assert.match(types, /export type ScopeType = "channel" \| \(string & \{\}\);/);
   assert.match(types, /commentThreads: Record<ThreadId, CommentThread>;/);
   assert.match(types, /comments: Record<CommentId, Comment>;/);
+  assert.match(types, /Requires `member` role\./);
+  assert.match(types, /body: string, <= 4000/);
+  assert.match(types, /omit to leave unchanged; null to clear/);
 }
 
 test("Chat exports schema-only RoomKit manifests", () => {
@@ -335,6 +343,42 @@ test("Chat generated player actions dispatch composition descriptors", async () 
   const calls = [];
   await app.playerPlugin.actions[action.name]({ dispatch: (draft) => calls.push(draft) }, samplePayload(action.type));
   assert.deepEqual(calls[0], { schemaAction: action.name, pluginId: app.hostPlugin.id, type: action.type, payload: samplePayload(action.type) });
+});
+
+test("Chat SDK generic exposes role gates, selectors, and structured dispatch errors", async () => {
+  const { createRoomKitConnector } = await import("roomkit-sdk/browser/liveRoomConnector");
+  const state = {
+    channels: [],
+    messages: {
+      late: { id: "late", channelId: "general", body: "Later", authorId: "ada", createdAt: 2, deletedAt: null, editedAt: null, embeds: [], pinnedAt: null, pinnedBy: null, reactions: {}, replyToId: null },
+      early: { id: "early", channelId: "general", body: "Earlier", authorId: "ada", createdAt: 1, deletedAt: null, editedAt: null, embeds: [], pinnedAt: null, pinnedBy: null, reactions: {}, replyToId: null }
+    },
+    embeds: {
+      embed_1: { id: "embed_1", scopeType: "channel", scopeId: "general", url: "https://example.test", note: null, addedAt: 3, removedAt: null }
+    }
+  };
+  const connector = createRoomKitConnector({
+    appName: "Chord",
+    bridgeName: "ROOMKIT_CHORD_TEST_HOST",
+    emptyState: state,
+    appMetadata: { composition: app.compositionSchema },
+    createHost: () => ({
+      mode: "injected",
+      appMetadata: { composition: app.compositionSchema },
+      sendOperation: () => ({ ok: true, state })
+    })
+  });
+  const room = connector.connect({ initialState: state, actor: { memberId: "ada", deviceId: "dev_ada", role: "member", displayName: "Ada" } });
+
+  assert.equal(room.can("messageSend"), true);
+  assert.equal(room.can("channelCreate"), false);
+  assert.deepEqual(room.select.messagesByChannel("general").map((message) => message.id), ["early", "late"]);
+  assert.deepEqual(room.select.embedsByScope({ scopeType: "channel", scopeId: "general" }).map((embed) => embed.id), ["embed_1"]);
+
+  const result = await room.dispatch("messageSend", { channelId: "general", body: "x".repeat(4001) });
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "validation");
+  assert.equal(result.field, "body");
 });
 
 test("Chat defineApp export does not depend on a demo sidecar", async () => {

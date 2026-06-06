@@ -5,15 +5,11 @@ import type { ActiveView } from "@entities/chat/model/chatUiStore";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { canEditRoom, canViewRoom, assignedRoleIds } from "@entities/chat/model/roles";
-import { directUnreadCounts, latestDirectMessageTime } from "@entities/chat/model/state";
+import { channelThreads, directUnreadCounts, latestDirectMessageTime, visibleChannelMessages } from "@entities/chat/model/state";
 import type { ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
 import type { ChordLiveClient } from "@entities/chat/model/useChordClient";
-import type { DirectThread } from "@entities/chat/model/types";
+import type { ChannelId, DirectThread, ThreadId } from "@entities/chat/model/types";
 import {
-  canCreateChannels,
-  canManageRoles,
-  canManageRooms,
-  channelFeed,
   forwardTargetsForState,
   hasDirectMessages,
   memberAvatarsForState,
@@ -57,9 +53,9 @@ export function useChatViewData(input: ChatViewDataInput) {
   const memberNamesById = useMemo(() => memberNamesForState(state, live.actor), [live.actor, state.members, state.presence]);
   const memberAvatarsById = useMemo(() => memberAvatarsForState(state, live.actor), [live.actor, state.members, state.presence]);
   const unreadCounts = useMemo(() => directUnreadCounts(state, live.actor.memberId, input.readAtByThread), [input.readAtByThread, live.actor.memberId, state]);
-  const actorCanManageRooms = canManageRooms(live.actor.role);
-  const actorCanCreateChannels = canCreateChannels(live.actor.role);
-  const actorCanManageRoles = canManageRoles(live.actor.role);
+  const actorCanManageRooms = live.can("mediaRoomCreate");
+  const actorCanCreateChannels = live.can("channelCreate");
+  const actorCanManageRoles = live.can("roleCreate");
   const actorCanManageAnything = actorCanManageRooms || actorCanCreateChannels || actorCanManageRoles;
   const actorRoleIds = useMemo(() => assignedRoleIds(live.actor.memberId, live.actor.role, state.memberRoles), [live.actor.memberId, live.actor.role, state.memberRoles]);
   const effectiveVoicePreferences = useMemo(
@@ -73,8 +69,15 @@ export function useChatViewData(input: ChatViewDataInput) {
   const showingDm = input.activeView === "dm" && Boolean(activeThread);
   const feedTitle = showingDm ? threadTitle(activeThread!, memberNamesById, live.actor.memberId) : activeChannel ? `# ${activeChannel.name}` : "# channels";
   const feedSubtitle = showingDm ? activeThread?.topicKey || activeThread?.topic || "Direct message" : activeChannel?.topic || "Channel";
-  const channel = useMemo(() => channelFeed(state, currentChannelId), [currentChannelId, state]);
-  const feedMessages = showingDm ? directGroupsByThreadId.get(currentThreadId || "")?.messages || [] : channel.messages;
+  const channel = useMemo(() => {
+    if (!currentChannelId) return { embeds: [], messages: [], threads: [] };
+    return {
+      embeds: live.select.embedsByScope({ scopeType: "channel", scopeId: currentChannelId }),
+      messages: visibleChannelMessages(live.select.messagesByChannel(currentChannelId as ChannelId)),
+      threads: channelThreads(state, currentChannelId)
+    };
+  }, [currentChannelId, live.select, state]);
+  const feedMessages = showingDm ? directGroupsByThreadId.get((currentThreadId || "") as ThreadId)?.messages || [] : channel.messages;
   const embeds = showingDm ? [] : channel.embeds;
   const threadsForChannel = showingDm ? [] : channel.threads;
   const activeScreenShares = Object.values(state.screenShares || {}).filter((share) => !share.stoppedAt);

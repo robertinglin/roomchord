@@ -1,5 +1,5 @@
 import type { ManagementTab } from "@entities/chat/model/managementTypes";
-import type { RoomRoleAccess } from "@entities/chat/model/types";
+import type { ChannelId, MemberId, RoleId, RoomId, RoomRoleAccess } from "@entities/chat/model/types";
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
 
 export function managementActions(input: ChatActionHandlersInput) {
@@ -10,11 +10,11 @@ export function managementActions(input: ChatActionHandlersInput) {
   }
 
   async function updateTextChannel(channelId: string, channel: { name?: string; topic?: string | null; group?: string | null }) {
-    await dispatch("channelRename", { channelId, ...channel });
+    await dispatch("channelRename", { channelId: channelId as ChannelId, ...channel });
   }
 
   async function archiveTextChannel(channelId: string) {
-    await dispatch("channelArchive", { channelId });
+    await dispatch("channelArchive", { channelId: channelId as ChannelId });
   }
 
   async function createMediaRoom(room: { name: string; allowsVideo: boolean; group?: string; roleAccess?: RoomRoleAccess }) {
@@ -23,27 +23,32 @@ export function managementActions(input: ChatActionHandlersInput) {
   }
 
   async function updateMediaRoomSettings(roomId: string, settings: { name?: string; group?: string | null; allowsVideo?: boolean; locked?: boolean; roleAccess?: RoomRoleAccess }) {
-    await dispatch("mediaRoomUpdate", { roomId, ...settings });
+    await dispatch("mediaRoomUpdate", { roomId: roomId as RoomId, ...settings });
   }
 
   async function archiveMediaRoom(roomId: string) {
-    await dispatch("mediaRoomArchive", { roomId });
+    await dispatch("mediaRoomArchive", { roomId: roomId as RoomId });
   }
 
   async function createRole(role: { roleId: string; name: string; description?: string; color?: string }) {
-    await dispatch("roleCreate", role);
+    await dispatch("roleCreate", { ...role, roleId: role.roleId as RoleId });
   }
 
   async function updateRole(roleId: string, role: { name?: string; description?: string; color?: string }) {
-    await dispatch("roleUpdate", { roleId, ...role });
+    await dispatch("roleUpdate", { roleId: roleId as RoleId, ...role });
   }
 
   async function archiveRole(roleId: string) {
-    await dispatch("roleArchive", { roleId });
+    await dispatch("roleArchive", { roleId: roleId as RoleId });
   }
 
   async function assignMemberRoles(memberId: string, roleIds: string[], displayName?: string) {
-    await dispatch("memberRoleAssign", { memberId, roleId: roleIds[0] || "member", roleIds, displayName });
+    await dispatch("memberRoleAssign", {
+      memberId: memberId as MemberId,
+      roleId: (roleIds[0] || "member") as RoleId,
+      roleIds: roleIds as RoleId[],
+      displayName
+    });
   }
 
   function openManageDialog(tab: ManagementTab = "overview", memberId?: string) {

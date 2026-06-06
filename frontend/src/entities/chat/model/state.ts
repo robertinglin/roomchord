@@ -48,6 +48,10 @@ export function channelMessages(state: ChatState, channelId?: string): Message[]
   const messages = Object.values(state.messages || {})
     .filter((message) => message.channelId === channelId)
     .sort((left, right) => (left.createdAt || 0) - (right.createdAt || 0));
+  return visibleChannelMessages(messages);
+}
+
+export function visibleChannelMessages(messages: Message[]): Message[] {
   let lastVisibleIndex = messages.length - 1;
   while (lastVisibleIndex >= 0 && messages[lastVisibleIndex].deletedAt) lastVisibleIndex -= 1;
   return messages.filter((message, index) => !message.deletedAt || index < lastVisibleIndex);

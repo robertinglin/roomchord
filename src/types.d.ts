@@ -9,15 +9,15 @@
 
 export namespace Chord {
   export type Role = "guest" | "member" | "moderator" | "admin" | "owner";
-  export type ChannelId = string;
-  export type MessageId = string;
-  export type RoleId = string;
-  export type RoomId = string;
-  export type MemberId = string;
-  export type ThreadId = string;
-  export type CommentId = string;
-  export type EmbedId = string;
-  export type ShareId = string;
+  export type ChannelId = string & { readonly __brand: "ChannelId" };
+  export type MessageId = string & { readonly __brand: "MessageId" };
+  export type RoleId = string & { readonly __brand: "RoleId" };
+  export type RoomId = string & { readonly __brand: "RoomId" };
+  export type MemberId = string & { readonly __brand: "MemberId" };
+  export type ThreadId = string & { readonly __brand: "ThreadId" };
+  export type CommentId = string & { readonly __brand: "CommentId" };
+  export type EmbedId = string & { readonly __brand: "EmbedId" };
+  export type ShareId = string & { readonly __brand: "ShareId" };
   export type Reactions = Record<string, MemberId[]>;
   export type ScopeType = "channel" | (string & {});
   export interface ScopeRef { scopeType: ScopeType; scopeId: string; }
@@ -28,24 +28,37 @@ export namespace Chord {
   export interface MediaFlags { audio?: boolean; video?: boolean; screen?: boolean; }
   export interface MessageEmbed { id?: EmbedId; url: string; provider?: string; kind?: string; title?: string; thumbnailUrl?: string; renderMode?: string; }
   export interface Member { id?: MemberId; memberId?: MemberId; name?: string; displayName?: string; role?: Role | (string & {}); status?: string; avatarUrl?: string; revokedAt?: number | null; bannedAt?: number | null; }
+  /** From the mediaRooms plugin. */
   export interface MediaRoomParticipant { memberId: MemberId; name?: string; media?: MediaFlags; joinedAt?: number; }
+  /** From the mediaRooms plugin. */
   export interface MediaRoom { id: RoomId; name: string; group: string | null; allowsVideo: boolean; scopeType?: ScopeType; scopeId?: string; roleAccess: RoomRoleAccess; locked: boolean; spotlightMemberId?: MemberId | null; archivedAt: number | null; participants: Record<MemberId, MediaRoomParticipant>; participantCount: number; createdBy?: MemberId; createdAt?: number; }
 
+  /** From the presence plugin. */
   export interface PresenceMember { memberId: MemberId; name?: string; status: PresenceStatus; activity: string | null; location: string | null; updatedAt?: number; lastPingAt?: number; visible?: boolean; avatarUrl?: string; }
 
+  /** From the comments plugin. */
   export interface CommentThread { id: ThreadId; scopeType: ScopeType; scopeId: string; title: string | null; resolved: boolean; createdAt: number; lastCommentAt?: number; archivedAt: number | null; }
+  /** From the comments plugin. */
   export interface Comment { id: CommentId; threadId: ThreadId; scopeType?: ScopeType; scopeId?: string; parentId?: CommentId | null; body: string; authorId: MemberId; authorName?: string; createdAt: number; deletedAt: number | null; reactions: Reactions; }
 
+  /** From the embeds plugin. */
   export interface Embed { id: EmbedId; scopeType: ScopeType; scopeId: string; url: string; provider?: string; kind?: string; title?: string; note: string | null; addedBy?: MemberId; addedByName?: string; addedAt: number; removedAt: number | null; }
 
+  /** From the reactions plugin. */
   export interface ScopedReaction { scopeType: ScopeType; scopeId: string; reactions: Reactions; updatedAt?: number; }
 
+  /** From the screenShare plugin. */
   export interface ScreenShare { id: ShareId; scopeType?: ScopeType; scopeId?: string; roomId: RoomId | null; title: string | null; presenterId: MemberId; presenterName?: string; startedAt: number; stoppedAt: number | null; stoppedBy?: MemberId; }
 
+  /** From roomkit.core direct messages. */
   export interface DirectThread { id: ThreadId; protocol?: string; userIds: MemberId[]; topicKey?: string; topic: string | null; createdAt: number; archivedAt: number | null; }
+  /** From roomkit.core direct messages. */
   export interface DirectMessage { id: MessageId; protocol?: string; threadId: ThreadId; userIds?: MemberId[]; topicKey?: string; authorId: MemberId; body: string; reactions: Reactions; embeds: MessageEmbed[]; replyToId?: MessageId | null; pinnedAt?: number | null; pinnedBy?: MemberId | null; editedAt?: number | null; deletedAt?: number | null; deletedBy?: MemberId | null; createdAt: number; encrypted?: boolean; }
   export interface Actor { memberId: MemberId; deviceId: string; role: Role | (string & {}); displayName?: string; avatar?: string; avatarUrl?: string; profileImageUrl?: string; }
   export interface Activity { id: string; operationId?: string; actorId?: MemberId; actorName?: string; message: string; createdAt?: number; }
+  /**
+   * From primary model collection `channels`.
+   */
   export interface Channel {
     archivedAt: null | number;
     createdAt: number;
@@ -56,6 +69,9 @@ export namespace Chord {
     topic: null | string;
     updatedAt?: number;
   }
+  /**
+   * From primary model collection `memberRoles`.
+   */
   export interface MemberRole {
     assignedAt: number;
     assignedBy: MemberId;
@@ -65,6 +81,9 @@ export namespace Chord {
     roleId: RoleId | null;
     roleIds: RoleId[];
   }
+  /**
+   * From primary model collection `messages`.
+   */
   export interface Message {
     authorId: MemberId;
     body: string;
@@ -80,6 +99,9 @@ export namespace Chord {
     reactions: Reactions;
     replyToId: MessageId | null;
   }
+  /**
+   * From primary model collection `roleDefinitions`.
+   */
   export interface RoleDefinition {
     archivedAt: null | number;
     archivedBy?: MemberId;
@@ -113,39 +135,233 @@ export namespace Chord {
   }
   export interface DirectMessageThread { thread: DirectThread; messages: DirectMessage[]; }
   export interface Actions {
+    /**
+     * Requires `moderator` role.
+     * channelId: string, <= 200
+     */
     channelArchive: { channelId: ChannelId };
+    /**
+     * Requires `admin` role.
+     * name: string, <= 80
+     * topic: string, <= 240, nullable
+     * group: string, <= 80, nullable
+     */
     channelCreate: { name: string; topic?: null | string; group?: null | string };
+    /**
+     * Requires `moderator` role.
+     * channelId: string, <= 200
+     * name: string, <= 80, nullable
+     * topic: string, <= 240, nullable
+     * group: string, <= 80, nullable
+     */
     channelRename: { channelId: ChannelId; name?: null | string; topic?: null | string; group?: null | string };
+    /**
+     * Requires `admin` role.
+     * memberId: string, <= 120
+     * roleId: string, <= 80, nullable
+     * roleIds: array
+     * displayName: string, <= 120, nullable
+     */
     memberRoleAssign: { memberId: MemberId; roleId?: RoleId | null; roleIds?: RoleId[]; displayName?: null | string };
+    /**
+     * Requires `member` role.
+     * messageId: string, <= 200
+     */
     messageDelete: { messageId: MessageId };
+    /**
+     * Requires `member` role.
+     * messageId: string, <= 200
+     * body: string, <= 4000
+     * embeds: array
+     */
     messageEdit: { messageId: MessageId; body: string; embeds?: MessageEmbed[] };
+    /**
+     * Requires `moderator` role.
+     * messageId: string, <= 200
+     */
     messagePin: { messageId: MessageId };
+    /**
+     * Requires `member` role.
+     * messageId: string, <= 200
+     * emoji: string, <= 64
+     */
     messageReact: { messageId: MessageId; emoji: string };
+    /**
+     * Requires `member` role.
+     * channelId: string, <= 200
+     * replyToId: string, <= 200
+     * body: string, <= 4000
+     */
     messageReply: { channelId: ChannelId; replyToId: MessageId; body: string };
+    /**
+     * Requires `member` role.
+     * channelId: string, <= 200
+     * body: string, <= 4000
+     * embeds: array
+     */
     messageSend: { channelId: ChannelId; body: string; embeds?: MessageEmbed[] };
+    /**
+     * Requires `moderator` role.
+     * messageId: string, <= 200
+     */
     messageUnpin: { messageId: MessageId };
+    /**
+     * Requires `admin` role.
+     * roleId: string, <= 80
+     */
     roleArchive: { roleId: RoleId };
+    /**
+     * Requires `admin` role.
+     * roleId: string, <= 80
+     * name: string, <= 80
+     * description: string, <= 240, nullable
+     * color: string, <= 40, nullable
+     */
     roleCreate: { roleId: RoleId; name: string; description?: null | string; color?: null | string };
+    /**
+     * Requires `admin` role.
+     * roleId: string, <= 80
+     * name: string, <= 80, nullable
+     * description: string, <= 240, nullable
+     * color: string, <= 40, nullable
+     */
     roleUpdate: { roleId: RoleId; name?: null | string; description?: null | string; color?: null | string };
+    /**
+     * Requires `member` role.
+     * body: string
+     * threadId: string
+     * scopeType: string
+     * scopeId: string
+     * parentId: string
+     */
     commentsAdd: { body: string; threadId?: ThreadId; parentId?: CommentId } & Partial<ScopeRef>;
+    /**
+     * Requires `member` role.
+     * commentId: string
+     * reason: string
+     */
     commentsDelete: { commentId: CommentId; reason?: string };
+    /**
+     * Requires `member` role.
+     * commentId: string
+     * body: string
+     */
     commentsEdit: { commentId: CommentId; body: string };
+    /**
+     * Requires `member` role.
+     * commentId: string
+     * emoji: string
+     */
     commentsReact: { commentId: CommentId; emoji: string };
+    /**
+     * Requires `moderator` role.
+     * threadId: string
+     * resolved: string
+     */
     commentsResolve: { threadId: ThreadId; resolved?: boolean };
+    /**
+     * Requires `member` role.
+     * scopeType: string
+     * scopeId: string
+     * title: string
+     * visibility: string
+     */
     commentsThreadCreate: { title?: string; visibility?: string } & ScopeRef;
+    /**
+     * Requires `member` role.
+     * memberId: string
+     */
     presenceClear: { memberId?: MemberId };
+    /**
+     * Requires `member` role.
+     * status: string
+     */
     presencePing: { status?: PresenceStatus };
+    /**
+     * Requires `member` role.
+     * status: string
+     * activity: string
+     * location: string
+     */
     presenceUpdate: { status: PresenceStatus; activity?: string; location?: string };
+    /**
+     * Requires `moderator` role.
+     * roomId: string, <= 200
+     */
     mediaRoomArchive: { roomId: RoomId };
+    /**
+     * Requires `moderator` role.
+     * name: string, <= 100
+     * allowsVideo: boolean
+     * group: string, <= 80, nullable
+     * scopeType: string, <= 80
+     * scopeId: string, <= 160
+     * roleAccess: record
+     */
     mediaRoomCreate: { name: string; allowsVideo?: boolean; group?: null | string; roleAccess?: RoomRoleAccess } & Partial<ScopeRef>;
+    /**
+     * Requires `member` role.
+     * roomId: string, <= 200
+     * media: object
+     */
     mediaRoomJoin: { roomId: RoomId; media?: MediaFlags };
+    /**
+     * Requires `member` role.
+     * roomId: string, <= 200
+     */
     mediaRoomLeave: { roomId: RoomId };
-    mediaRoomUpdate: { roomId: RoomId; locked?: boolean; allowsVideo?: boolean; spotlightMemberId?: string; name?: string; group?: null | string; roleAccess?: RoomRoleAccess };
+    /**
+     * Requires `moderator` role.
+     * roomId: string, <= 200
+     * locked: boolean
+     * allowsVideo: boolean
+     * spotlightMemberId: string, <= 120
+     * name: string, <= 100
+     * group: string, <= 80, nullable
+     * roleAccess: record
+     */
+    mediaRoomUpdate: { roomId: RoomId; locked?: boolean; allowsVideo?: boolean; spotlightMemberId?: MemberId; name?: string; group?: null | string; roleAccess?: RoomRoleAccess };
+    /**
+     * Requires `member` role.
+     * scopeType: string
+     * scopeId: string
+     * roomId: string
+     * title: string
+     */
     screenshareStart: { roomId?: RoomId; title?: string } & ScopeRef;
+    /**
+     * Requires `member` role.
+     * shareId: string
+     */
     screenshareStop: { shareId: ShareId };
+    /**
+     * Requires `member` role.
+     * scopeType: string
+     * scopeId: string
+     * url: string
+     * title: string
+     * provider: string
+     * note: string
+     */
     embedAdd: { url: string; title?: string; provider?: string; note?: string } & ScopeRef;
+    /**
+     * Requires `member` role.
+     * embedId: string
+     */
     embedRemove: { embedId: EmbedId };
+    /**
+     * Requires `member` role.
+     * scopeType: string
+     * scopeId: string
+     * emoji: string
+     */
     reactionToggle: { emoji: string } & ScopeRef;
+    /**
+     * Requires `member` role.
+     * userIds: array
+     * body: string
+     * topicKey: string
+     */
     directMessageSend: { userIds: MemberId[]; body: string; topicKey?: string };
   }
   export type ActionName = keyof Actions;
@@ -199,31 +415,10 @@ export namespace Chord {
   }
   export type RoutePath = "/" | "/dms" | "/rooms";
   export type RouteComponent = "ChatRoomPage" | "DirectMessagesPage" | "MediaRoomsPage";
-  export type ConnectionStatus = "connecting" | "connected" | "saving" | "offline" | "error";
-  export type DispatchResult = { ok: true; state: State } | { ok: false; reason: string; state?: State };
-  export type ActionHelpers = { [K in ActionName]: (payload: Actions[K]) => Promise<DispatchResult>; };
   export interface Core {
     sendPresence(input: { status: PresenceStatus; activity?: string; at?: number }): Promise<boolean>;
   }
   export interface LaunchEnvelope { room?: { id?: string; name?: string }; actor?: Actor; credentialGrant?: { credentialId?: string }; initialState?: State; }
-  export interface Client {
-    readonly state: State;
-    readonly actor: Actor;
-    readonly status: ConnectionStatus;
-    readonly ready: boolean;
-    readonly envelope: LaunchEnvelope;
-    readonly message: string;
-    readonly lastOperation?: string;
-    readonly mediaHost?: unknown;
-    readonly actions: ActionHelpers;
-    dispatch<K extends ActionName>(action: K, payload: Actions[K]): Promise<DispatchResult>;
-    query<K extends QueryName>(name: K, ...input: QueryInput[K] extends void ? [] : [QueryInput[K]]): Queries[K];
-    getDMs(topicPattern?: RegExp): DirectMessageThread[];
-    subscribeDMs(listener: (threads: DirectMessageThread[]) => void): () => void;
-    subscribeDMs(topicPattern: RegExp, listener: (threads: DirectMessageThread[]) => void): () => void;
-    refresh(): Promise<State | undefined>;
-    core: Core;
-  }
 }
 export interface Chord {
   State: Chord.State;
@@ -233,7 +428,5 @@ export interface Chord {
   Actor: Chord.Actor;
   Core: Chord.Core;
   LaunchEnvelope: Chord.LaunchEnvelope;
-  DispatchResult: Chord.DispatchResult;
   DirectMessageThread: Chord.DirectMessageThread;
-  Client: Chord.Client;
 }

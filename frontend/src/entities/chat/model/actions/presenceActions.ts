@@ -1,4 +1,5 @@
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
+import type { ShareId } from "@entities/chat/model/types";
 
 export function presenceActions(input: ChatActionHandlersInput) {
   const { dispatch } = input.live;
@@ -9,7 +10,7 @@ export function presenceActions(input: ChatActionHandlersInput) {
   }
 
   async function stopScreenShare(shareId: string) {
-    await dispatch("screenshareStop", { shareId });
+    await dispatch("screenshareStop", { shareId: shareId as ShareId });
   }
 
   return {
