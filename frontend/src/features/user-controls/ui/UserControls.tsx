@@ -6,7 +6,7 @@ import { VoiceSettingsDialog } from "@features/user-controls/ui/VoiceSettingsDia
 import { ReconnectPrompt } from "@features/user-controls/ui/userControls/ReconnectPrompt";
 import { SelfAccountRow } from "@features/user-controls/ui/userControls/SelfAccountRow";
 import { StatusMenu } from "@features/user-controls/ui/userControls/StatusMenu";
-import { VoiceControlPanel } from "@features/user-controls/ui/userControls/VoiceControlPanel";
+import { VoiceControlPanel } from "@shared/ui/VoiceControlPanel";
 
 export type UserControlsProps = {
   actorName: string;
@@ -29,6 +29,7 @@ export type UserControlsProps = {
   onUpdateVoicePreferences: (preferences: VoicePreferences) => void;
   onVoiceSettingsOpenChange?: (open: boolean) => void;
   onUpdateStatus: (status: string, activity: string) => void;
+  hideVoicePanel?: boolean;
 };
 
 function activeScreenShare(screenShares: ScreenShare[], roomId?: string) {
@@ -64,7 +65,8 @@ export function UserControls({
   onStopShare,
   onUpdateVoicePreferences,
   onVoiceSettingsOpenChange,
-  onUpdateStatus
+  onUpdateStatus,
+  hideVoicePanel = false
 }: UserControlsProps) {
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -174,7 +176,7 @@ export function UserControls({
     <footer className="self-panel" aria-label="User controls">
       {statusMenuOpen ? <StatusMenu onSetStatus={setStatus} /> : null}
 
-      {joined && room ? (
+      {!hideVoicePanel && joined && room ? (
         <VoiceControlPanel
           canUseVideo={canUseVideo}
           error={error}

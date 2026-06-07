@@ -83,6 +83,21 @@ export function ScreenIcon(props: IconProps) {
   );
 }
 
+export function CameraSwapIcon(props: IconProps) {
+  return (
+    <IconShell {...props}>
+      <path d="M5 4v4" />
+      <path d="M7 6H3.5" />
+      <path d="M19 20v-4" />
+      <path d="M17 18h3.5" />
+      <path d="M13.5 9h4.5a1.5 1.5 0 0 1 1.5 1.5v2" />
+      <path d="m18 12.5-2.5 2.5-2.5-2.5" />
+      <path d="M10.5 15H6a1.5 1.5 0 0 1-1.5-1.5v-2" />
+      <path d="m6 11.5 2.5-2.5 2.5 2.5" />
+    </IconShell>
+  );
+}
+
 export function SmileIcon(props: IconProps) {
   return (
     <IconShell {...props}>
@@ -124,6 +139,16 @@ export function MaximizeIcon(props: IconProps) {
       <path d="M4.5 19.5 10 14" />
       <path d="M15.5 19.5h4v-4" />
       <path d="M19.5 19.5 14 14" />
+    </IconShell>
+  );
+}
+
+export function MenuIcon(props: IconProps) {
+  return (
+    <IconShell {...props}>
+      <path d="M4.5 6.5h15" />
+      <path d="M4.5 11.5h15" />
+      <path d="M4.5 16.5h15" />
     </IconShell>
   );
 }

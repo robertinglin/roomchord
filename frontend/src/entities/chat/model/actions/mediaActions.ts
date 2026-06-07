@@ -41,7 +41,10 @@ export function mediaActions(input: ChatActionHandlersInput) {
   async function leaveMediaRoom(roomId: string) {
     if (input.joinedMediaRoomId === roomId) ui.setJoinedMediaRoomId(undefined);
     ui.clearVoiceJoin();
-    if (media.sfu.mediaRoomId === roomId) media.leaveRoom();
+    ui.setActiveView("channel");
+    ui.setSidebarOpen(true);
+    ui.setSelectedMediaRoomId(undefined);
+    media.leaveRoom();
   }
 
   function reconnectVoiceRoom(room: MediaRoom) {

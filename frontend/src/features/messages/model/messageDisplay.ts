@@ -2,7 +2,7 @@ import { messageAnchorId } from "@entities/chat/model/messageLinks";
 import type { Message } from "@entities/chat/model/types";
 
 export function authorName(message: Message, memberNamesById: Record<string, string>) {
-  return message.authorName || (message.authorId ? memberNamesById[message.authorId] : undefined) || message.authorId || "Member";
+  return (message.authorId ? memberNamesById[message.authorId] : undefined) || message.authorName || message.authorId || "Member";
 }
 
 export function messageAvatar(message: Message, memberAvatarsById: Record<string, string>) {

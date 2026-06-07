@@ -14,8 +14,18 @@ function ensureChatStyles() {
   document.head.appendChild(style);
 }
 
+function ensureKeyboardOverlayMode() {
+  const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  if (viewport && !viewport.content.includes("interactive-widget")) {
+    viewport.content = `${viewport.content}, interactive-widget=overlays-content`;
+  }
+  const keyboard = (navigator as Navigator & { virtualKeyboard?: { overlaysContent: boolean } }).virtualKeyboard;
+  if (keyboard) keyboard.overlaysContent = true;
+}
+
 export function mountRoomKitChat(target: HTMLElement, options: ChatProps = {}) {
   ensureChatStyles();
+  ensureKeyboardOverlayMode();
   const root: Root = createRoot(target);
   root.render(<ChatApp {...options} />);
   return () => root.unmount();

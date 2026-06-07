@@ -3,7 +3,9 @@ import { RemoteAudioSink } from "@features/voice-room/ui/RemoteAudioSink";
 import { VoiceParticipantGrid } from "@features/voice-room/ui/VoiceParticipantGrid";
 import { VoiceScreenShares, type ActiveScreenShare } from "@features/voice-room/ui/VoiceScreenShares";
 import type { VoiceRoomViewProps } from "@features/voice-room/model/types";
+import { MenuIcon } from "@shared/ui/Icons";
 import { audioOn, isVoiceParticipantMuted, roomParticipants, screenOn, screenShareStream, streamHasTrack } from "@features/voice-room/model/voiceParticipants";
+import { VoiceControlPanel } from "@shared/ui/VoiceControlPanel";
 
 export type { VoiceRoomViewProps };
 
@@ -44,6 +46,16 @@ export function VoiceRoomView(props: VoiceRoomViewProps) {
     <section className="chat-main voice-room-main" aria-labelledby="active-room-heading">
       <RemoteAudioSink muted={props.voicePreferences.deafened} streams={remoteAudioStreams} />
       <header className="chat-main-header">
+        {props.showSidebarMenu ? (
+          <button
+            type="button"
+            className="chat-mobile-nav-toggle"
+            aria-label="Open navigation"
+            onClick={props.onOpenMenu || (() => undefined)}
+          >
+            <MenuIcon />
+          </button>
+        ) : null}
         <div>
           <h1 id="active-room-heading">{props.room.name}</h1>
           <p>{participants.length} {participants.length === 1 ? "participant" : "participants"} · {props.room.allowsVideo === false ? "Audio only" : "Camera allowed"}</p>
@@ -71,6 +83,25 @@ export function VoiceRoomView(props: VoiceRoomViewProps) {
           />
         </div>
       </div>
+      {props.joinedRoomId === props.room.id ? (
+        <div className="voice-room-controls">
+          <VoiceControlPanel
+            canSwapCamera={Boolean(props.voiceControlCanSwapCamera)}
+            canUseVideo={Boolean(props.voiceControlCanUseVideo)}
+            error={props.voiceControlError}
+            onLeave={props.onLeaveVoiceRoom || (() => undefined)}
+            onToggleCameraSwap={props.onToggleVoiceCameraSwap}
+            onToggleScreenShare={props.onToggleVoiceScreenShare || (() => undefined)}
+            onToggleVideo={props.onToggleVoiceVideo || (() => undefined)}
+            roomName={props.room.name}
+            sfuActive={Boolean(props.voiceControlSfuActive)}
+            sfuStatus={props.voiceControlSfuStatus || "idle"}
+            showScreenShare={props.voiceControlShowScreenShare ?? true}
+            shareActive={Boolean(props.voiceControlShareActive)}
+            videoOn={Boolean(props.voiceControlVideoOn)}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

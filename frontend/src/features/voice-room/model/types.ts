@@ -31,4 +31,18 @@ export type VoiceRoomViewProps = {
   onStopWatchingScreenShare?: (participantId: string) => void;
   onToggleVoiceParticipantMute?: (participantId: string) => void;
   onWatchScreenShare?: (participantId: string) => void;
+  showSidebarMenu?: boolean;
+  onOpenMenu?: () => void;
+  onLeaveVoiceRoom?: () => void;
+  onToggleVoiceCameraSwap?: () => void;
+  onToggleVoiceScreenShare?: () => void;
+  voiceControlCanSwapCamera?: boolean;
+  voiceControlShowScreenShare?: boolean;
+  onToggleVoiceVideo?: () => void;
+  voiceControlCanUseVideo?: boolean;
+  voiceControlError?: string;
+  voiceControlSfuActive?: boolean;
+  voiceControlSfuStatus?: string;
+  voiceControlShareActive?: boolean;
+  voiceControlVideoOn?: boolean;
 };

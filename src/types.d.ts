@@ -143,24 +143,24 @@ export namespace Chord {
     /**
      * Requires `admin` role.
      * name: string, <= 80
-     * topic: string, <= 240, nullable
-     * group: string, <= 80, nullable
+     * topic: string, <= 240, nullable, omit to leave unchanged; null to clear
+     * group: string, <= 80, nullable, omit to leave unchanged; null to clear
      */
     channelCreate: { name: string; topic?: null | string; group?: null | string };
     /**
      * Requires `moderator` role.
      * channelId: string, <= 200
-     * name: string, <= 80, nullable
-     * topic: string, <= 240, nullable
-     * group: string, <= 80, nullable
+     * name: string, <= 80, nullable, omit to leave unchanged; null to clear
+     * topic: string, <= 240, nullable, omit to leave unchanged; null to clear
+     * group: string, <= 80, nullable, omit to leave unchanged; null to clear
      */
     channelRename: { channelId: ChannelId; name?: null | string; topic?: null | string; group?: null | string };
     /**
      * Requires `admin` role.
      * memberId: string, <= 120
-     * roleId: string, <= 80, nullable
+     * roleId: string, <= 80, nullable, omit to leave unchanged; null to clear
      * roleIds: array
-     * displayName: string, <= 120, nullable
+     * displayName: string, <= 120, nullable, omit to leave unchanged; null to clear
      */
     memberRoleAssign: { memberId: MemberId; roleId?: RoleId | null; roleIds?: RoleId[]; displayName?: null | string };
     /**
@@ -214,16 +214,16 @@ export namespace Chord {
      * Requires `admin` role.
      * roleId: string, <= 80
      * name: string, <= 80
-     * description: string, <= 240, nullable
-     * color: string, <= 40, nullable
+     * description: string, <= 240, nullable, omit to leave unchanged; null to clear
+     * color: string, <= 40, nullable, omit to leave unchanged; null to clear
      */
     roleCreate: { roleId: RoleId; name: string; description?: null | string; color?: null | string };
     /**
      * Requires `admin` role.
      * roleId: string, <= 80
-     * name: string, <= 80, nullable
-     * description: string, <= 240, nullable
-     * color: string, <= 40, nullable
+     * name: string, <= 80, nullable, omit to leave unchanged; null to clear
+     * description: string, <= 240, nullable, omit to leave unchanged; null to clear
+     * color: string, <= 40, nullable, omit to leave unchanged; null to clear
      */
     roleUpdate: { roleId: RoleId; name?: null | string; description?: null | string; color?: null | string };
     /**
@@ -293,7 +293,7 @@ export namespace Chord {
      * Requires `moderator` role.
      * name: string, <= 100
      * allowsVideo: boolean
-     * group: string, <= 80, nullable
+     * group: string, <= 80, nullable, omit to leave unchanged; null to clear
      * scopeType: string, <= 80
      * scopeId: string, <= 160
      * roleAccess: record
@@ -317,7 +317,7 @@ export namespace Chord {
      * allowsVideo: boolean
      * spotlightMemberId: string, <= 120
      * name: string, <= 100
-     * group: string, <= 80, nullable
+     * group: string, <= 80, nullable, omit to leave unchanged; null to clear
      * roleAccess: record
      */
     mediaRoomUpdate: { roomId: RoomId; locked?: boolean; allowsVideo?: boolean; spotlightMemberId?: MemberId; name?: string; group?: null | string; roleAccess?: RoomRoleAccess };

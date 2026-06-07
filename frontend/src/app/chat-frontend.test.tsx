@@ -13,6 +13,7 @@ import { VoiceRoomView } from "@features/voice-room/ui/VoiceRoomView";
 import { mountRoomKitChat } from "@app/roomkitChat";
 import { defaultVoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import { channelMessages } from "@entities/chat/model/state";
+import { forwardedMessageBody } from "@entities/chat/model/chatViewModel";
 import type { ChatState } from "@entities/chat/model/types";
 
 const state: ChatState = {
@@ -780,6 +781,33 @@ describe("ChatApp", () => {
     expect(((screen.getByLabelText("Your screen share") as HTMLVideoElement).srcObject as MediaStream).getVideoTracks().map((track) => track.id)).toEqual(["screen"]);
   });
 
+  it("shows camera swap button when supported and hides screen-share controls when disabled", async () => {
+    const user = userEvent.setup();
+    const onToggleCameraSwap = vi.fn();
+    installMediaCapture();
+    const localStream = new FakeMediaStream([new FakeMediaStreamTrack("audio"), new FakeMediaStreamTrack("video", "camera")]) as unknown as MediaStream;
+
+    render(
+      <VoiceRoomView
+        actorId="alice"
+        actorName="Alice"
+        joinedRoomId="media1"
+        localMedia={{ audio: true, video: true }}
+        room={state.rooms[0]}
+        sfu={{ status: "connected", mediaRoomId: "media1", media: { audio: true, video: true }, localStream, remoteStreams: [] }}
+        voicePreferences={defaultVoicePreferences()}
+        voiceTokens={[]}
+        voiceControlCanSwapCamera
+        voiceControlShowScreenShare={false}
+        onToggleVoiceCameraSwap={onToggleCameraSwap}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Share screen" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Flip camera" }));
+    expect(onToggleCameraSwap).toHaveBeenCalledTimes(1);
+  });
+
   it("shows remote screen shares as blurred previews until the user watches them", async () => {
     installMediaCapture();
     const user = userEvent.setup();
@@ -1295,6 +1323,30 @@ describe("ChatApp", () => {
     expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
     expect(screen.getByLabelText("Actions for Lee")).toBeInTheDocument();
     expect(screen.queryByText("lee")).not.toBeInTheDocument();
+  });
+
+  it("uses member display names before stale stored author names", async () => {
+    renderChat(undefined, {
+      ...state,
+      messages: {
+        m1: { ...state.messages.m1, authorName: "user_0e691c2ca2d2854286f53594", authorId: "lee" }
+      }
+    });
+
+    expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
+    expect(screen.getByLabelText("Actions for Lee")).toBeInTheDocument();
+    expect(screen.queryByText("user_0e691c2ca2d2854286f53594")).not.toBeInTheDocument();
+  });
+
+  it("uses member display names before stale stored author names when forwarding", () => {
+    const body = forwardedMessageBody({
+      ...state.messages.m1,
+      authorName: "user_0e691c2ca2d2854286f53594",
+      authorId: "lee"
+    }, { lee: "Lee" });
+
+    expect(body).toContain("Forwarded from Lee:");
+    expect(body).not.toContain("user_0e691c2ca2d2854286f53594");
   });
 
   it("uses emoji avatars when members do not have profile images", async () => {

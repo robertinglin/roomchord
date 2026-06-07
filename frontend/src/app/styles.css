@@ -57,7 +57,7 @@ button {
 }
 
 .chat-shell {
-  min-height: 100vh;
+  min-height: 100svh;
   display: grid;
   grid-template-columns: 240px minmax(420px, 1fr) 260px;
   color: var(--text);
@@ -65,7 +65,8 @@ button {
 }
 
 .chat-loading-shell {
-  min-height: 100vh;
+  min-height: 100svh;
+  height: 100svh;
   display: grid;
   place-items: center;
   padding: 24px;
@@ -1111,7 +1112,7 @@ button {
 
 .voice-control-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -1206,7 +1207,11 @@ button {
 }
 
 .voice-room-main {
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.voice-room-controls {
+  padding: 10px 20px 12px;
 }
 
 .voice-room-body {
@@ -1246,7 +1251,9 @@ button {
 }
 
 .screen-share-card {
-  min-height: 260px;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  width: 100%;
 }
 
 .screen-share-card video,
@@ -1259,7 +1266,7 @@ button {
 }
 
 .screen-share-card video {
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .screen-share-preview-row {
@@ -1271,7 +1278,7 @@ button {
 
 .screen-share-preview-card {
   flex: 0 0 220px;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1 / 1;
 }
 
 .screen-share-preview-image,
@@ -1376,7 +1383,7 @@ button {
   display: grid;
   place-items: center;
   grid-column: span 4;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
   border: 1px solid var(--sidebar-deep);
   border-radius: 8px;
@@ -2354,6 +2361,12 @@ button {
   white-space: normal;
 }
 
+.chat-sidebar-shroud,
+.chat-sidebar-close-button,
+.chat-mobile-nav-toggle {
+  display: none;
+}
+
 @media (max-width: 1180px) {
   .chat-shell {
     grid-template-columns: 280px minmax(0, 1fr);
@@ -2365,22 +2378,109 @@ button {
 }
 
 @media (max-width: 760px) {
+  html,
+  body,
+  #roomkit-chord-root {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   .chat-shell {
+    position: fixed;
+    inset: 0;
+    width: 100%;
     grid-template-columns: 1fr;
-    min-height: 100vh;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 100svh;
+    height: 100svh;
+    max-height: 100svh;
+    overflow: clip;
   }
 
   .room-sidebar,
   .chat-main {
     max-height: none;
+    min-height: 0;
   }
 
   .room-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(330px, 88vw);
+    max-width: 88vw;
+    transform: translateX(-105%);
+    transition: transform 180ms ease;
+    z-index: 20;
+    box-shadow: 0 20px 52px oklch(0.06 0.008 260 / 0.45);
     grid-template-rows: auto;
+    flex: 0 0 auto;
+  }
+
+  .chat-shell.mobile-sidebar-open .room-sidebar {
+    transform: translateX(0);
+  }
+
+  .chat-shell.mobile-sidebar-open .chat-sidebar-shroud {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: block;
+    background: oklch(0.08 0.004 260 / 0.45);
+  }
+
+  .chat-sidebar-close-button {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    margin: -2px 0 0 auto;
+    border-radius: 7px;
+    color: var(--text);
+    background: var(--panel-bg);
   }
 
   .chat-main {
-    min-height: 70vh;
+    min-height: 0;
+    height: 100svh;
+    max-height: 100svh;
+    overflow: hidden;
+  }
+
+  .voice-room-main {
+    height: 100svh;
+    overflow: hidden;
+    background: oklch(0.17 0.008 260);
+  }
+
+  .chat-main-header {
+    min-height: 52px;
+    padding: 10px 12px;
+  }
+
+  .chat-main-header h1 {
+    font-size: 16px;
+  }
+
+  .message-list {
+    min-height: 0;
+    overflow: auto;
+    padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .composer-wrap {
+    flex: 0 0 auto;
+    padding: 0 12px calc(10px + env(safe-area-inset-bottom));
+    position: sticky;
+    bottom: env(keyboard-inset-height, 0px);
+    z-index: 4;
+    background: var(--panel-bg);
+  }
+
+  .message-row {
+    padding: 8px 12px;
   }
 
   .message-row {
@@ -2415,13 +2515,26 @@ button {
     padding: 8px;
   }
 
+  .chat-mobile-nav-toggle {
+    display: inline-grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    margin-right: 8px;
+    border-radius: 7px;
+    color: var(--text);
+    background: var(--panel-bg);
+    flex: 0 0 auto;
+  }
+
   .manage-dialog-shroud {
     padding: 8px;
   }
 
   .manage-dialog {
     min-height: 0;
-    max-height: calc(100vh - 16px);
+    max-height: calc(100svh - 16px);
+    min-width: min(920px, 100%);
   }
 
   .manage-overview-grid,
@@ -2435,10 +2548,18 @@ button {
   }
 
   .voice-room-body {
-    padding: 12px;
+    min-height: 0;
+    display: grid;
+    align-items: center;
+    overflow: hidden;
+    padding: 14px 16px;
   }
 
+  .voice-room-layout,
   .voice-room-layout.has-active-share {
+    min-height: 0;
+    align-content: center;
+    gap: 12px;
     grid-template-rows: auto auto auto;
   }
 
@@ -2448,12 +2569,17 @@ button {
 
   .screen-share-card {
     min-height: 190px;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 1 / 1;
   }
 
   .voice-room-layout.has-active-share .voice-video-grid,
   .voice-video-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(100%, 420px);
+    grid-template-columns: 1fr;
+    gap: 10px;
+    align-content: center;
+    justify-self: center;
+    margin: 0 auto;
   }
 
   .voice-video-grid .voice-video-tile,
@@ -2468,6 +2594,103 @@ button {
   .participant-count-8 .voice-video-tile:nth-child(7),
   .participant-count-8 .voice-video-tile:nth-child(8) {
     grid-column: auto;
+  }
+
+  .voice-video-tile {
+    border-color: oklch(0.28 0.01 260);
+    box-shadow: 0 12px 30px oklch(0.08 0.004 260 / 0.32);
+  }
+
+  .voice-video-placeholder .member-avatar {
+    width: 82px;
+    height: 82px;
+    font-size: 28px;
+  }
+
+  .voice-video-overlay {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    grid-template-columns: 16px minmax(0, 1fr) auto;
+    padding: 7px 8px;
+    border-radius: 6px;
+  }
+
+  .voice-room-controls {
+    padding: 8px 12px calc(10px + env(safe-area-inset-bottom));
+    background: linear-gradient(
+      180deg,
+      oklch(0.17 0.008 260 / 0),
+      oklch(0.17 0.008 260 / 0.96) 24px,
+      oklch(0.17 0.008 260)
+    );
+  }
+
+  .voice-room-controls .voice-panel {
+    width: min(100%, 440px);
+    margin: 0 auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid oklch(0.37 0.03 150 / 0.45);
+    border-radius: 8px;
+    background: oklch(0.22 0.025 150);
+    box-shadow: 0 14px 36px oklch(0.08 0.004 260 / 0.38);
+  }
+
+  .voice-room-controls .voice-panel-header {
+    grid-template-columns: 16px minmax(0, 1fr) 36px;
+    gap: 8px;
+  }
+
+  .voice-room-controls .voice-panel-header strong {
+    font-size: 12px;
+  }
+
+  .voice-room-controls .voice-panel-header small {
+    font-size: 12px;
+  }
+
+  .voice-room-controls .voice-control-row {
+    display: inline-flex;
+    gap: 6px;
+    justify-content: end;
+  }
+
+  .voice-room-controls .voice-control-button,
+  .voice-room-controls .voice-leave-button {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    border-radius: 7px;
+    background: oklch(0.27 0.012 260);
+  }
+
+  .voice-room-controls .voice-leave-button {
+    color: var(--danger);
+  }
+
+  .voice-room-controls .voice-control-button svg,
+  .voice-room-controls .voice-leave-button svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .voice-room-controls .voice-control-button span,
+  .voice-room-controls .voice-leave-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .voice-room-controls .call-error {
+    grid-column: 1 / -1;
+    margin: 0 2px;
   }
 }
 

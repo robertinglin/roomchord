@@ -1,26 +1,32 @@
 import React from "react";
-import { PhoneIcon, ScreenIcon, SpeakerIcon, VideoIcon, VideoOffIcon } from "@shared/ui/Icons";
+import { CameraSwapIcon, PhoneIcon, ScreenIcon, SpeakerIcon, VideoIcon, VideoOffIcon } from "@shared/ui/Icons";
 
 export function VoiceControlPanel({
   canUseVideo,
+  canSwapCamera = false,
   error,
   onLeave,
+  onToggleCameraSwap,
   onToggleScreenShare,
   onToggleVideo,
   roomName,
   sfuActive,
   sfuStatus,
+  showScreenShare = true,
   shareActive,
   videoOn
 }: {
   canUseVideo: boolean;
+  canSwapCamera?: boolean;
   error?: string;
   onLeave: () => void;
+  onToggleCameraSwap?: () => void;
   onToggleScreenShare: () => void;
   onToggleVideo: () => void;
   roomName: string;
   sfuActive: boolean;
   sfuStatus: string;
+  showScreenShare?: boolean;
   shareActive: boolean;
   videoOn: boolean;
 }) {
@@ -49,15 +55,28 @@ export function VoiceControlPanel({
           {videoOn ? <VideoIcon /> : <VideoOffIcon />}
           <span>{videoOn ? "Video on" : "Video off"}</span>
         </button>
-        <button
-          className={`voice-control-button${shareActive ? " active" : ""}`}
-          type="button"
-          aria-label={shareActive ? "Stop screen share" : "Share screen"}
-          onClick={onToggleScreenShare}
-        >
-          <ScreenIcon />
-          <span>{shareActive ? "Stop share" : "Share"}</span>
-        </button>
+        {showScreenShare ? (
+          <button
+            className={`voice-control-button${shareActive ? " active" : ""}`}
+            type="button"
+            aria-label={shareActive ? "Stop screen share" : "Share screen"}
+            onClick={onToggleScreenShare}
+          >
+            <ScreenIcon />
+            <span>{shareActive ? "Stop share" : "Share"}</span>
+          </button>
+        ) : null}
+        {canSwapCamera ? (
+          <button
+            className="voice-control-button"
+            type="button"
+            aria-label="Flip camera"
+            onClick={onToggleCameraSwap}
+          >
+            <CameraSwapIcon />
+            <span>Flip</span>
+          </button>
+        ) : null}
       </div>
 
       {error ? <p className="call-error">{error}</p> : null}

@@ -37,12 +37,14 @@ type ChatUiValues = {
   routedHash: string;
   selectedMediaRoomId?: string;
   storageKeys: ChatStorageKeys;
+  sidebarOpen: boolean;
   voicePreferences: VoicePreferences;
   voiceSettingsOpen: boolean;
 };
 
 export type ChatUiActions = {
   archiveJoinedMediaRoom(roomId: string): void;
+  closeSidebar(): void;
   bumpComposerFocus(): void;
   clearDraftDirectThread(threadId: string): void;
   clearRoutedHash(): void;
@@ -70,6 +72,7 @@ export type ChatUiActions = {
   setSelectedMediaRoomId(roomId?: string): void;
   setVoiceSettingsOpen(open: boolean): void;
   showDirectThread(threadId: string): void;
+  setSidebarOpen(open: boolean): void;
   toggleVoiceParticipantMute(participantId: string): void;
   updateVoicePreferences(preferences: VoicePreferences): void;
 };
@@ -106,6 +109,7 @@ function createChatUiState(input: ChatUiStoreInput, actions: ChatUiActions): Cha
     routedHash: input.initialLinkedLocation ? currentHash() : "",
     selectedMediaRoomId: undefined,
     storageKeys: input.storageKeys,
+    sidebarOpen: false,
     voicePreferences: loadVoicePreferences(input.storageKeys.voicePreferences),
     voiceSettingsOpen: false
   };
@@ -144,6 +148,9 @@ export function createChatUiStore(input: ChatUiStoreInput): ChatUiStore {
       },
       closeManageDialog() {
         set({ manageDialog: undefined });
+      },
+      closeSidebar() {
+        set({ sidebarOpen: false });
       },
       clearVoiceJoin() {
         set((state) => {
@@ -228,6 +235,9 @@ export function createChatUiStore(input: ChatUiStoreInput): ChatUiStore {
       },
       setActiveThreadId(threadId) {
         set({ activeThreadId: threadId });
+      },
+      setSidebarOpen(open) {
+        set({ sidebarOpen: open });
       },
       setActiveView(view) {
         set({ activeView: view });

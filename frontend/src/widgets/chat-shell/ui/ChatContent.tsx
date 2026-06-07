@@ -4,6 +4,12 @@ import { useChatRuntime } from "@entities/chat/model/chatRuntime";
 import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
 import { MessageFeed } from "@features/messages/ui/MessageFeed";
 import { VoiceRoomView } from "@features/voice-room/ui/VoiceRoomView";
+import type { ScreenShare } from "@entities/chat/model/types";
+
+function activeScreenShareForRoom(screenShares: ScreenShare[], roomId?: string) {
+  if (!roomId) return undefined;
+  return screenShares.find((share) => !share.stoppedAt && (share.roomId === roomId || share.scopeId === roomId));
+}
 
 export function ChatContent() {
   const { actions, live, media, view } = useChatRuntime();
@@ -11,8 +17,34 @@ export function ChatContent() {
   const composerFocusKey = useChatUiStore((value) => value.composerFocusKey);
   const localMediaSettings = useChatUiStore((value) => value.localMediaSettings);
   const mutedVoiceParticipantIds = useChatUiStore((value) => value.mutedVoiceParticipantIds);
+  const isMobile = typeof window !== "undefined" && typeof window.matchMedia === "function" ? window.matchMedia("(max-width: 760px)").matches : false;
 
   if (view.showingMediaRoom && view.selectedMediaRoom) {
+    const room = view.selectedMediaRoom;
+    const joined = view.joinedRoomId === room.id;
+    const roomSfuActive = media.sfu.mediaRoomId === room.id;
+    const sfuActive = roomSfuActive && (media.sfu.status === "connected" || media.sfu.status === "connecting");
+    const activeMedia = sfuActive ? media.sfu.media : localMediaSettings;
+    const videoOn = Boolean(activeMedia?.video);
+    const audioOn = !view.effectiveVoicePreferences.muted && !view.effectiveVoicePreferences.deafened;
+    const screenOn = Boolean(activeMedia?.screen);
+    const share = activeScreenShareForRoom(view.activeScreenShares, room.id);
+    const shareActive = screenOn || Boolean(share);
+
+    function toggleScreenShare() {
+      if (!joined) return;
+      if (!screenOn && share) {
+        void actions.stopScreenShare(share.id);
+        return;
+      }
+      void media.updateRoomMedia(room, { audio: audioOn, video: videoOn, screen: !screenOn });
+    }
+
+    function toggleVideo() {
+      if (!joined) return;
+      void media.updateRoomMedia(room, { audio: audioOn, video: !videoOn, screen: screenOn });
+    }
+
     return (
       <VoiceRoomView
         actorId={live.actor.memberId}
@@ -25,6 +57,20 @@ export function ChatContent() {
         voicePreferences={view.effectiveVoicePreferences}
         voiceTokens={media.voiceTokens}
         mutedVoiceParticipantIds={mutedVoiceParticipantIds}
+        showSidebarMenu={true}
+        onOpenMenu={() => ui.setSidebarOpen(true)}
+        onLeaveVoiceRoom={() => actions.leaveMediaRoom(room.id)}
+        onToggleVoiceCameraSwap={media.canSwapCamera ? () => media.toggleCameraFacing() : undefined}
+        onToggleVoiceScreenShare={toggleScreenShare}
+        voiceControlShowScreenShare={!isMobile}
+        onToggleVoiceVideo={toggleVideo}
+        voiceControlCanUseVideo={joined && room.allowsVideo !== false}
+        voiceControlCanSwapCamera={media.canSwapCamera}
+        voiceControlSfuActive={sfuActive}
+        voiceControlSfuStatus={media.sfu.status}
+        voiceControlShareActive={shareActive}
+        voiceControlVideoOn={videoOn}
+        voiceControlError={media.error}
         onDirectMessage={actions.openDirectThreadForMember}
         onStopWatchingScreenShare={media.stopWatchingScreenShare}
         onToggleVoiceParticipantMute={ui.toggleVoiceParticipantMute}
@@ -41,7 +87,7 @@ export function ChatContent() {
       memberNamesById={view.memberNamesById}
       memberAvatarsById={view.memberAvatarsById}
       forwardTargets={view.forwardTargets}
-      focusKey={composerFocusKey}
+      focusKey={composerFocusKey > 0 ? composerFocusKey : undefined}
       currentUserId={live.actor.memberId}
       mode={view.showingDm ? "dm" : "channel"}
       disabled={view.showingDm ? !view.currentThreadId : !view.currentChannelId}

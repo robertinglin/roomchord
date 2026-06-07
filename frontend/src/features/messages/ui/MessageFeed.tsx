@@ -4,6 +4,8 @@ import { MessageComposer } from "@features/messages/ui/MessageComposer";
 import { MessageRow } from "@features/messages/ui/MessageRow";
 import { loadRecentReactions, rememberReaction } from "@features/messages/model/recentReactions";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
+import { MenuIcon } from "@shared/ui/Icons";
+import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
 
 export type { MessageForwardTarget };
 
@@ -56,6 +58,8 @@ export function MessageFeed({
 }: MessageFeedProps) {
   const [replyTo, setReplyTo] = useState<Message | undefined>();
   const [recentReactions, setRecentReactions] = useState(loadRecentReactions);
+  const sidebarOpen = useChatUiStore((value) => value.sidebarOpen);
+  const ui = useChatUiActions();
   const messagesById = new Map(messages.map((message) => [message.id, message]));
   const displayMessages = [
     ...messages.filter((message) => message.pinnedAt && !message.deletedAt).map((message) => ({ message, pinnedCopy: true, instanceKey: `${message.id}:pinned` })),
@@ -74,6 +78,14 @@ export function MessageFeed({
   return (
     <section className="chat-main" aria-labelledby="active-room-heading">
       <header className="chat-main-header">
+        <button
+          type="button"
+          className="chat-mobile-nav-toggle"
+          aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
+          onClick={() => ui.setSidebarOpen(!sidebarOpen)}
+        >
+          <MenuIcon />
+        </button>
         <div>
           <h1 id="active-room-heading">{title}</h1>
           {subtitle ? <p>{subtitle}</p> : null}

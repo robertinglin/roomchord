@@ -128,7 +128,7 @@ export function draftDirectThreadForUsers(actorId: string, userIds: string[]): D
 }
 
 export function forwardedMessageBody(message: Message, memberNamesById: Record<string, string>) {
-  const name = message.authorName || (message.authorId ? memberNamesById[message.authorId] : undefined) || message.authorId || "Member";
+  const name = (message.authorId ? memberNamesById[message.authorId] : undefined) || message.authorName || message.authorId || "Member";
   return `Forwarded from ${name}:\n${message.body}`;
 }
 

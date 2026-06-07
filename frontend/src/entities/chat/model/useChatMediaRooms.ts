@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MeshRoomCallController, type MeshRoomParticipant } from "roomkit-sdk/browser/meshRoomCalls";
 import { SfuCallController } from "roomkit-sdk/browser/sfuCalls";
-import { mediaStreamForTrackRole, normalizeCallMediaSettings, publicCallMediaSettings, startScreenPreviewSnapshots } from "roomkit-sdk/browser/mediaCapture";
+import { mediaStreamForTrackRole, mediaTrackRole, normalizeCallMediaSettings, publicCallMediaSettings, startScreenPreviewSnapshots } from "roomkit-sdk/browser/mediaCapture";
 import type { CallMediaSettings, PeerJsMediaConnection, SfuCallState, ScreenPreviewSnapshot } from "roomkit-sdk/browser/types";
 import type { RoomKitEphemeralToken, RoomKitEphemeralTokenHandle } from "roomkit-sdk/browser/liveRoomConnector";
 import { mediaBridgeFromHost } from "@entities/chat/api/callBridge";
@@ -44,6 +44,43 @@ export function useChatMediaRooms(input: Input) {
   function relayHasSfu() {
     const info = bridge?.getRelaySfuInfo?.();
     return Boolean(info?.enabled && info.peerId);
+  }
+
+  function activeRoomState() {
+    if (sfuState.mediaRoomId === activeRoomRef.current?.id) return sfuState;
+    if (meshState.mediaRoomId === activeRoomRef.current?.id) return meshState;
+    return null;
+  }
+
+  function localCameraTrack(state: SfuCallState) {
+    if (!state.localStream) return undefined;
+    const tracks = state.localStream.getVideoTracks();
+    if (!tracks.length) return undefined;
+    const mediaTracks = state.localMediaTracks;
+    if (mediaTracks) {
+      const cameraTrack = tracks.find((track, index) => mediaTrackRole(track, index, mediaTracks) === "camera");
+      if (cameraTrack) return cameraTrack;
+    }
+    return tracks.find((track) => !track.label.toLowerCase().includes("screen")) || tracks[0];
+  }
+
+  function isFacingModeSwappable(state: SfuCallState) {
+    const track = localCameraTrack(state);
+    const capabilities = track?.getCapabilities?.();
+    const facingMode = capabilities?.facingMode;
+    if (!Array.isArray(facingMode) || !facingMode.length) return false;
+    return facingMode.includes("user") && facingMode.includes("environment");
+  }
+
+  function nextFacingMode(track: MediaStreamTrack, facingMode?: string) {
+    const capabilities = track.getCapabilities?.();
+    const modes = capabilities?.facingMode;
+    if (!Array.isArray(modes)) return undefined;
+    const normalized = modes.map((mode) => String(mode).toLowerCase());
+    if (normalized.includes("user") && normalized.includes("environment")) {
+      return normalized.includes(facingMode === "environment" ? "user" : "environment") ? (facingMode === "environment" ? "user" : "environment") : undefined;
+    }
+    return normalized.find((mode) => mode !== facingMode);
   }
 
   function activeCallState() {
@@ -246,6 +283,27 @@ export function useChatMediaRooms(input: Input) {
     return true;
   }, [bridge, meshState.mediaRoomId, sfuState.mediaRoomId]);
 
+  const toggleCameraFacing = useCallback(async () => {
+    const room = activeRoomRef.current;
+    const state = activeRoomState();
+    const roomId = room?.id;
+    if (!roomId || !state || state.mediaRoomId !== roomId || !state.localStream) return false;
+    const track = localCameraTrack(state);
+    if (!track) return false;
+    const settings = track.getSettings?.();
+    const nextFacing = nextFacingMode(track, settings?.facingMode);
+    if (!nextFacing) return false;
+    setError("");
+    try {
+      await track.applyConstraints({ facingMode: nextFacing });
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to switch camera";
+      setError(message);
+      return false;
+    }
+  }, [sfuState, meshState]);
+
   const leaveRoom = useCallback(() => {
     voiceTokenRef.current?.release();
     voiceTokenRef.current = undefined;
@@ -263,6 +321,7 @@ export function useChatMediaRooms(input: Input) {
   }, [meshState.mediaRoomId]);
 
   const roomCallState = activeCallState();
+  const roomState = activeRoomState();
 
   return {
     error,
@@ -272,7 +331,9 @@ export function useChatMediaRooms(input: Input) {
     updateRoomMedia,
     leaveRoom,
     watchScreenShare,
-    stopWatchingScreenShare
+    stopWatchingScreenShare,
+    toggleCameraFacing,
+    canSwapCamera: Boolean(roomState && isFacingModeSwappable(roomState))
   };
 }
 
