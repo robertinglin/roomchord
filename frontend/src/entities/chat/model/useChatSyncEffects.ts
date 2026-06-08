@@ -4,7 +4,7 @@ import { VOICE_RECONNECT_WINDOW_MS, type RecentVoiceJoin } from "@entities/chat/
 import { latestDirectMessageTime } from "@entities/chat/model/state";
 import type { ChatUiActions } from "@entities/chat/model/chatUiStore";
 import type { ChatState, DirectThread, Message } from "@entities/chat/model/types";
-import { currentHash, hasDirectMessages, linkedMessageLocation } from "@entities/chat/model/chatViewModel";
+import { currentHash, directThreadForUsers, hasDirectMessages, linkedMessageLocation } from "@entities/chat/model/chatViewModel";
 
 export type ChatSyncEffectsInput = {
   channels: Array<{ id: string }>;
@@ -48,8 +48,17 @@ export function useChatSyncEffects(input: ChatSyncEffectsInput) {
   }, [threads.length, ui]);
 
   useEffect(() => {
-    if (draftDirectThread && hasDirectMessages(state, draftDirectThread.id)) ui.clearDraftDirectThread(draftDirectThread.id);
-  }, [draftDirectThread, state, ui]);
+    if (!draftDirectThread) return;
+    const realThread = directThreadForUsers(state, draftDirectThread.userIds);
+    if (realThread) {
+      ui.clearDraftDirectThread(draftDirectThread.id);
+      if (currentThreadId === draftDirectThread.id) {
+        ui.setActiveThreadId(realThread.id);
+      }
+      return;
+    }
+    if (hasDirectMessages(state, draftDirectThread.id)) ui.clearDraftDirectThread(draftDirectThread.id);
+  }, [draftDirectThread, state, ui, currentThreadId]);
 
   useEffect(() => {
     function openLinkedMessage(hash = currentHash()) {

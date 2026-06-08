@@ -47,7 +47,15 @@ export function useChatViewData(input: ChatViewDataInput) {
         return closedAt === undefined || latestDirectMessageTime(state, thread.thread.id) > closedAt;
       })
       .map((group) => group.thread);
-    if (input.draftDirectThread && !visible.some((thread) => thread.id === input.draftDirectThread?.id)) visible.push(input.draftDirectThread);
+    if (input.draftDirectThread && !visible.some((thread) => thread.id === input.draftDirectThread?.id)) {
+      const draftUserIds = input.draftDirectThread.userIds;
+      const hasRealThread = draftUserIds && visible.some((thread) =>
+        !thread.topicKey &&
+        thread.userIds?.length === draftUserIds.length &&
+        thread.userIds?.every((id, i) => id === draftUserIds[i])
+      );
+      if (!hasRealThread) visible.push(input.draftDirectThread);
+    }
     return visible;
   }, [directGroups, input.closedDirectThreads, input.draftDirectThread, state]);
   const memberNamesById = useMemo(() => memberNamesForState(state, live.actor), [live.actor, state.members, state.presence]);
