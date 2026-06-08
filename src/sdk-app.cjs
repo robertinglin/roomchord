@@ -73,7 +73,7 @@ const operations = {
   ),
 
   "message.send": op(
-    { authorize: { roles: ["member"] }, payload: { channelId: p.string({ max: 200 }), body: p.string({ max: 4000 }), embeds: p.array().optional() } },
+    { authorize: { roles: ["member"] }, payload: { channelId: p.string({ max: 200 }), body: p.string({ max: 4000 }), embeds: p.array().optional(), mentionIds: p.array(p.string({ max: 120 })).optional() } },
     ({ ref, fx }) => ({
       effects: [fx.create(messages, {
         id: ref.newId("message"),
@@ -84,7 +84,7 @@ const operations = {
   ),
 
   "message.reply": op(
-    { authorize: { roles: ["member"] }, payload: { channelId: p.string({ max: 200 }), replyToId: p.string({ max: 200 }), body: p.string({ max: 4000 }) } },
+    { authorize: { roles: ["member"] }, payload: { channelId: p.string({ max: 200 }), replyToId: p.string({ max: 200 }), body: p.string({ max: 4000 }), mentionIds: p.array(p.string({ max: 120 })).optional() } },
     ({ ref, fx }) => ({
       effects: [fx.create(messages, {
         id: ref.newId("message"),
@@ -163,6 +163,76 @@ const operations = {
   )
 };
 
+/* ----- declarative notifications -----
+ * The NotificationRuntime in the SDK matches each accepted operation against
+ * `on.action` (the dispatched schemaAction), resolves the audience/scope/
+ * presentation expressions, and asks the relay to push to the recipients'
+ * subscribed devices. The relay stays zero-knowledge: payloads are encrypted
+ * with the room secret and contain no message body. This replaces the old
+ * imperative `sendPushNotification` calls in the frontend.
+ *
+ * Mentions are resolved on the client (member names are only known there) and
+ * passed through as `payload.mentionIds`, which the audience expression reads.
+ */
+const notifications = {
+  schemaVersion: 1,
+  definitions: {
+    messageMention: {
+      on: { action: "messageSend" },
+      kind: "chord.message.mention",
+      audience: { userIds: "$payload.mentionIds", excludeActor: true },
+      scope: { type: "channel", id: "$payload.channelId" },
+      presentation: {
+        title: { $expr: "$actor.displayName", fallback: "New mention" },
+        body: "mentioned you in a message"
+      },
+      link: { route: "channel", params: { channelId: "$payload.channelId" } },
+      read: {
+        scopeKey: "$payload.channelId",
+        cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
+        defaultPolicy: "route-visible"
+      },
+      delivery: { collapse: "scope" }
+    },
+    replyMention: {
+      on: { action: "messageReply" },
+      kind: "chord.message.mention",
+      audience: { userIds: "$payload.mentionIds", excludeActor: true },
+      scope: { type: "channel", id: "$payload.channelId" },
+      presentation: {
+        title: { $expr: "$actor.displayName", fallback: "New mention" },
+        body: "mentioned you in a reply"
+      },
+      link: { route: "channel", params: { channelId: "$payload.channelId" } },
+      read: {
+        scopeKey: "$payload.channelId",
+        cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
+        defaultPolicy: "route-visible"
+      },
+      delivery: { collapse: "scope" }
+    },
+    directMessage: {
+      on: { action: "directMessageSend" },
+      kind: "chord.dm.message",
+      audience: { userIds: "$payload.userIds", excludeActor: true },
+      // No thread id is in the payload, so group per sender: every recipient
+      // collapses notifications from the same person into one.
+      scope: { type: "dm", id: "$actor.memberId" },
+      presentation: {
+        title: { $expr: "$actor.displayName", fallback: "New message" },
+        body: "sent you a direct message"
+      },
+      link: { route: "dm", params: { memberId: "$actor.memberId" } },
+      read: {
+        scopeKey: "$actor.memberId",
+        cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
+        defaultPolicy: "route-visible"
+      },
+      delivery: { collapse: "scope" }
+    }
+  }
+};
+
 /* ----- compose with shared plugins + views + routes ----- */
 
 const app = defineApp({
@@ -199,6 +269,7 @@ const app = defineApp({
   actions: {
     directMessageSend: { plugin: "core", type: "dm.message", requiredRole: "member" }
   },
+  notifications,
   plugins: [
     "comments",
     "presence",

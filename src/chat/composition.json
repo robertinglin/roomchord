@@ -113,5 +113,124 @@
         "com.roomkit.examples.plugins.screen-share"
       ]
     }
-  ]
+  ],
+  "notifications": {
+    "schemaVersion": 1,
+    "definitions": {
+      "messageMention": {
+        "kind": "chord.message.mention",
+        "on": {
+          "action": "messageSend"
+        },
+        "audience": {
+          "userIds": "$payload.mentionIds",
+          "excludeActor": true
+        },
+        "scope": {
+          "type": "channel",
+          "id": "$payload.channelId"
+        },
+        "presentation": {
+          "title": {
+            "$expr": "$actor.displayName",
+            "fallback": "New mention"
+          },
+          "body": "mentioned you in a message"
+        },
+        "link": {
+          "route": "channel",
+          "params": {
+            "channelId": "$payload.channelId"
+          }
+        },
+        "read": {
+          "scopeKey": "$payload.channelId",
+          "cursor": {
+            "createdAt": "$operation.createdAt",
+            "operationId": "$operation.id"
+          },
+          "defaultPolicy": "route-visible"
+        },
+        "delivery": {
+          "collapse": "scope"
+        }
+      },
+      "replyMention": {
+        "kind": "chord.message.mention",
+        "on": {
+          "action": "messageReply"
+        },
+        "audience": {
+          "userIds": "$payload.mentionIds",
+          "excludeActor": true
+        },
+        "scope": {
+          "type": "channel",
+          "id": "$payload.channelId"
+        },
+        "presentation": {
+          "title": {
+            "$expr": "$actor.displayName",
+            "fallback": "New mention"
+          },
+          "body": "mentioned you in a reply"
+        },
+        "link": {
+          "route": "channel",
+          "params": {
+            "channelId": "$payload.channelId"
+          }
+        },
+        "read": {
+          "scopeKey": "$payload.channelId",
+          "cursor": {
+            "createdAt": "$operation.createdAt",
+            "operationId": "$operation.id"
+          },
+          "defaultPolicy": "route-visible"
+        },
+        "delivery": {
+          "collapse": "scope"
+        }
+      },
+      "directMessage": {
+        "kind": "chord.dm.message",
+        "on": {
+          "action": "directMessageSend"
+        },
+        "audience": {
+          "userIds": "$payload.userIds",
+          "excludeActor": true
+        },
+        "scope": {
+          "type": "dm",
+          "id": "$actor.memberId"
+        },
+        "presentation": {
+          "title": {
+            "$expr": "$actor.displayName",
+            "fallback": "New message"
+          },
+          "body": "sent you a direct message"
+        },
+        "link": {
+          "route": "dm",
+          "params": {
+            "memberId": "$actor.memberId"
+          }
+        },
+        "read": {
+          "scopeKey": "$actor.memberId",
+          "cursor": {
+            "createdAt": "$operation.createdAt",
+            "operationId": "$operation.id"
+          },
+          "defaultPolicy": "route-visible"
+        },
+        "delivery": {
+          "collapse": "scope"
+        }
+      }
+    }
+  }
 }

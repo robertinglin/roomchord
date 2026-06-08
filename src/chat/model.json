@@ -211,6 +211,13 @@
         "optional": {
           "embeds": {
             "type": "array"
+          },
+          "mentionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "max": 120
+            }
           }
         }
       },
@@ -260,6 +267,15 @@
           "body": {
             "type": "string",
             "max": 4000
+          }
+        },
+        "optional": {
+          "mentionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "max": 120
+            }
           }
         }
       },

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, type ReactNode } from "react";
 import { chatActionHandlers, type ChatActionHandlers } from "@entities/chat/model/chatActions";
 import { useChatMediaRooms, type ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
+import { useChatNotifications } from "@entities/chat/model/useChatNotifications";
 import { useChatSyncEffects } from "@entities/chat/model/useChatSyncEffects";
 import { useChatViewData, type ChatViewData } from "@entities/chat/model/useChatViewData";
 import { useChordClient, type ChordLiveClient } from "@entities/chat/model/useChordClient";
@@ -56,6 +57,8 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
     ui,
     view
   });
+
+  useChatNotifications({ actions, live, ui });
 
   useChatSyncEffects({
     channels: view.channels,

@@ -191,15 +191,17 @@ export namespace Chord {
      * channelId: string, <= 200
      * replyToId: string, <= 200
      * body: string, <= 4000
+     * mentionIds: array
      */
-    messageReply: { channelId: ChannelId; replyToId: MessageId; body: string };
+    messageReply: { channelId: ChannelId; replyToId: MessageId; body: string; mentionIds?: string[] };
     /**
      * Requires `member` role.
      * channelId: string, <= 200
      * body: string, <= 4000
      * embeds: array
+     * mentionIds: array
      */
-    messageSend: { channelId: ChannelId; body: string; embeds?: MessageEmbed[] };
+    messageSend: { channelId: ChannelId; body: string; embeds?: MessageEmbed[]; mentionIds?: string[] };
     /**
      * Requires `moderator` role.
      * messageId: string, <= 200

@@ -1,4 +1,3 @@
-import { sendPushNotification } from "roomkit-sdk/browser/push";
 import { latestDirectMessageTime } from "@entities/chat/model/state";
 import { parseMentionedMemberIds } from "@entities/chat/model/mentions";
 import type { ChannelId, MemberId, Message, MessageId } from "@entities/chat/model/types";
@@ -16,26 +15,15 @@ export function messageActions(input: ChatActionHandlersInput) {
   const { live, ui, view } = input;
   const { dispatch, state } = live;
 
-  // The client decides who to notify and asks the relay to deliver the push.
-  // The relay never inspects operations or decrypts content — it just routes the
-  // payload to the target users' registered subscriptions. We keep the payload to
-  // already relay-visible facts (sender, room) and never include message content.
-  function requestPush(userIds: string[], title: string, body: string) {
-    const targets = [...new Set(userIds)].filter((id) => id && id !== live.actor.memberId);
-    console.log("Requesting push notification for users", targets, { title, body });
-    if (targets.length === 0) return;
-    void sendPushNotification({
-      connector: live,
-      roomName: view.roomName,
-      userIds: targets,
-      payload: { title, body, roomName: view.roomName }
-    }).catch(() => {});
-  }
-
+  // Notifications are now declarative: the app schema's `notifications` block
+  // tells the SDK NotificationRuntime to push on accepted operations. We only
+  // surface the data its audience expressions need. Mentions can only be
+  // resolved client-side (member names live here), so we attach the resolved
+  // recipient ids as `mentionIds`; the relay still never sees message content.
   async function sendChannelMessageToChannel(channelId: string, body: string) {
     const embeds = messageEmbeds(body);
-    await dispatch("messageSend", { channelId: channelId as ChannelId, body, embeds });
-    requestPush(parseMentionedMemberIds(body, view.memberNamesById), `${view.actorName} mentioned you`, "You were mentioned in a message");
+    const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
+    await dispatch("messageSend", { channelId: channelId as ChannelId, body, embeds, mentionIds: mentionIds as MemberId[] });
     for (const embed of embeds) {
       if (embed.provider === "link") continue;
       await dispatch("embedAdd", { scopeType: "channel", scopeId: channelId, url: embed.url, title: embed.title, provider: embed.provider });
@@ -50,7 +38,6 @@ export function messageActions(input: ChatActionHandlersInput) {
   async function sendDirectMessageToThread(threadId: string, userIds: string[], body: string) {
     const result = await dispatch("directMessageSend", { userIds: userIds as MemberId[], body });
     if (result.ok === false) return;
-    requestPush(userIds, `New message from ${view.actorName}`, "You have a new direct message");
     const committedThread = result.state ? directThreadForUsers(result.state, userIds) : directThreadForUsers(state, userIds);
     if (committedThread) {
       ui.clearDraftDirectThread(committedThread.id);
@@ -80,8 +67,8 @@ export function messageActions(input: ChatActionHandlersInput) {
 
   async function replyToMessage(replyToId: string, body: string) {
     if (!view.currentChannelId) return;
-    await dispatch("messageReply", { channelId: view.currentChannelId as ChannelId, replyToId: replyToId as MessageId, body });
-    requestPush(parseMentionedMemberIds(body, view.memberNamesById), `${view.actorName} mentioned you`, "You were mentioned in a message");
+    const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
+    await dispatch("messageReply", { channelId: view.currentChannelId as ChannelId, replyToId: replyToId as MessageId, body, mentionIds: mentionIds as MemberId[] });
   }
 
   async function reactToMessage(messageId: string, emoji: string) {

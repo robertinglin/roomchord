@@ -3,6 +3,10 @@ import { roomSearchParamsWithoutConfig } from "roomkit-sdk/browser/roomLink";
 
 const MESSAGE_HASH_PREFIX = "message-";
 const MESSAGE_QUERY_PARAM = "messageId";
+const NOTIFY_CHANNEL_PARAM = "notifyChannel";
+const NOTIFY_DM_PARAM = "notifyDm";
+
+export type NotificationTarget = { channelId: string } | { dmMemberId: string };
 
 export function messageAnchorId(messageId: string) {
   return `${MESSAGE_HASH_PREFIX}${messageId}`;
@@ -18,6 +22,29 @@ export function messageHref(messageId: string) {
     }
   }
   return `#${encodeURIComponent(messageAnchorId(messageId))}`;
+}
+
+// Builds the deep link baked into a push notification. Mirrors messageHref:
+// we reuse the recipient-shared room route and strip room config so the link is
+// safe to embed. Returns undefined when we are not on a room route (the SDK then
+// falls back to its default hash link).
+export function notificationHref(target: NotificationTarget): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const path = hashPath();
+  if (!path.startsWith("/room/")) return undefined;
+  const params = roomSearchParamsWithoutConfig(hashSearchParams());
+  if ("channelId" in target) params.set(NOTIFY_CHANNEL_PARAM, target.channelId);
+  else params.set(NOTIFY_DM_PARAM, target.dmMemberId);
+  return buildHashRoute(path, params);
+}
+
+export function notificationTargetFromHash(hash?: string): NotificationTarget | undefined {
+  const params = hashSearchParams(hash);
+  const channelId = params.get(NOTIFY_CHANNEL_PARAM);
+  if (channelId) return { channelId };
+  const dmMemberId = params.get(NOTIFY_DM_PARAM);
+  if (dmMemberId) return { dmMemberId };
+  return undefined;
 }
 
 export function messageIdFromHash(hash: string) {
