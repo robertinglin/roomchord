@@ -225,6 +225,7 @@ function renderChat(
   actor = { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" },
   hostOverrides: Record<string, unknown> = {}
 ) {
+  window.localStorage.removeItem("roomkit:notification-read-state");
   const sender = sendOperation || vi.fn(async (operation) => ({ ok: true, state: initialState, operation }));
   window.ROOMKIT_CHORD_HOST = { appMetadata: testAppMetadata, getAppMetadata: () => testAppMetadata, getState: vi.fn(async () => initialState), sendOperation: sender, ...hostOverrides } as any;
   return { ...render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor }} />), sendOperation: sender };

@@ -3,10 +3,12 @@ import { messageAnchorId, messageIdFromHash } from "@entities/chat/model/message
 import { VOICE_RECONNECT_WINDOW_MS, type RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { latestDirectMessageTime } from "@entities/chat/model/state";
 import type { ChatUiActions } from "@entities/chat/model/chatUiStore";
+import type { ChordLiveClient } from "@entities/chat/model/useChordClient";
 import type { ChatState, DirectThread, Message } from "@entities/chat/model/types";
 import { currentHash, directThreadForUsers, hasDirectMessages, linkedMessageLocation } from "@entities/chat/model/chatViewModel";
 
 export type ChatSyncEffectsInput = {
+  live?: ChordLiveClient;
   channels: Array<{ id: string }>;
   currentThreadId?: string;
   draftDirectThread?: DirectThread;
@@ -104,5 +106,26 @@ export function useChatSyncEffects(input: ChatSyncEffectsInput) {
     if (!showingDm || !currentThreadId) return;
     const latest = latestDirectMessageTime(state, currentThreadId);
     ui.markDirectThreadRead(currentThreadId, latest);
-  }, [currentThreadId, showingDm, state, ui]);
+
+    // Also mark RoomKit notifications read for each sender in this thread.
+    const notifications = input.live?.notifications;
+    if (notifications) {
+      const messages = Object.values(state.directMessages || {})
+        .filter((m) => m.threadId === currentThreadId && !m.deletedAt);
+      const latestBySender = new Map<string, Message>();
+      for (const message of messages) {
+        if (!message.authorId) continue;
+        const existing = latestBySender.get(message.authorId);
+        if (!existing || (message.createdAt || 0) > (existing.createdAt || 0)) {
+          latestBySender.set(message.authorId, message);
+        }
+      }
+      for (const [authorId, message] of latestBySender) {
+        void notifications.markRead(authorId, {
+          createdAt: Number(message.createdAt || 0),
+          operationId: String(message.id)
+        });
+      }
+    }
+  }, [currentThreadId, showingDm, state, ui, input.live]);
 }

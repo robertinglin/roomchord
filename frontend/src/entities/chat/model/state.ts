@@ -77,6 +77,31 @@ export function directUnreadCounts(state: ChatState, currentUserId: string | und
   return counts;
 }
 
+export type NotificationReadCursorLike = { createdAt: number; operationId: string };
+
+export function directUnreadCountsUsingNotifications(
+  state: ChatState,
+  currentUserId: string | undefined,
+  notifications: { getReadCursor(scopeKey: string): NotificationReadCursorLike | undefined }
+): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const message of Object.values(state.directMessages || {})) {
+    if (!isCoreDirectMessage(message)) continue;
+    if (!message.threadId || message.deletedAt) continue;
+    if (currentUserId && message.authorId === currentUserId) continue;
+
+    const cursor = message.authorId ? notifications.getReadCursor(message.authorId) : undefined;
+    if (cursor) {
+      const createdAt = Number(message.createdAt || 0);
+      if (createdAt < cursor.createdAt) continue;
+      if (createdAt === cursor.createdAt && String(message.id) <= cursor.operationId) continue;
+    }
+
+    counts[message.threadId] = (counts[message.threadId] || 0) + 1;
+  }
+  return counts;
+}
+
 export function latestDirectMessageTime(state: ChatState, threadId?: string): number {
   if (!threadId) return 0;
   return directMessages(state, threadId).reduce((latest, message) => Math.max(latest, Number(message.createdAt || 0)), 0);

@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { removeStorage } from "roomkit-sdk/browser/storage/base";
 
 const localStorageData = new Map<string, string>();
 
@@ -31,6 +32,7 @@ Object.defineProperty(window, "localStorage", {
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  removeStorage("roomkit:notification-read-state");
   document.getElementById("roomkit-chord-styles")?.remove();
   document.getElementById("roomkit-emoji-picker-styles")?.remove();
   window.location.hash = "";

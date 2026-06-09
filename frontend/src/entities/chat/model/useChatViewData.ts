@@ -5,7 +5,7 @@ import type { ActiveView } from "@entities/chat/model/chatUiStore";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { canEditRoom, canViewRoom, assignedRoleIds } from "@entities/chat/model/roles";
-import { channelThreads, directUnreadCounts, latestDirectMessageTime, visibleChannelMessages } from "@entities/chat/model/state";
+import { channelThreads, directUnreadCounts, directUnreadCountsUsingNotifications, latestDirectMessageTime, visibleChannelMessages } from "@entities/chat/model/state";
 import type { ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
 import type { ChordLiveClient } from "@entities/chat/model/useChordClient";
 import type { ChannelId, DirectThread, ThreadId } from "@entities/chat/model/types";
@@ -60,7 +60,12 @@ export function useChatViewData(input: ChatViewDataInput) {
   }, [directGroups, input.closedDirectThreads, input.draftDirectThread, state]);
   const memberNamesById = useMemo(() => memberNamesForState(state, live.actor), [live.actor, state.members, state.presence]);
   const memberAvatarsById = useMemo(() => memberAvatarsForState(state, live.actor), [live.actor, state.members, state.presence]);
-  const unreadCounts = useMemo(() => directUnreadCounts(state, live.actor.memberId, input.readAtByThread), [input.readAtByThread, live.actor.memberId, state]);
+  const unreadCounts = useMemo(() => {
+    if (live.notifications) {
+      return directUnreadCountsUsingNotifications(state, live.actor.memberId, live.notifications);
+    }
+    return directUnreadCounts(state, live.actor.memberId, input.readAtByThread);
+  }, [input.readAtByThread, live.actor.memberId, live.notifications, state]);
   const actorCanManageRooms = live.can("mediaRoomCreate");
   const actorCanCreateChannels = live.can("channelCreate");
   const actorCanManageRoles = live.can("roleCreate");

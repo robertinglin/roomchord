@@ -61,6 +61,7 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   useChatNotifications({ actions, live, ui });
 
   useChatSyncEffects({
+    live,
     channels: view.channels,
     currentThreadId: view.currentThreadId,
     draftDirectThread,
