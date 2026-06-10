@@ -144,7 +144,7 @@
           }
         },
         "read": {
-          "scopeKey": "$payload.channelId",
+          "scopeKey": "channel:$payload.channelId",
           "cursor": {
             "createdAt": "$operation.createdAt",
             "operationId": "$operation.id"
@@ -156,7 +156,7 @@
         }
       },
       "replyMention": {
-        "kind": "chord.message.mention",
+        "kind": "chord.reply.mention",
         "on": {
           "action": "messageReply"
         },
@@ -182,7 +182,7 @@
           }
         },
         "read": {
-          "scopeKey": "$payload.channelId",
+          "scopeKey": "channel:$payload.channelId",
           "cursor": {
             "createdAt": "$operation.createdAt",
             "operationId": "$operation.id"
@@ -194,7 +194,7 @@
         }
       },
       "directMessage": {
-        "kind": "chord.dm.message",
+        "kind": "chord.directMessage",
         "on": {
           "action": "directMessageSend"
         },
@@ -220,7 +220,7 @@
           }
         },
         "read": {
-          "scopeKey": "$actor.memberId",
+          "scopeKey": "dm:$actor.memberId",
           "cursor": {
             "createdAt": "$operation.createdAt",
             "operationId": "$operation.id"

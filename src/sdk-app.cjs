@@ -176,54 +176,58 @@ const operations = {
  */
 const notifications = {
   messageMention: {
-    action: "messageSend",
+    kind: "chord.message.mention",
+    on: { action: "messageSend" },
     audience: { userIds: "$payload.mentionIds", excludeActor: true },
     scope: { type: "channel", id: "$payload.channelId" },
     presentation: {
       title: { $expr: "$actor.displayName", fallback: "New mention" },
       body: "mentioned you in a message"
     },
-    link: { kind: "route", route: "channel", params: { channelId: "$payload.channelId" } },
+    link: { route: "channel", params: { channelId: "$payload.channelId" } },
     read: {
-      scope: { type: "channel", id: "$payload.channelId" },
+      scopeKey: "channel:$payload.channelId",
       cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
-      policy: "route-visible"
+      defaultPolicy: "route-visible"
     },
     delivery: { collapse: "scope" }
   },
   replyMention: {
-    action: "messageReply",
+    kind: "chord.reply.mention",
+    on: { action: "messageReply" },
     audience: { userIds: "$payload.mentionIds", excludeActor: true },
     scope: { type: "channel", id: "$payload.channelId" },
     presentation: {
       title: { $expr: "$actor.displayName", fallback: "New mention" },
       body: "mentioned you in a reply"
     },
-    link: { kind: "route", route: "channel", params: { channelId: "$payload.channelId" } },
+    link: { route: "channel", params: { channelId: "$payload.channelId" } },
     read: {
-      scope: { type: "channel", id: "$payload.channelId" },
+      scopeKey: "channel:$payload.channelId",
       cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
-      policy: "route-visible"
+      defaultPolicy: "route-visible"
     },
     delivery: { collapse: "scope" }
   },
   directMessage: {
-    action: "directMessageSend",
+    kind: "chord.directMessage",
+    on: { action: "directMessageSend" },
     audience: { userIds: "$payload.userIds", excludeActor: true },
     // No thread id is in the payload, so group per sender: every recipient
     // collapses notifications from the same person into one.
     scope: { type: "dm", id: "$actor.memberId" },
     presentation: {
       title: { $expr: "$actor.displayName", fallback: "New message" },
-      // This shows actual DM text in the notification. Use the static fallback
-      // only if the active notification transport should not expose message text.
-      body: { $expr: "$payload.body", fallback: "sent you a direct message" }
+      // The body is static because the schema only accepts a string here.
+      // If you want dynamic DM text, encrypt it client-side into the notification
+      // transport; the relay and schema stay zero-knowledge.
+      body: "sent you a direct message"
     },
-    link: { kind: "route", route: "dm", params: { memberId: "$actor.memberId" } },
+    link: { route: "dm", params: { memberId: "$actor.memberId" } },
     read: {
-      scope: { type: "dm", id: "$actor.memberId" },
+      scopeKey: "dm:$actor.memberId",
       cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
-      policy: "route-visible"
+      defaultPolicy: "route-visible"
     },
     delivery: { collapse: "scope" }
   }
@@ -265,7 +269,7 @@ const app = defineApp({
   actions: {
     directMessageSend: { plugin: "core", type: "dm.message", requiredRole: "member" }
   },
-  notifications,
+  notifications: { definitions: notifications },
   plugins: [
     "comments",
     "presence",

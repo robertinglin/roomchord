@@ -98,6 +98,7 @@
           "kind": "createRecord",
           "collection": "channels",
           "storage": "array",
+          "partition": "channels",
           "idPrefix": "channel",
           "fields": {
             "name": "$payload.name",
@@ -153,6 +154,7 @@
           "kind": "updateRecord",
           "collection": "channels",
           "storage": "array",
+          "partition": "channels",
           "idField": "channelId",
           "fields": {
             "name": "$payload.name",
@@ -183,6 +185,7 @@
           "kind": "markRecord",
           "collection": "channels",
           "storage": "array",
+          "partition": "channels",
           "idField": "channelId",
           "fields": {
             "archivedAt": "$createdAt"
@@ -226,6 +229,7 @@
           "kind": "createRecord",
           "collection": "messages",
           "storage": "map",
+          "partition": "messages",
           "idPrefix": "message",
           "fields": {
             "channelId": "$payload.channelId",
@@ -284,6 +288,7 @@
           "kind": "createRecord",
           "collection": "messages",
           "storage": "map",
+          "partition": "messages",
           "idPrefix": "message",
           "fields": {
             "channelId": "$payload.channelId",
@@ -331,6 +336,7 @@
           "kind": "recordOwnerOrRole",
           "collection": "messages",
           "storage": "map",
+          "partition": "messages",
           "idField": "messageId",
           "ownerField": "authorId",
           "roles": [],
@@ -340,6 +346,7 @@
           "kind": "recordFlagClear",
           "collection": "messages",
           "storage": "map",
+          "partition": "messages",
           "idField": "messageId",
           "flag": "deletedAt",
           "message": "Deleted messages cannot be edited."
@@ -350,6 +357,7 @@
           "kind": "updateRecord",
           "collection": "messages",
           "storage": "map",
+          "partition": "messages",
           "idField": "messageId",
           "fields": {
             "body": "$payload.body",
@@ -383,6 +391,7 @@
           "kind": "toggleReaction",
           "collection": "messages",
           "storage": "map",
+          "partition": "messages",
           "idField": "messageId",
           "emojiField": "emoji"
         }
@@ -407,6 +416,7 @@
           "kind": "markRecord",
           "collection": "messages",
           "storage": "map",
+          "partition": "messages",
           "idField": "messageId",
           "fields": {
             "pinnedAt": "$createdAt",
@@ -435,6 +445,7 @@
           "kind": "markRecord",
           "collection": "messages",
           "storage": "map",
+          "partition": "messages",
           "idField": "messageId",
           "fields": {
             "pinnedAt": null,
@@ -463,6 +474,7 @@
           "kind": "recordOwnerOrRole",
           "collection": "messages",
           "storage": "map",
+          "partition": "messages",
           "idField": "messageId",
           "ownerField": "authorId",
           "roles": [
@@ -476,6 +488,7 @@
           "kind": "markRecord",
           "collection": "messages",
           "storage": "map",
+          "partition": "messages",
           "idField": "messageId",
           "fields": {
             "body": "",
@@ -525,6 +538,7 @@
           "kind": "createRecord",
           "collection": "roleDefinitions",
           "storage": "map",
+          "partition": "roleDefinitions",
           "idField": "roleId",
           "fields": {
             "name": "$payload.name",
@@ -582,6 +596,7 @@
           "kind": "updateRecord",
           "collection": "roleDefinitions",
           "storage": "map",
+          "partition": "roleDefinitions",
           "idField": "roleId",
           "fields": {
             "name": "$payload.name",
@@ -614,6 +629,7 @@
           "kind": "markRecord",
           "collection": "roleDefinitions",
           "storage": "map",
+          "partition": "roleDefinitions",
           "idField": "roleId",
           "fields": {
             "archivedAt": "$createdAt",
@@ -662,6 +678,7 @@
           "kind": "createRecord",
           "collection": "memberRoles",
           "storage": "map",
+          "partition": "memberRoles",
           "idField": "memberId",
           "fields": {
             "memberId": "$payload.memberId",
@@ -685,5 +702,37 @@
       ]
     }
   },
-  "views": {}
+  "views": {},
+  "shapes": {
+    "channels": {
+      "readClass": "full-fold",
+      "integrityClass": "checkpoint",
+      "storage": "array",
+      "partition": "channels"
+    },
+    "messages": {
+      "readClass": "full-fold",
+      "integrityClass": "checkpoint",
+      "storage": "map",
+      "partition": "messages"
+    },
+    "memberRoles": {
+      "readClass": "full-fold",
+      "integrityClass": "checkpoint",
+      "storage": "map",
+      "partition": "memberRoles"
+    },
+    "roleDefinitions": {
+      "readClass": "full-fold",
+      "integrityClass": "checkpoint",
+      "storage": "map",
+      "partition": "roleDefinitions"
+    },
+    "activity": {
+      "readClass": "full-fold",
+      "integrityClass": "checkpoint",
+      "storage": "array",
+      "partition": "activity"
+    }
+  }
 }
