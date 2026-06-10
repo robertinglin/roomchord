@@ -6,6 +6,20 @@ const MESSAGE_QUERY_PARAM = "messageId";
 const NOTIFY_CHANNEL_PARAM = "notifyChannel";
 const NOTIFY_DM_PARAM = "notifyDm";
 
+const ROOM_DEEP_LINK_PREFIXES = ["/room/", "/roomkit/launch/", "/roomkit/invite/"];
+
+function currentRoomDeepLinkPath() {
+  const path = hashPath();
+  return ROOM_DEEP_LINK_PREFIXES.some((prefix) => path.startsWith(prefix)) ? path : undefined;
+}
+
+function absoluteHashHref(hashRoute: string) {
+  if (typeof window === "undefined") return hashRoute;
+  const url = new URL(window.location.href);
+  url.hash = hashRoute.startsWith("#") ? hashRoute.slice(1) : hashRoute;
+  return url.toString();
+}
+
 export type NotificationTarget = { channelId: string } | { dmMemberId: string };
 
 export function messageAnchorId(messageId: string) {
@@ -30,12 +44,12 @@ export function messageHref(messageId: string) {
 // falls back to its default hash link).
 export function notificationHref(target: NotificationTarget): string | undefined {
   if (typeof window === "undefined") return undefined;
-  const path = hashPath();
-  if (!path.startsWith("/room/")) return undefined;
+  const path = currentRoomDeepLinkPath();
+  if (!path) return undefined;
   const params = roomSearchParamsWithoutConfig(hashSearchParams());
   if ("channelId" in target) params.set(NOTIFY_CHANNEL_PARAM, target.channelId);
   else params.set(NOTIFY_DM_PARAM, target.dmMemberId);
-  return buildHashRoute(path, params);
+  return absoluteHashHref(buildHashRoute(path, params));
 }
 
 export function notificationTargetFromHash(hash?: string): NotificationTarget | undefined {

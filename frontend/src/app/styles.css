@@ -1207,10 +1207,11 @@ button {
 }
 
 .voice-room-main {
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .voice-room-controls {
+  display: none;
   padding: 10px 20px 12px;
 }
 
@@ -1222,6 +1223,7 @@ button {
 
 .voice-room-layout {
   min-height: 100%;
+  height: 100%;
   width: 100%;
   display: grid;
   gap: 14px;
@@ -1229,14 +1231,25 @@ button {
 }
 
 .voice-room-layout.has-active-share {
-  align-content: stretch;
-  grid-template-rows: minmax(280px, 1fr) auto auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.voice-shares-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  flex: 1 1 0%;
 }
 
 .screen-share-stage {
   min-height: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  flex: 1 1 0%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 12px;
 }
 
@@ -1251,9 +1264,12 @@ button {
 }
 
 .screen-share-card {
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 16 / 9;
   min-height: 0;
-  width: 100%;
+  max-height: 100%;
+  max-width: 100%;
+  width: auto;
+  height: auto;
 }
 
 .screen-share-card video,
@@ -1266,7 +1282,7 @@ button {
 }
 
 .screen-share-card video {
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .screen-share-preview-row {
@@ -1278,7 +1294,7 @@ button {
 
 .screen-share-preview-card {
   flex: 0 0 220px;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 16 / 9;
 }
 
 .screen-share-preview-image,
@@ -1360,21 +1376,29 @@ button {
 
 .voice-video-grid {
   width: 100%;
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 12px;
-  align-content: center;
+  max-width: 1200px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
   margin: auto;
 }
 
 .voice-room-layout.has-active-share .voice-video-grid {
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-content: start;
-  margin: 0;
+  margin: 0 auto;
+  flex: 0 0 auto;
+  width: 100%;
+  gap: 12px;
 }
 
 .voice-video-grid > .empty-thread {
-  grid-column: 1 / -1;
+  width: 100%;
+  text-align: center;
 }
 
 .voice-video-tile {
@@ -1382,51 +1406,49 @@ button {
   min-width: 0;
   display: grid;
   place-items: center;
-  grid-column: span 4;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid var(--sidebar-deep);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--sidebar-deep);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.voice-video-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
 }
 
 .voice-room-layout.has-active-share .voice-video-grid .voice-video-tile {
   grid-column: auto;
-  aspect-ratio: 1 / 1;
+  width: 132px;
+  aspect-ratio: 16 / 9;
 }
 
+/* Auto-sizing card layouts on desktop based on participant count */
 .participant-count-1 .voice-video-tile {
-  grid-column: 2 / span 10;
+  width: min(100%, 720px);
 }
 
-.participant-count-2 .voice-video-tile,
+.participant-count-2 .voice-video-tile {
+  width: min(calc(50% - 12px), 580px);
+}
+
 .participant-count-3 .voice-video-tile,
 .participant-count-4 .voice-video-tile {
-  grid-column: span 6;
+  width: min(calc(50% - 12px), 480px);
 }
 
-.participant-count-3 .voice-video-tile:last-child {
-  grid-column: 4 / span 6;
+.participant-count-5 .voice-video-tile,
+.participant-count-6 .voice-video-tile {
+  width: min(calc(33.33% - 12px), 400px);
 }
 
-.participant-count-5 .voice-video-tile:nth-child(4) {
-  grid-column: 3 / span 4;
-}
-
-.participant-count-5 .voice-video-tile:nth-child(5) {
-  grid-column: 7 / span 4;
-}
-
-.participant-count-7 .voice-video-tile:nth-child(7) {
-  grid-column: 5 / span 4;
-}
-
-.participant-count-8 .voice-video-tile:nth-child(7) {
-  grid-column: 3 / span 4;
-}
-
-.participant-count-8 .voice-video-tile:nth-child(8) {
-  grid-column: 7 / span 4;
+.participant-count-7 .voice-video-tile,
+.participant-count-8 .voice-video-tile,
+.participant-count-many .voice-video-tile {
+  width: min(calc(25% - 12px), 320px);
 }
 
 .voice-video-tile video {
@@ -1461,6 +1483,7 @@ button {
   border-radius: 7px;
   color: var(--text);
   background: oklch(0.16 0.006 260 / 0.82);
+  pointer-events: none;
 }
 
 .voice-video-speaker {
@@ -2275,6 +2298,18 @@ button {
   place-items: center;
 }
 
+.member-list .member-context-target {
+  display: block;
+  width: 100%;
+}
+
+.voice-video-tile .member-context-target {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
 .member-context-menu {
   position: fixed;
   z-index: 20;
@@ -2453,6 +2488,7 @@ button {
     height: 100svh;
     overflow: hidden;
     background: oklch(0.17 0.008 260);
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
   .chat-main-header {
@@ -2560,26 +2596,43 @@ button {
     min-height: 0;
     align-content: center;
     gap: 12px;
-    grid-template-rows: auto auto auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .voice-shares-wrap {
+    height: auto;
   }
 
   .screen-share-stage {
     grid-template-columns: 1fr;
+    height: auto;
+    flex: none;
   }
 
   .screen-share-card {
     min-height: 190px;
     aspect-ratio: 1 / 1;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    max-width: none;
   }
 
   .voice-room-layout.has-active-share .voice-video-grid,
   .voice-video-grid {
+    display: grid;
     width: min(100%, 420px);
     grid-template-columns: 1fr;
     gap: 10px;
     align-content: center;
     justify-self: center;
     margin: 0 auto;
+  }
+
+  .voice-room-layout.has-active-share .voice-video-grid .voice-video-tile {
+    width: auto;
+    aspect-ratio: 1 / 1;
   }
 
   .voice-video-grid .voice-video-tile,
@@ -2592,13 +2645,24 @@ button {
   .participant-count-5 .voice-video-tile:nth-child(5),
   .participant-count-7 .voice-video-tile:nth-child(7),
   .participant-count-8 .voice-video-tile:nth-child(7),
-  .participant-count-8 .voice-video-tile:nth-child(8) {
+  .participant-count-8 .voice-video-tile:nth-child(8),
+  .participant-count-5 .voice-video-tile,
+  .participant-count-6 .voice-video-tile,
+  .participant-count-7 .voice-video-tile,
+  .participant-count-8 .voice-video-tile,
+  .participant-count-many .voice-video-tile {
     grid-column: auto;
+    width: auto;
+    aspect-ratio: 1 / 1;
+    transform: none;
   }
 
   .voice-video-tile {
     border-color: oklch(0.28 0.01 260);
     box-shadow: 0 12px 30px oklch(0.08 0.004 260 / 0.32);
+    width: auto;
+    aspect-ratio: 1 / 1;
+    transform: none;
   }
 
   .voice-video-placeholder .member-avatar {
@@ -2617,6 +2681,7 @@ button {
   }
 
   .voice-room-controls {
+    display: block;
     padding: 8px 12px calc(10px + env(safe-area-inset-bottom));
     background: linear-gradient(
       180deg,

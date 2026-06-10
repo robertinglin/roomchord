@@ -5,6 +5,7 @@ import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiSto
 import { MessageFeed } from "@features/messages/ui/MessageFeed";
 import { VoiceRoomView } from "@features/voice-room/ui/VoiceRoomView";
 import type { ScreenShare } from "@entities/chat/model/types";
+import { useIsMobile } from "@shared/ui/useIsMobile";
 
 function activeScreenShareForRoom(screenShares: ScreenShare[], roomId?: string) {
   if (!roomId) return undefined;
@@ -17,7 +18,7 @@ export function ChatContent() {
   const composerFocusKey = useChatUiStore((value) => value.composerFocusKey);
   const localMediaSettings = useChatUiStore((value) => value.localMediaSettings);
   const mutedVoiceParticipantIds = useChatUiStore((value) => value.mutedVoiceParticipantIds);
-  const isMobile = typeof window !== "undefined" && typeof window.matchMedia === "function" ? window.matchMedia("(max-width: 760px)").matches : false;
+  const isMobile = useIsMobile();
 
   if (view.showingMediaRoom && view.selectedMediaRoom) {
     const room = view.selectedMediaRoom;

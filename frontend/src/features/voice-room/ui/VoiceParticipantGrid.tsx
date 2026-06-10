@@ -6,6 +6,7 @@ import { MicIcon, MicOffIcon, ScreenIcon, SpeakerIcon, VideoIcon, VideoOffIcon }
 import { MemberContextMenu, type MemberContextMenuAction } from "@shared/ui/MemberContextMenu";
 import type { VoiceParticipant } from "@features/voice-room/model/types";
 import { audioOn, cameraOn, cameraStream, isVoiceParticipantMuted, mediaLabel, participantGridClass, screenOn } from "@features/voice-room/model/voiceParticipants";
+import type { ScreenPreviewSnapshot } from "roomkit-sdk/browser/types";
 
 export function VoiceParticipantGrid({
   actorId,
@@ -14,7 +15,9 @@ export function VoiceParticipantGrid({
   onToggleVoiceParticipantMute,
   participants,
   roomName,
-  voicePreferences
+  voicePreferences,
+  inlinedShares,
+  onWatchScreenShare
 }: {
   actorId: string;
   mutedVoiceParticipantIds?: Record<string, boolean>;
@@ -23,6 +26,8 @@ export function VoiceParticipantGrid({
   participants: VoiceParticipant[];
   roomName: string;
   voicePreferences: VoicePreferences;
+  inlinedShares?: Array<{ participant: VoiceParticipant; preview: ScreenPreviewSnapshot | undefined; stream?: MediaStream }>;
+  onWatchScreenShare?: (participantId: string) => void;
 }) {
   function voiceParticipantActions(participant: VoiceParticipant): MemberContextMenuAction[] {
     if (participant.isLocal || !onToggleVoiceParticipantMute) return [];
@@ -34,9 +39,11 @@ export function VoiceParticipantGrid({
     }];
   }
 
+  const totalTilesCount = participants.length + (inlinedShares?.length || 0);
+
   return (
-    <div className={`voice-video-grid ${participantGridClass(participants.length)}`} aria-label={`${roomName} participants`}>
-      {participants.length === 0 ? (
+    <div className={`voice-video-grid ${participantGridClass(totalTilesCount)}`} aria-label={`${roomName} participants`}>
+      {totalTilesCount === 0 ? (
         <div className="empty-thread">
           <strong>No one is in this room</strong>
           <span>No active voice participants.</span>
@@ -48,21 +55,21 @@ export function VoiceParticipantGrid({
         const hasVideo = Boolean(participantCameraStream);
         return (
           <article className={`voice-video-tile${hasVideo ? " has-video" : ""}`} aria-label={`${participant.name} participant`} key={participant.id}>
-            {hasVideo ? (
-              <VideoStream label={label} muted={participant.isLocal || voicePreferences.deafened} stream={participantCameraStream} />
-            ) : (
-              <div className="voice-video-placeholder">
-                <MemberContextMenu
-                  additionalActions={voiceParticipantActions(participant)}
-                  currentUserId={actorId}
-                  memberId={participant.memberId}
-                  memberName={participant.name}
-                  onDirectMessage={onDirectMessage}
-                >
+            <MemberContextMenu
+              additionalActions={voiceParticipantActions(participant)}
+              currentUserId={actorId}
+              memberId={participant.memberId}
+              memberName={participant.name}
+              onDirectMessage={onDirectMessage}
+            >
+              {hasVideo ? (
+                <VideoStream label={label} muted={participant.isLocal || voicePreferences.deafened} stream={participantCameraStream} />
+              ) : (
+                <div className="voice-video-placeholder">
                   <Avatar name={participant.name} avatar={participant.avatar} />
-                </MemberContextMenu>
-              </div>
-            )}
+                </div>
+              )}
+            </MemberContextMenu>
             <span className="voice-video-overlay">
               <SpeakerIcon className="ui-icon voice-video-speaker" />
               <span className="voice-video-name">{participant.name}</span>
@@ -74,6 +81,69 @@ export function VoiceParticipantGrid({
             </span>
           </article>
         );
+      })}
+      {inlinedShares?.map(({ participant, preview, stream }) => {
+        const isLocalShare = participant.isLocal;
+        const key = `${participant.id}-screen`;
+        
+        if (isLocalShare) {
+          return (
+            <article
+              className="voice-video-tile has-video local-screen-share-tile"
+              aria-label="Your screen share"
+              key={key}
+            >
+              {stream ? (
+                <VideoStream
+                  label="Your screen share"
+                  muted={true}
+                  stream={stream}
+                />
+              ) : (
+                <div className="screen-share-preview-placeholder" aria-label="Your screen share preview" />
+              )}
+              <div className="screen-share-card-overlay">
+                <span>
+                  <strong>Your screen</strong>
+                  <small>Sharing now</small>
+                </span>
+              </div>
+            </article>
+          );
+        } else {
+          return (
+            <article
+              className="voice-video-tile screen-share-preview-tile"
+              aria-label={`${participant.name} screen share preview`}
+              key={key}
+            >
+              {preview?.dataUrl ? (
+                <img
+                  alt=""
+                  aria-label={`${participant.name} screen share preview`}
+                  className="screen-share-preview-image"
+                  src={preview.dataUrl}
+                />
+              ) : (
+                <div className="screen-share-preview-placeholder" aria-label={`${participant.name} screen share preview`} />
+              )}
+              <div className="screen-share-preview-overlay">
+                <span>
+                  <strong>{participant.name}</strong>
+                  <small>Screen share</small>
+                </span>
+                <button
+                  className="screen-share-watch-button"
+                  type="button"
+                  aria-label={`Watch ${participant.name} screen share`}
+                  onClick={() => onWatchScreenShare?.(participant.id)}
+                >
+                  Watch
+                </button>
+              </div>
+            </article>
+          );
+        }
       })}
     </div>
   );

@@ -20,9 +20,12 @@ export function VoiceRoomView(props: VoiceRoomViewProps) {
   const activeShares = screenShares.filter((
     share
   ): share is ActiveScreenShare => Boolean(
-    share.stream && (share.participant.isLocal || watchedShares[share.participant.id])
+    share.stream && !share.participant.isLocal && watchedShares[share.participant.id]
   ));
-  const previewShares = screenShares.filter((share) => !share.participant.isLocal && (!watchedShares[share.participant.id] || !share.stream));
+  const inlinedShares = screenShares.filter((share) => {
+    if (share.participant.isLocal) return true;
+    return !watchedShares[share.participant.id] || !share.stream;
+  });
   const remoteAudioStreams = participants
     .filter((participant) => !participant.isLocal && !isVoiceParticipantMuted(participant, props.mutedVoiceParticipantIds) && participant.stream && audioOn(participant) && streamHasTrack(participant.stream, "audio"))
     .map((participant) => ({
@@ -67,10 +70,8 @@ export function VoiceRoomView(props: VoiceRoomViewProps) {
         <div className={layoutClass}>
           <VoiceScreenShares
             activeShares={activeShares}
-            previewShares={previewShares}
             voiceDeafened={props.voicePreferences.deafened}
             onStopWatching={stopWatchingShare}
-            onWatch={watchShare}
           />
           <VoiceParticipantGrid
             actorId={props.actorId}
@@ -80,6 +81,8 @@ export function VoiceRoomView(props: VoiceRoomViewProps) {
             participants={participants}
             roomName={props.room.name}
             voicePreferences={props.voicePreferences}
+            inlinedShares={inlinedShares}
+            onWatchScreenShare={watchShare}
           />
         </div>
       </div>

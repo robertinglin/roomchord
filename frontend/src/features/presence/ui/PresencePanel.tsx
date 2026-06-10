@@ -131,28 +131,28 @@ export function PresencePanel({
   function renderMember(member: MemberRow) {
     return (
       <React.Fragment key={member.id}>
-        <button
-          className={`member-row member-action${selectedMemberId === member.id ? " selected" : ""}`}
-          type="button"
-          disabled={!member.canMessage && !canManageRoles}
-          aria-label={member.self ? `${member.name} (you)` : `${member.name}, ${member.status}`}
-          onClick={() => setSelectedMemberId((current) => current === member.id ? undefined : member.id)}
+        <MemberContextMenu
+          additionalActions={memberActions(member)}
+          currentUserId={actor?.memberId}
+          memberId={member.id}
+          memberName={member.name}
+          onDirectMessage={onDirectMessage}
         >
-          <span className={`status-dot ${member.status}`} />
-          <MemberContextMenu
-            additionalActions={memberActions(member)}
-            currentUserId={actor?.memberId}
-            memberId={member.id}
-            memberName={member.name}
-            onDirectMessage={onDirectMessage}
+          <button
+            className={`member-row member-action${selectedMemberId === member.id ? " selected" : ""}`}
+            type="button"
+            disabled={!member.canMessage && !canManageRoles}
+            aria-label={member.self ? `${member.name} (you)` : `${member.name}, ${member.status}`}
+            onClick={() => setSelectedMemberId((current) => current === member.id ? undefined : member.id)}
           >
+            <span className={`status-dot ${member.status}`} />
             <Avatar name={member.name} avatar={member.avatar} small />
-          </MemberContextMenu>
-          <span>
-            <strong>{member.self ? `${member.name} (you)` : member.name}</strong>
-            <small>{member.activity || member.role || member.status}</small>
-          </span>
-        </button>
+            <span>
+              <strong>{member.self ? `${member.name} (you)` : member.name}</strong>
+              <small>{member.activity || member.role || member.status}</small>
+            </span>
+          </button>
+        </MemberContextMenu>
         {selectedMemberId === member.id && member.canMessage ? (
           <div className="member-context">
             <span>{member.role || member.status}</span>

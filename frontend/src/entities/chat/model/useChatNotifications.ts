@@ -11,6 +11,16 @@ export type ChatNotificationsInput = {
   ui: ChatUiActions;
 };
 
+type NotificationIntent = { link?: { params?: Record<string, string | undefined> } };
+
+function linkParam(intent: NotificationIntent, key: string) {
+  return intent.link?.params?.[key];
+}
+
+function linkResult(url: string | undefined) {
+  return url ? { kind: "url", url } : undefined;
+}
+
 // Wires roomchord into the RoomKit notification Player API. The declarative
 // `notifications` block in the app schema drives *who* gets pushed; here we
 // customize the deep link a recipient lands on when they click, and route the
@@ -24,18 +34,18 @@ export function useChatNotifications(input: ChatNotificationsInput) {
   useEffect(() => {
     if (!notifications) return;
     const channelLink = {
-      resolveLink: (intent: { link: { params: Record<string, string> } }) => {
-        const url = notificationHref({ channelId: intent.link.params.channelId });
-        return url ? { url } : undefined;
+      resolveLink: (intent: NotificationIntent) => {
+        const channelId = linkParam(intent, "channelId");
+        return linkResult(channelId ? notificationHref({ channelId }) : undefined);
       }
     };
     const unsubscribes = [
       notifications.subscribe("messageMention", channelLink),
       notifications.subscribe("replyMention", channelLink),
       notifications.subscribe("directMessage", {
-        resolveLink: (intent) => {
-          const url = notificationHref({ dmMemberId: intent.link.params.memberId });
-          return url ? { url } : undefined;
+        resolveLink: (intent: NotificationIntent) => {
+          const memberId = linkParam(intent, "memberId");
+          return linkResult(memberId ? notificationHref({ dmMemberId: memberId }) : undefined);
         }
       })
     ];

@@ -175,61 +175,57 @@ const operations = {
  * passed through as `payload.mentionIds`, which the audience expression reads.
  */
 const notifications = {
-  schemaVersion: 1,
-  definitions: {
-    messageMention: {
-      on: { action: "messageSend" },
-      kind: "chord.message.mention",
-      audience: { userIds: "$payload.mentionIds", excludeActor: true },
-      scope: { type: "channel", id: "$payload.channelId" },
-      presentation: {
-        title: { $expr: "$actor.displayName", fallback: "New mention" },
-        body: "mentioned you in a message"
-      },
-      link: { route: "channel", params: { channelId: "$payload.channelId" } },
-      read: {
-        scopeKey: "$payload.channelId",
-        cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
-        defaultPolicy: "route-visible"
-      },
-      delivery: { collapse: "scope" }
+  messageMention: {
+    action: "messageSend",
+    audience: { userIds: "$payload.mentionIds", excludeActor: true },
+    scope: { type: "channel", id: "$payload.channelId" },
+    presentation: {
+      title: { $expr: "$actor.displayName", fallback: "New mention" },
+      body: "mentioned you in a message"
     },
-    replyMention: {
-      on: { action: "messageReply" },
-      kind: "chord.message.mention",
-      audience: { userIds: "$payload.mentionIds", excludeActor: true },
+    link: { kind: "route", route: "channel", params: { channelId: "$payload.channelId" } },
+    read: {
       scope: { type: "channel", id: "$payload.channelId" },
-      presentation: {
-        title: { $expr: "$actor.displayName", fallback: "New mention" },
-        body: "mentioned you in a reply"
-      },
-      link: { route: "channel", params: { channelId: "$payload.channelId" } },
-      read: {
-        scopeKey: "$payload.channelId",
-        cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
-        defaultPolicy: "route-visible"
-      },
-      delivery: { collapse: "scope" }
+      cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
+      policy: "route-visible"
     },
-    directMessage: {
-      on: { action: "directMessageSend" },
-      kind: "chord.dm.message",
-      audience: { userIds: "$payload.userIds", excludeActor: true },
-      // No thread id is in the payload, so group per sender: every recipient
-      // collapses notifications from the same person into one.
+    delivery: { collapse: "scope" }
+  },
+  replyMention: {
+    action: "messageReply",
+    audience: { userIds: "$payload.mentionIds", excludeActor: true },
+    scope: { type: "channel", id: "$payload.channelId" },
+    presentation: {
+      title: { $expr: "$actor.displayName", fallback: "New mention" },
+      body: "mentioned you in a reply"
+    },
+    link: { kind: "route", route: "channel", params: { channelId: "$payload.channelId" } },
+    read: {
+      scope: { type: "channel", id: "$payload.channelId" },
+      cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
+      policy: "route-visible"
+    },
+    delivery: { collapse: "scope" }
+  },
+  directMessage: {
+    action: "directMessageSend",
+    audience: { userIds: "$payload.userIds", excludeActor: true },
+    // No thread id is in the payload, so group per sender: every recipient
+    // collapses notifications from the same person into one.
+    scope: { type: "dm", id: "$actor.memberId" },
+    presentation: {
+      title: { $expr: "$actor.displayName", fallback: "New message" },
+      // This shows actual DM text in the notification. Use the static fallback
+      // only if the active notification transport should not expose message text.
+      body: { $expr: "$payload.body", fallback: "sent you a direct message" }
+    },
+    link: { kind: "route", route: "dm", params: { memberId: "$actor.memberId" } },
+    read: {
       scope: { type: "dm", id: "$actor.memberId" },
-      presentation: {
-        title: { $expr: "$actor.displayName", fallback: "New message" },
-        body: "sent you a direct message"
-      },
-      link: { route: "dm", params: { memberId: "$actor.memberId" } },
-      read: {
-        scopeKey: "$actor.memberId",
-        cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
-        defaultPolicy: "route-visible"
-      },
-      delivery: { collapse: "scope" }
-    }
+      cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
+      policy: "route-visible"
+    },
+    delivery: { collapse: "scope" }
   }
 };
 
