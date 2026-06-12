@@ -11,6 +11,15 @@ importers:
 
   .:
     dependencies:
+      '@roomkit-core/base':
+        specifier: link:../roomkit/packages/roomkit-core
+        version: link:../roomkit/packages/roomkit-core
+      '@roomkit-core/host-runtime':
+        specifier: link:../roomkit/packages/roomkit-host-runtime
+        version: link:../roomkit/packages/roomkit-host-runtime
+      '@roomkit-core/protocol':
+        specifier: link:../roomkit/packages/roomkit-protocol
+        version: link:../roomkit/packages/roomkit-protocol
       react:
         specifier: ^18.3.1
         version: 18.3.1

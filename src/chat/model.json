@@ -705,32 +705,32 @@
   "views": {},
   "shapes": {
     "channels": {
-      "readClass": "full-fold",
-      "integrityClass": "checkpoint",
+      "readClass": "head",
+      "integrityClass": "signature",
       "storage": "array",
       "partition": "channels"
     },
     "messages": {
-      "readClass": "full-fold",
-      "integrityClass": "checkpoint",
+      "readClass": "window",
+      "integrityClass": "seq",
       "storage": "map",
       "partition": "messages"
     },
     "memberRoles": {
-      "readClass": "full-fold",
-      "integrityClass": "checkpoint",
+      "readClass": "head",
+      "integrityClass": "signature",
       "storage": "map",
       "partition": "memberRoles"
     },
     "roleDefinitions": {
-      "readClass": "full-fold",
-      "integrityClass": "checkpoint",
+      "readClass": "head",
+      "integrityClass": "signature",
       "storage": "map",
       "partition": "roleDefinitions"
     },
     "activity": {
-      "readClass": "full-fold",
-      "integrityClass": "checkpoint",
+      "readClass": "window",
+      "integrityClass": "seq",
       "storage": "array",
       "partition": "activity"
     }

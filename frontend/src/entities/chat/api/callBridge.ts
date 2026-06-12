@@ -4,6 +4,7 @@ import type { RoomKitEphemeralToken, RoomKitEphemeralTokenHandle } from "roomkit
 import { EncryptedRoomPayload } from "roomkit-sdk/browser/crypto";
 
 export type ChatMediaBridge = {
+  available?: boolean;
   clientId?: string;
   getMediaPeer?: () => PeerJsPeer | undefined;
   getMediaPeerAddress?: () => string | undefined;
@@ -20,6 +21,7 @@ export type ChatMediaBridge = {
 
 export function mediaBridgeFromHost(host: unknown): ChatMediaBridge | undefined {
   const bridge = host as ChatMediaBridge | undefined;
+  if (bridge?.available === false) return undefined;
   if (!bridge?.getMediaPeer || !bridge.sendPeerSignal || !bridge.subscribeRelayMessage) return undefined;
   return bridge;
 }

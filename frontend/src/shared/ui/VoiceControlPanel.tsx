@@ -5,6 +5,7 @@ export function VoiceControlPanel({
   canUseVideo,
   canSwapCamera = false,
   error,
+  label = "Voice controls",
   onLeave,
   onToggleCameraSwap,
   onToggleScreenShare,
@@ -19,6 +20,7 @@ export function VoiceControlPanel({
   canUseVideo: boolean;
   canSwapCamera?: boolean;
   error?: string;
+  label?: string;
   onLeave: () => void;
   onToggleCameraSwap?: () => void;
   onToggleScreenShare: () => void;
@@ -32,7 +34,7 @@ export function VoiceControlPanel({
 }) {
   const voiceTitle = sfuActive && sfuStatus === "connecting" ? "Voice connecting" : sfuActive ? "Voice connected" : "Voice joined";
   return (
-    <section className={`voice-panel${sfuActive ? " connected" : " joined"}`} aria-label="Voice controls">
+    <section className={`voice-panel${sfuActive ? " connected" : " joined"}`} aria-label={label}>
       <div className="voice-panel-header">
         <SpeakerIcon className="ui-icon voice-status-icon" />
         <span>

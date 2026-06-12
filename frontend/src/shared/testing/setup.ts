@@ -36,9 +36,4 @@ afterEach(() => {
   document.getElementById("roomkit-chord-styles")?.remove();
   document.getElementById("roomkit-emoji-picker-styles")?.remove();
   window.location.hash = "";
-  delete (window as any).ROOMKIT_CHORD_HOST;
-  delete (window as any).ROOMKIT_HOST;
-  delete (window as any).ROOMKIT_EXAMPLE_HOST;
-  delete (window as any).ROOMKIT_CHAT_HOST;
-  delete (window as any).ROOMKIT_EXAMPLE_BACKEND_URL;
 });

@@ -8,15 +8,19 @@ const {
   playerSupportsApp,
   validateAppPackManifest,
   validateHostPackManifest,
-  validatePlayerPackManifest,
+  validatePlayerPackManifest
+} = require("@roomkit-core/base");
+const {
   HostPluginRuntime,
   createMemoryOperationLog,
-  createMemoryRoomStore,
+  createMemoryRoomStore
+} = require("@roomkit-core/host-runtime");
+const {
   ensureOperationIdentity
-} = require("roomkit-sdk");
+} = require("@roomkit-core/protocol");
 const { createLiveExampleBackend } = require("../shared/liveBackend.cjs");
 const sdkApp = require("../src/sdk-app.cjs");
-const app = require("../src/index.cjs");
+const app = require("../src/sdk-app.cjs").toRoomKitExports();
 
 function primaryAction(type) {
   return app.appPack.composition.actions.find((action) => (action.plugin === "primary" || action.plugin === "$primary") && (!type || action.type === type));
@@ -91,7 +95,6 @@ test("Chat exports schema-only RoomKit manifests", () => {
   assert.equal(app.hostPlugin.schemaSource, "schema:roomkit.primary-model");
   assert.equal(app.appPack.composition.primaryPlugin.source, undefined);
   assert.equal(typeof app.appPack.composition.primaryPlugin.model, "object");
-  assert.equal(app.roomkitApp.roomkit.bridgeGlobalName, "ROOMKIT_CHORD_HOST");
   assert.equal(app.roomkitApp.roomkit.frontendProjection, "chat");
   assert.equal(app.roomkitApp.frontend.backgroundColor, "oklch(0.205 0.008 260)");
   assert.deepEqual(app.roomkitApp.frontend.icon, { path: "src/chord-icon.svg" });
@@ -345,8 +348,8 @@ test("Chat generated player actions dispatch composition descriptors", async () 
   assert.deepEqual(calls[0], { schemaAction: action.name, pluginId: app.hostPlugin.id, type: action.type, payload: samplePayload(action.type) });
 });
 
-test("Chat SDK generic exposes role gates, selectors, and structured dispatch errors", async () => {
-  const { createRoomKitConnector } = await import("roomkit-sdk/browser/liveRoomConnector");
+test("Chat SDK client uses app scope for role gates and dispatch errors", async () => {
+  const { RoomKit, RoomKitValidationError, installRoomKitAppScope, resetRoomKitForTests } = await import("roomkit-sdk/client");
   const state = {
     channels: [],
     messages: {
@@ -357,28 +360,30 @@ test("Chat SDK generic exposes role gates, selectors, and structured dispatch er
       embed_1: { id: "embed_1", scopeType: "channel", scopeId: "general", url: "https://example.test", note: null, addedAt: 3, removedAt: null }
     }
   };
-  const connector = createRoomKitConnector({
+  resetRoomKitForTests();
+  installRoomKitAppScope({
+    appId: "com.roomkit.chord",
     appName: "Chord",
-    bridgeName: "ROOMKIT_CHORD_TEST_HOST",
-    emptyState: state,
-    appMetadata: { composition: app.compositionSchema },
-    createHost: () => ({
+    metadata: { composition: app.compositionSchema },
+    host: {
       mode: "injected",
       appMetadata: { composition: app.compositionSchema },
+      getState: async () => state,
       sendOperation: () => ({ ok: true, state })
-    })
+    },
+    initialState: state,
+    actor: { memberId: "ada", deviceId: "dev_ada", role: "member", displayName: "Ada" },
+    envelope: { room: { id: "chat" }, actor: { memberId: "ada", deviceId: "dev_ada", role: "member", displayName: "Ada" } }
   });
-  const room = connector.connect({ initialState: state, actor: { memberId: "ada", deviceId: "dev_ada", role: "member", displayName: "Ada" } });
+  const room = RoomKit();
 
-  assert.equal(room.can("messageSend"), true);
-  assert.equal(room.can("channelCreate"), false);
-  assert.deepEqual(room.select.messagesByChannel("general").map((message) => message.id), ["early", "late"]);
-  assert.deepEqual(room.select.embedsByScope({ scopeType: "channel", scopeId: "general" }).map((embed) => embed.id), ["embed_1"]);
-
-  const result = await room.dispatch("messageSend", { channelId: "general", body: "x".repeat(4001) });
-  assert.equal(result.ok, false);
-  assert.equal(result.code, "validation");
-  assert.equal(result.field, "body");
+  assert.equal(room.can.messageSend().status, "allowed");
+  assert.equal(room.can.channelCreate().status, "denied");
+  await assert.rejects(
+    () => room.dispatch("messageSend", { channelId: "general", body: "x".repeat(4001) }),
+    (error) => error instanceof RoomKitValidationError && /body/.test(error.message)
+  );
+  resetRoomKitForTests();
 });
 
 test("Chat defineApp export does not depend on a demo sidecar", async () => {

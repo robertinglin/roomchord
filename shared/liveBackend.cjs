@@ -2,7 +2,8 @@
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
-const { manifestHash, ensureOperationIdentity, validateRoomOperation } = require('roomkit-sdk');
+const { manifestHash } = require('@roomkit-core/base');
+const { ensureOperationIdentity, validateRoomOperation } = require('@roomkit-core/protocol');
 const { applyExampleOperations, createExampleRuntime } = require('./roomkitExample/runtime.cjs');
 const { createExampleActor } = require('./roomkitExample/identity.cjs');
 
@@ -28,9 +29,10 @@ function clone(value) {
 
 function loadRoomKitExampleApp(appRoot = process.cwd()) {
   const resolved = path.resolve(appRoot);
-  const entry = path.join(resolved, 'src', 'index.cjs');
+  const entry = path.join(resolved, 'src', 'sdk-app.cjs');
   if (!fs.existsSync(entry)) throw new Error(`RoomKit example app entry not found: ${entry}`);
-  return { appRoot: resolved, app: require(entry) };
+  const definition = require(entry);
+  return { appRoot: resolved, app: definition.toRoomKitExports() };
 }
 
 function appSlug(appRoot, app) {

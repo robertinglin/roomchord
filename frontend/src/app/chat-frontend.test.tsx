@@ -1,7 +1,8 @@
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { installRoomKitAppScope, resetRoomKitForTests } from "roomkit-sdk/client";
 import { MeshRoomCallController } from "roomkit-sdk/browser/meshRoomCalls";
 import { SfuCallController } from "roomkit-sdk/browser/sfuCalls";
 import { markMediaTrackRole } from "roomkit-sdk/browser/mediaCapture";
@@ -98,6 +99,32 @@ const testAppMetadata = {
     ]
   }
 };
+
+function installTestRoomKitScope(
+  initialState: ChatState = state,
+  actor = { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" },
+  sendOperation: ReturnType<typeof vi.fn> = vi.fn(async (operation) => ({ ok: true, state: initialState, operation })),
+  hostOverrides: Record<string, unknown> = {}
+) {
+  resetRoomKitForTests();
+  installRoomKitAppScope({
+    appId: "com.roomkit.chord",
+    appName: "Chord",
+    metadata: testAppMetadata,
+    host: {
+      mode: "injected",
+      appMetadata: testAppMetadata,
+      getAppMetadata: () => testAppMetadata,
+      getState: vi.fn(async () => initialState),
+      sendOperation,
+      ...hostOverrides
+    } as any,
+    initialState,
+    actor,
+    envelope: { room: { id: "chat", name: "Chat" }, actor }
+  });
+  return sendOperation;
+}
 
 const fakeMediaRecorders: FakeMediaRecorder[] = [];
 
@@ -227,8 +254,12 @@ function renderChat(
 ) {
   window.localStorage.removeItem("roomkit:notification-read-state");
   const sender = sendOperation || vi.fn(async (operation) => ({ ok: true, state: initialState, operation }));
-  window.ROOMKIT_CHORD_HOST = { appMetadata: testAppMetadata, getAppMetadata: () => testAppMetadata, getState: vi.fn(async () => initialState), sendOperation: sender, ...hostOverrides } as any;
+  installTestRoomKitScope(initialState, actor, sender, hostOverrides);
   return { ...render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor }} />), sendOperation: sender };
+}
+
+function sidebarVoiceControls() {
+  return within(screen.getByRole("complementary", { name: "Room navigation" })).getByLabelText("Voice controls");
 }
 
 async function memberRailAvatar(name: string, label: string) {
@@ -247,6 +278,14 @@ function stateWithMessage(body: string): ChatState {
 }
 
 describe("ChatApp", () => {
+  beforeEach(() => {
+    installTestRoomKitScope();
+  });
+
+  afterEach(() => {
+    resetRoomKitForTests();
+  });
+
   it("filters direct messages by the default lane or a topic regex", () => {
     const dmState: ChatState = {
       ...state,
@@ -281,15 +320,16 @@ describe("ChatApp", () => {
     expect(screen.getByRole("heading", { name: "Online - 2" })).toBeInTheDocument();
   });
 
-  it("uses the generic injected RoomKit bridge when the Chord alias is missing", async () => {
+  it("uses the installed RoomKit app scope", async () => {
     const sender = vi.fn(async (operation) => ({ ok: true, state, operation }));
-    window.ROOMKIT_HOST = { getState: vi.fn(async () => state), sendOperation: sender } as any;
+    installTestRoomKitScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, sender);
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
 
     expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
     expect(screen.getByText("connected")).toBeInTheDocument();
-    expect(window.ROOMKIT_CHORD_HOST).toBe(window.ROOMKIT_HOST);
+    expect((window as any).ROOMKIT_CHORD_HOST).toBeUndefined();
+    expect((window as any).ROOMKIT_HOST).toBeUndefined();
   });
 
   it("renders connected voice members without channel metadata", async () => {
@@ -473,10 +513,7 @@ describe("ChatApp", () => {
 
   it("does not restart state loading when default launch metadata is used", async () => {
     const getState = vi.fn(async () => state);
-    window.ROOMKIT_CHORD_HOST = {
-      getState,
-      sendOperation: vi.fn(async (operation) => ({ ok: true, state, operation }))
-    } as any;
+    installTestRoomKitScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), { getState });
 
     render(<ChatApp />);
 
@@ -495,14 +532,13 @@ describe("ChatApp", () => {
     const getState = vi.fn(() => new Promise<ChatState>((resolve) => {
       resolveGetState = resolve;
     }));
-    window.ROOMKIT_CHORD_HOST = {
+    installTestRoomKitScope(subscribedState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: subscribedState, operation })), {
       getState,
-      sendOperation: vi.fn(async (operation) => ({ ok: true, state: subscribedState, operation })),
       subscribe(listener: (next: ChatState) => void) {
         listener(subscribedState);
         return vi.fn();
       }
-    } as any;
+    });
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
 
@@ -517,6 +553,32 @@ describe("ChatApp", () => {
     expect(screen.queryByText("Stale getState snapshot")).not.toBeInTheDocument();
   });
 
+  it("updates direct-message unread counts from room subscription pushes", async () => {
+    let subscriptionListener: ((next: ChatState) => void) | undefined;
+    installTestRoomKitScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
+      subscribe(listener: (next: ChatState) => void) {
+        subscriptionListener = listener;
+        return vi.fn();
+      }
+    });
+
+    render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
+
+    expect(await screen.findByRole("button", { name: "Lee, 1 unread DM" })).toBeInTheDocument();
+
+    await act(async () => {
+      subscriptionListener?.({
+        ...state,
+        directMessages: {
+          ...state.directMessages,
+          dm_msg_2: { id: "dm_msg_2", protocol: "nostr.nip17", threadId: "dm_alice__lee", body: "Second private hello", authorName: "Lee", authorId: "lee", reactions: {}, createdAt: 3 }
+        }
+      });
+    });
+
+    expect(await screen.findByRole("button", { name: "Lee, 2 unread DMs" })).toBeInTheDocument();
+  });
+
   it("marks launcher-provided initial state as connected immediately", () => {
     render(<ChatApp
       envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }}
@@ -528,7 +590,7 @@ describe("ChatApp", () => {
   });
 
   it("injects styles through the launcher mount path", async () => {
-    window.ROOMKIT_CHORD_HOST = { getState: vi.fn(async () => state), sendOperation: vi.fn(async (operation) => ({ ok: true, state, operation })) } as any;
+    installTestRoomKitScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" });
     const target = document.createElement("div");
     document.body.appendChild(target);
     let unmount = () => {};
@@ -560,8 +622,8 @@ describe("ChatApp", () => {
     await user.type(screen.getByLabelText("Message # general"), "Ship it");
     await user.click(screen.getByRole("button", { name: "Send message" }));
     await user.click(screen.getByRole("button", { name: "Join Launch Room" }));
-    expect(screen.getByLabelText("Voice controls")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Turn camera on" })).toBeInTheDocument();
+    expect(sidebarVoiceControls()).toBeInTheDocument();
+    expect(within(sidebarVoiceControls()).getByRole("button", { name: "Turn camera on" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Open status menu" }));
     await user.click(screen.getByRole("menuitem", { name: "Set busy" }));
 
@@ -572,11 +634,11 @@ describe("ChatApp", () => {
   it("submits channel messages with Enter and keeps Shift+Enter as a newline", async () => {
     const user = userEvent.setup();
     const sent: any[] = [];
-    const originalScrollHeight = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "scrollHeight");
-    Object.defineProperty(window.HTMLTextAreaElement.prototype, "scrollHeight", {
+    const originalScrollHeight = Object.getOwnPropertyDescriptor(window.HTMLElement.prototype, "scrollHeight");
+    Object.defineProperty(window.HTMLElement.prototype, "scrollHeight", {
       configurable: true,
       get() {
-        return (this as HTMLTextAreaElement).value.includes("\n") ? 72 : 40;
+        return (this as HTMLElement).textContent?.includes("Line two") ? 72 : 40;
       }
     });
 
@@ -590,13 +652,14 @@ describe("ChatApp", () => {
       expect(screen.getByRole("button", { name: "Add emoji" })).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Insert link" }));
-      await waitFor(() => expect(composer).toHaveValue("[link](https://)"));
+      await waitFor(() => expect(composer).toHaveTextContent("[link](https://)"));
       await user.clear(composer);
 
       await user.click(composer);
       await user.keyboard("Line one{Shift>}{Enter}{/Shift}Line two");
 
-      expect(composer).toHaveValue("Line one\nLine two");
+      expect(composer.textContent).toContain("Line one");
+      expect(composer.textContent).toContain("Line two");
       await waitFor(() => expect(composer).toHaveStyle({ height: "72px" }));
       expect(sent).toHaveLength(0);
 
@@ -604,14 +667,114 @@ describe("ChatApp", () => {
 
       await waitFor(() => expect(sent).toHaveLength(1));
       expect(sent[0]).toMatchObject({ type: "messageSend", schemaAction: "messageSend", payload: { channelId: "general", body: "Line one\nLine two" } });
-      expect(composer).toHaveValue("");
+      expect(composer).toHaveTextContent("");
     } finally {
       if (originalScrollHeight) {
-        Object.defineProperty(window.HTMLTextAreaElement.prototype, "scrollHeight", originalScrollHeight);
+        Object.defineProperty(window.HTMLElement.prototype, "scrollHeight", originalScrollHeight);
       } else {
-        delete (window.HTMLTextAreaElement.prototype as any).scrollHeight;
+        delete (window.HTMLElement.prototype as any).scrollHeight;
       }
     }
+  });
+
+  it("offers clickable mention suggestions and deletes a completed mention as one object", async () => {
+    const user = userEvent.setup();
+    const sent: any[] = [];
+    renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
+
+    const composer = await screen.findByLabelText("Message # general");
+    await user.type(composer, "@L");
+    await user.click(await screen.findByRole("option", { name: "Lee" }));
+
+    expect(document.querySelector(".composer-backdrop [data-mention-id='lee']")).toHaveTextContent("@Lee");
+    expect(composer).toHaveValue("@Lee ");
+
+    await user.keyboard("{Backspace}");
+    expect(document.querySelector(".composer-backdrop [data-mention-id='lee']")).toBeNull();
+    expect(composer).toHaveValue("");
+
+    await user.type(composer, "@L");
+    await user.click(await screen.findByRole("option", { name: "Lee" }));
+    await user.type(composer, "can you review this?");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      type: "messageSend",
+      schemaAction: "messageSend",
+      payload: {
+        body: "@Lee can you review this?",
+        mentionIds: ["lee"]
+      }
+    });
+  });
+
+  it("uses Enter and arrow keys to pick mention suggestions without submitting", async () => {
+    const user = userEvent.setup();
+    const sent: any[] = [];
+    renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
+
+    const composer = await screen.findByLabelText("Message # general");
+    await user.type(composer, "@L");
+    expect(await screen.findByRole("option", { name: "Lee" })).toBeInTheDocument();
+    fireEvent.keyDown(composer, { key: "Enter" });
+
+    expect(sent).toHaveLength(0);
+    expect(document.querySelector(".composer-backdrop [data-mention-id='lee']")).toHaveTextContent("@Lee");
+    expect(composer).toHaveValue("@Lee ");
+
+    await user.keyboard("{Backspace}");
+    await user.type(composer, "@");
+
+    expect(await screen.findByRole("option", { name: "Alice" })).toHaveAttribute("aria-selected", "true");
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("option", { name: "Lee" })).toHaveAttribute("aria-selected", "true");
+    await user.keyboard("{ArrowUp}");
+    expect(screen.getByRole("option", { name: "Alice" })).toHaveAttribute("aria-selected", "true");
+    await user.keyboard("{ArrowDown}{Enter}");
+
+    expect(sent).toHaveLength(0);
+    expect(document.querySelector(".composer-backdrop [data-mention-id='lee']")).toHaveTextContent("@Lee");
+    expect(composer).toHaveValue("@Lee ");
+  });
+
+  it("keeps native left and right caret movement through completed mentions", async () => {
+    const user = userEvent.setup();
+    renderChat();
+
+    const composer = await screen.findByLabelText("Message # general");
+    await user.type(composer, "@L");
+    expect(await screen.findByRole("option", { name: "Lee" })).toBeInTheDocument();
+    fireEvent.keyDown(composer, { key: "Enter" });
+
+    expect(composer).toHaveValue("@Lee ");
+
+    await user.click(composer);
+    (composer as HTMLTextAreaElement).setSelectionRange(0, 0);
+    await user.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}");
+    expect((composer as HTMLTextAreaElement).selectionStart).toBe(5);
+    await user.keyboard("{ArrowLeft}");
+    expect((composer as HTMLTextAreaElement).selectionStart).toBe(4);
+  });
+
+  it("resolves punctuated channel mentions before dispatch", async () => {
+    const user = userEvent.setup();
+    const sent: any[] = [];
+    renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
+
+    const composer = await screen.findByLabelText("Message # general");
+    await user.type(composer, "@Lee, can you review this?");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      type: "messageSend",
+      schemaAction: "messageSend",
+      payload: {
+        channelId: "general",
+        mentionIds: ["lee"]
+      }
+    });
   });
 
   it("claims an SDK ephemeral token for voice join when the injected bridge supports it", async () => {
@@ -625,9 +788,7 @@ describe("ChatApp", () => {
       release: vi.fn(),
       token: vi.fn()
     }));
-    window.ROOMKIT_CHORD_HOST = {
-      getState: vi.fn(async () => state),
-      sendOperation,
+    installTestRoomKitScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, sendOperation, {
       getMediaPeer: vi.fn(() => mediaPeer),
       getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
       getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
@@ -636,14 +797,14 @@ describe("ChatApp", () => {
       claimEphemeralToken,
       getEphemeralTokens: vi.fn(() => []),
       subscribeEphemeralTokens: vi.fn(() => vi.fn())
-    } as any;
+    });
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
     await user.click(await screen.findByRole("button", { name: "Join Launch Room" }));
 
     await waitFor(() => expect(claimEphemeralToken).toHaveBeenCalled());
     expect(getUserMedia).toHaveBeenCalledWith({ audio: sdkDefaultAudioConstraints, video: false });
-    expect(screen.getByText("Voice connected")).toBeInTheDocument();
+    expect(within(sidebarVoiceControls()).getByText("Voice connected")).toBeInTheDocument();
     expect(screen.queryByText("Group calling is not available on this relay.")).not.toBeInTheDocument();
     expect(claimEphemeralToken).toHaveBeenCalledWith(expect.objectContaining({
       kind: "media-room.join",
@@ -665,9 +826,7 @@ describe("ChatApp", () => {
     const user = userEvent.setup();
     const getUserMedia = installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
-    window.ROOMKIT_CHORD_HOST = {
-      getState: vi.fn(async () => state),
-      sendOperation: vi.fn(async (operation) => ({ ok: true, state, operation })),
+    installTestRoomKitScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
       getMediaPeer: vi.fn(() => mediaPeer),
       getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
       getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
@@ -676,13 +835,13 @@ describe("ChatApp", () => {
       claimEphemeralToken: vi.fn(() => ({ id: "voice-token", update: vi.fn(), release: vi.fn(), token: vi.fn() })),
       getEphemeralTokens: vi.fn(() => []),
       subscribeEphemeralTokens: vi.fn(() => vi.fn())
-    } as any;
+    });
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
     await user.click(await screen.findByRole("button", { name: "Join Launch Room" }));
 
     expect(await screen.findByRole("heading", { name: "Launch Room" })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText("Voice connected")).toBeInTheDocument());
+    await waitFor(() => expect(within(sidebarVoiceControls()).getByText("Voice connected")).toBeInTheDocument());
     expect(getUserMedia).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole("button", { name: "Join Launch Room" }));
@@ -694,13 +853,11 @@ describe("ChatApp", () => {
     expect(getUserMedia).toHaveBeenCalledTimes(1);
   });
 
-  it("renders camera video in the selected voice room grid", async () => {
+  it("keeps sidebar voice controls visible while viewing the joined voice room", async () => {
     const user = userEvent.setup();
     installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
-    window.ROOMKIT_CHORD_HOST = {
-      getState: vi.fn(async () => state),
-      sendOperation: vi.fn(async (operation) => ({ ok: true, state, operation })),
+    installTestRoomKitScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
       getMediaPeer: vi.fn(() => mediaPeer),
       getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
       getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
@@ -709,11 +866,33 @@ describe("ChatApp", () => {
       claimEphemeralToken: vi.fn(() => ({ id: "voice-token", update: vi.fn(), release: vi.fn(), token: vi.fn() })),
       getEphemeralTokens: vi.fn(() => []),
       subscribeEphemeralTokens: vi.fn(() => vi.fn())
-    } as any;
+    });
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
     await user.click(await screen.findByRole("button", { name: "Join Launch Room" }));
-    await user.click(await screen.findByRole("button", { name: "Turn camera on" }));
+
+    expect(await screen.findByRole("heading", { name: "Launch Room" })).toBeInTheDocument();
+    expect(within(screen.getByRole("complementary", { name: "Room navigation" })).getByLabelText("Voice controls")).toBeInTheDocument();
+  });
+
+  it("renders camera video in the selected voice room grid", async () => {
+    const user = userEvent.setup();
+    installMediaCapture();
+    const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
+    installTestRoomKitScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
+      getMediaPeer: vi.fn(() => mediaPeer),
+      getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
+      getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
+      sendPeerSignal: vi.fn(() => true),
+      subscribeRelayMessage: vi.fn(() => vi.fn()),
+      claimEphemeralToken: vi.fn(() => ({ id: "voice-token", update: vi.fn(), release: vi.fn(), token: vi.fn() })),
+      getEphemeralTokens: vi.fn(() => []),
+      subscribeEphemeralTokens: vi.fn(() => vi.fn())
+    });
+
+    render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
+    await user.click(await screen.findByRole("button", { name: "Join Launch Room" }));
+    await user.click(within(sidebarVoiceControls()).getByRole("button", { name: "Turn camera on" }));
 
     expect(await screen.findByLabelText("Your room video")).toBeInTheDocument();
     expect(within(screen.getByLabelText("Voice controls")).queryByLabelText("Your room video")).not.toBeInTheDocument();
@@ -938,9 +1117,7 @@ describe("ChatApp", () => {
     const user = userEvent.setup();
     const getUserMedia = installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
-    window.ROOMKIT_CHORD_HOST = {
-      getState: vi.fn(async () => state),
-      sendOperation: vi.fn(async (operation) => ({ ok: true, state, operation })),
+    installTestRoomKitScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
       getMediaPeer: vi.fn(() => mediaPeer),
       getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
       getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
@@ -949,11 +1126,11 @@ describe("ChatApp", () => {
       claimEphemeralToken: vi.fn(() => ({ id: "voice-token", update: vi.fn(), release: vi.fn(), token: vi.fn() })),
       getEphemeralTokens: vi.fn(() => []),
       subscribeEphemeralTokens: vi.fn(() => vi.fn())
-    } as any;
+    });
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
     await user.click(await screen.findByRole("button", { name: "Join Launch Room" }));
-    await waitFor(() => expect(screen.getByText("Voice connected")).toBeInTheDocument());
+    await waitFor(() => expect(within(sidebarVoiceControls()).getByText("Voice connected")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: "#general" }));
 
@@ -974,9 +1151,7 @@ describe("ChatApp", () => {
         { id: "media2", name: "Standup", allowsVideo: false, participants: {} }
       ]
     };
-    window.ROOMKIT_CHORD_HOST = {
-      getState: vi.fn(async () => twoRoomState),
-      sendOperation: vi.fn(async (operation) => ({ ok: true, state: twoRoomState, operation })),
+    installTestRoomKitScope(twoRoomState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: twoRoomState, operation })), {
       getMediaPeer: vi.fn(() => mediaPeer),
       getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
       getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
@@ -989,7 +1164,7 @@ describe("ChatApp", () => {
       }),
       getEphemeralTokens: vi.fn(() => []),
       subscribeEphemeralTokens: vi.fn(() => vi.fn())
-    } as any;
+    });
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
     await user.click(await screen.findByRole("button", { name: "Join Launch Room" }));
@@ -1001,7 +1176,7 @@ describe("ChatApp", () => {
     await waitFor(() => expect(releases).toHaveLength(2));
     expect(releases[0]).toHaveBeenCalledTimes(1);
     expect(getUserMedia).toHaveBeenCalledTimes(2);
-    expect(screen.getByLabelText("Voice controls")).toHaveTextContent("Standup");
+    expect(sidebarVoiceControls()).toHaveTextContent("Standup");
   });
 
   // it("keeps SFU room audio sender alive while settings suspend audio", async () => {
@@ -1630,7 +1805,7 @@ describe("ChatApp", () => {
     const user = userEvent.setup();
     const sendPresence = vi.fn(async () => true);
     const sendOperation = vi.fn(async (operation) => ({ ok: true, state, operation }));
-    window.ROOMKIT_CHORD_HOST = { getState: vi.fn(async () => state), sendOperation, sendPresence } as any;
+    installTestRoomKitScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, sendOperation, { sendPresence });
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
     await user.click(await screen.findByRole("button", { name: "Open status menu" }));

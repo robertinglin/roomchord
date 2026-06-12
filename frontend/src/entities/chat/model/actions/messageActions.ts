@@ -23,6 +23,11 @@ export function messageActions(input: ChatActionHandlersInput) {
   async function sendChannelMessageToChannel(channelId: string, body: string) {
     const embeds = messageEmbeds(body);
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
+    console.info("[roomchord.notifications] channel message mention resolution", {
+      channelId,
+      mentionIds,
+      memberNamesById: view.memberNamesById
+    });
     await dispatch("messageSend", { channelId: channelId as ChannelId, body, embeds, mentionIds: mentionIds as MemberId[] });
     for (const embed of embeds) {
       if (embed.provider === "link") continue;
@@ -36,9 +41,12 @@ export function messageActions(input: ChatActionHandlersInput) {
   }
 
   async function sendDirectMessageToThread(threadId: string, userIds: string[], body: string) {
-    const result = await dispatch("directMessageSend", { userIds: userIds as MemberId[], body });
-    if (result.ok === false) return;
-    const committedThread = result.state ? directThreadForUsers(result.state, userIds) : directThreadForUsers(state, userIds);
+    try {
+      await dispatch("directMessageSend", { userIds: userIds as MemberId[], body });
+    } catch {
+      return;
+    }
+    const committedThread = directThreadForUsers(live.state, userIds) || directThreadForUsers(state, userIds);
     if (committedThread) {
       ui.clearDraftDirectThread(committedThread.id);
       ui.showDirectThread(committedThread.id);
@@ -68,6 +76,12 @@ export function messageActions(input: ChatActionHandlersInput) {
   async function replyToMessage(replyToId: string, body: string) {
     if (!view.currentChannelId) return;
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
+    console.info("[roomchord.notifications] reply mention resolution", {
+      channelId: view.currentChannelId,
+      replyToId,
+      mentionIds,
+      memberNamesById: view.memberNamesById
+    });
     await dispatch("messageReply", { channelId: view.currentChannelId as ChannelId, replyToId: replyToId as MessageId, body, mentionIds: mentionIds as MemberId[] });
   }
 

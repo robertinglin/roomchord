@@ -1,4 +1,6 @@
-const { manifestHash, HostPluginRuntime, createMemoryOperationLog, createMemoryRoomStore, ensureOperationIdentity } = require("roomkit-sdk");
+const { manifestHash } = require("@roomkit-core/base");
+const { HostPluginRuntime, createMemoryOperationLog, createMemoryRoomStore } = require("@roomkit-core/host-runtime");
+const { ensureOperationIdentity } = require("@roomkit-core/protocol");
 const { createExampleActor } = require("./identity.cjs");
 
 function createExampleRuntime({ appPack, hostPlugin, hostPlugins, roomId = "example_room", actorVerifier, now = () => 1000, capabilities = ["room.state", "room.roles"] } = {}) {

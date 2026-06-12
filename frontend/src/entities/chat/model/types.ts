@@ -1,5 +1,4 @@
 import type { Chord } from "../../../../../src/types";
-import type { RoomKitAppDispatchResult } from "roomkit-sdk/browser/liveRoomConnector";
 
 export type AvatarSource = { avatar?: string; avatarUrl?: string; profileImageUrl?: string };
 export type Actor = Chord.Actor & AvatarSource;
@@ -48,8 +47,8 @@ export type MemberRoleAssignment = Chord.MemberRole;
 
 export type ChatState = Chord.State;
 
-export type ChatProps = { envelope?: Chord.LaunchEnvelope; initialState?: ChatState };
+export type ChatProps = { envelope?: Chord.LaunchEnvelope; initialState?: Chord.LaunchEnvelope["initialState"] };
 export type ChatActionName = Chord.ActionName;
 export type ChatActionPayload<K extends ChatActionName> = Chord.Actions[K];
-export type ChatDispatchResult = RoomKitAppDispatchResult<Chord>;
+export type ChatDispatchResult = unknown;
 export type ChatCore = Chord.Core;

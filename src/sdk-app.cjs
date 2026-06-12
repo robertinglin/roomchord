@@ -8,7 +8,7 @@
 
 const path = require("node:path");
 const {
-  p, op, q, defineModel, defineApp
+  p, action, query, defineModel, defineApp
 } = require("roomkit-sdk");
 
 const packageRoot = path.join(__dirname, "..");
@@ -39,6 +39,23 @@ const chat = defineModel({
       memberRoles: {}
       // activity: [] and roleDefinitions are seeded by the builder from `roles`.
     }
+  },
+  shapes: {
+    // Ledger-pattern annotations for Milestone 2 per-stream indexing.
+    // - window  = append-only event stream (efficient latest-X + chunk pagination).
+    // - head    = single latest value per key (small, replaces in place).
+    // - seq     = integrity enforced by monotonic sequence numbers per stream.
+    // - signature = integrity enforced by writer signatures.
+    //
+    // NOTE: message.edit/react/pin/unpin/delete and channel/role updates still
+    // use updateRecord/markRecord while CRDT effects are finalized. The
+    // cross-partition validator is not yet wired into defineApp, so these
+    // declarations describe intent without blocking the build.
+    messages: { readClass: "window", integrityClass: "seq" },
+    activity: { readClass: "window", integrityClass: "seq" },
+    channels: { readClass: "head", integrityClass: "signature" },
+    memberRoles: { readClass: "head", integrityClass: "signature" },
+    roleDefinitions: { readClass: "head", integrityClass: "signature" }
   }
 });
 
@@ -47,7 +64,7 @@ const { channels, messages, roleDefinitions, memberRoles } = chat.collections;
 /* ----- operations (faithful to the existing model.json) ----- */
 
 const operations = {
-  "channel.create": op(
+  "channel.create": action(
     { authorize: { roles: ["admin"] }, payload: { name: p.string({ max: 80 }), topic: p.string({ max: 240 }).nullable().optional(), group: p.string({ max: 80 }).nullable().optional() } },
     ({ ref, fx }) => ({
       effects: [fx.create(channels, {
@@ -58,21 +75,21 @@ const operations = {
     })
   ),
 
-  "channel.rename": op(
+  "channel.rename": action(
     { authorize: { roles: ["moderator"] }, payload: { channelId: p.string({ max: 200 }), name: p.string({ max: 80 }).nullable().optional(), topic: p.string({ max: 240 }).nullable().optional(), group: p.string({ max: 80 }).nullable().optional() } },
     ({ ref, fx }) => ({
       effects: [fx.update(channels, { id: ref.payload("channelId"), set: { name: ref.payload("name"), topic: ref.payload("topic"), group: ref.payload("group"), updatedAt: ref.now() }, activity: "updated record" })]
     })
   ),
 
-  "channel.archive": op(
+  "channel.archive": action(
     { authorize: { roles: ["moderator"] }, payload: { channelId: p.string({ max: 200 }) } },
     ({ ref, fx }) => ({
       effects: [fx.mark(channels, { id: ref.payload("channelId"), set: { archivedAt: ref.now() }, activity: "marked record" })]
     })
   ),
 
-  "message.send": op(
+  "message.send": action(
     { authorize: { roles: ["member"] }, payload: { channelId: p.string({ max: 200 }), body: p.string({ max: 4000 }), embeds: p.array().optional(), mentionIds: p.array(p.string({ max: 120 })).optional() } },
     ({ ref, fx }) => ({
       effects: [fx.create(messages, {
@@ -83,7 +100,7 @@ const operations = {
     })
   ),
 
-  "message.reply": op(
+  "message.reply": action(
     { authorize: { roles: ["member"] }, payload: { channelId: p.string({ max: 200 }), replyToId: p.string({ max: 200 }), body: p.string({ max: 4000 }), mentionIds: p.array(p.string({ max: 120 })).optional() } },
     ({ ref, fx }) => ({
       effects: [fx.create(messages, {
@@ -94,7 +111,7 @@ const operations = {
     })
   ),
 
-  "message.edit": op(
+  "message.edit": action(
     { authorize: { roles: ["member"] }, payload: { messageId: p.string({ max: 200 }), body: p.string({ max: 4000 }), embeds: p.array().optional() } },
     ({ ref, fx, guard }) => ({
       guards: [
@@ -105,22 +122,22 @@ const operations = {
     })
   ),
 
-  "message.react": op(
+  "message.react": action(
     { authorize: { roles: ["member"] }, payload: { messageId: p.string({ max: 200 }), emoji: p.string({ max: 64 }) } },
     ({ ref, fx }) => ({ effects: [fx.toggleReaction(messages, { id: ref.payload("messageId"), emoji: ref.payload("emoji") })] })
   ),
 
-  "message.pin": op(
+  "message.pin": action(
     { authorize: { roles: ["moderator"] }, payload: { messageId: p.string({ max: 200 }) } },
     ({ ref, fx }) => ({ effects: [fx.mark(messages, { id: ref.payload("messageId"), set: { pinnedAt: ref.now(), pinnedBy: ref.actor("memberId") }, activity: "marked record" })] })
   ),
 
-  "message.unpin": op(
+  "message.unpin": action(
     { authorize: { roles: ["moderator"] }, payload: { messageId: p.string({ max: 200 }) } },
     ({ ref, fx }) => ({ effects: [fx.mark(messages, { id: ref.payload("messageId"), set: { pinnedAt: null, pinnedBy: null }, activity: "marked record" })] })
   ),
 
-  "message.delete": op(
+  "message.delete": action(
     { authorize: { roles: ["member"] }, payload: { messageId: p.string({ max: 200 }) } },
     ({ ref, fx, guard }) => ({
       guards: [guard.ownerOrRole(messages, { id: ref.payload("messageId"), ownerField: "authorId", roles: ["moderator"], message: "Only message authors or moderators can delete messages." })],
@@ -128,7 +145,7 @@ const operations = {
     })
   ),
 
-  "role.create": op(
+  "role.create": action(
     { authorize: { roles: ["admin"] }, payload: { roleId: p.string({ max: 80 }), name: p.string({ max: 80 }), description: p.string({ max: 240 }).nullable().optional(), color: p.string({ max: 40 }).nullable().optional() } },
     ({ ref, fx }) => ({
       effects: [fx.create(roleDefinitions, {
@@ -139,19 +156,19 @@ const operations = {
     })
   ),
 
-  "role.update": op(
+  "role.update": action(
     { authorize: { roles: ["admin"] }, payload: { roleId: p.string({ max: 80 }), name: p.string({ max: 80 }).nullable().optional(), description: p.string({ max: 240 }).nullable().optional(), color: p.string({ max: 40 }).nullable().optional() } },
     ({ ref, fx }) => ({
       effects: [fx.update(roleDefinitions, { id: ref.payload("roleId"), recordLabel: "Role", set: { name: ref.payload("name"), description: ref.payload("description"), color: ref.payload("color"), updatedAt: ref.now(), updatedBy: ref.actor("memberId") }, activity: "updated role" })]
     })
   ),
 
-  "role.archive": op(
+  "role.archive": action(
     { authorize: { roles: ["admin"] }, payload: { roleId: p.string({ max: 80 }) } },
     ({ ref, fx }) => ({ effects: [fx.mark(roleDefinitions, { id: ref.payload("roleId"), recordLabel: "Role", set: { archivedAt: ref.now(), archivedBy: ref.actor("memberId") }, activity: "archived role" })] })
   ),
 
-  "member.role.assign": op(
+  "member.role.assign": action(
     { authorize: { roles: ["admin"] }, payload: { memberId: p.string({ max: 120 }), roleId: p.string({ max: 80 }).nullable().optional(), roleIds: p.array(p.string({ max: 80 })).optional(), displayName: p.string({ max: 120 }).nullable().optional() } },
     ({ ref, fx }) => ({
       effects: [fx.create(memberRoles, {
@@ -258,7 +275,6 @@ const app = defineApp({
     build: { command: process.execPath, args: [frontendCommand, "build", packageRoot] }
   },
   roomkit: {
-    bridgeGlobalName: "ROOMKIT_CHORD_HOST",
     frontendProjection: "chat"
   },
   example: {
@@ -291,7 +307,7 @@ const app = defineApp({
     "reactions"
   ],
   views: {
-    channelSummary: q.collection(channels),
+    channelSummary: query.collection(channels),
     roomDirectory: { plugin: "mediaRooms", query: "roomDirectory" },
     onlineMembers: { plugin: "presence", query: "onlineMembers" }
   },

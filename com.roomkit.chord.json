@@ -17,14 +17,14 @@
     "roomkitVersion": ">=0.1 <0.2",
     "hostPack": {
       "url": "workspace:roomkit-chord#hostPack",
-      "integrity": "sha256-e4c9d2f6724c5f546b1de4ffd8ec2144669a6858f3426e8e813d1ed0cce80ffb"
+      "integrity": "sha256-46f6d078fb1105170901933a48f66b13deef1389d06efc2d7994a1bc9e492e23"
     },
     "playerPacks": [
       {
         "id": "com.roomkit.chord.player",
         "name": "Chord Player",
         "url": "workspace:roomkit-chord#playerPack",
-        "integrity": "sha256-3058666d4991ef410cfe6d7abd07930d15e5e0a14b69ab4a9e307c35204794ba",
+        "integrity": "sha256-908f82195a2e06b11c2351d8877181338d0d81739c466260a4381154c8b1658f",
         "recommendedFor": {
           "devices": [
             "desktop",
@@ -42,7 +42,7 @@
       "operationSchemaHash": "sha256-be37eabd0370eb7549aee3798a165b69c04a70a7f5cba18454f850f2b2bf6026",
       "stateSchemaHash": "sha256-c474bf84ccc49ca668b4570910cd4a965165fc70816791453ffb121c8aac02ef",
       "pluginGraphHash": "sha256-b34a653b1a7bb22d01a1512557f0c61601cefd016366fce4a0120e2825d389fe",
-      "compositionSchemaHash": "sha256-bd7881dd39a596e5fdd00521de6ab2d9867e89faf2671acaad3f0b8c583415ec"
+      "compositionSchemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
     },
     "composition": {
       "kind": "roomkit.app-composition.schema",
@@ -762,32 +762,32 @@
           "views": {},
           "shapes": {
             "channels": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "head",
+              "integrityClass": "signature",
               "storage": "array",
               "partition": "channels"
             },
             "messages": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "window",
+              "integrityClass": "seq",
               "storage": "map",
               "partition": "messages"
             },
             "memberRoles": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "head",
+              "integrityClass": "signature",
               "storage": "map",
               "partition": "memberRoles"
             },
             "roleDefinitions": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "head",
+              "integrityClass": "signature",
               "storage": "map",
               "partition": "roleDefinitions"
             },
             "activity": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "window",
+              "integrityClass": "seq",
               "storage": "array",
               "partition": "activity"
             }
@@ -1504,7 +1504,7 @@
           }
         }
       },
-      "schemaHash": "sha256-bd7881dd39a596e5fdd00521de6ab2d9867e89faf2671acaad3f0b8c583415ec"
+      "schemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
     },
     "capabilities": {
       "required": [
@@ -1593,7 +1593,7 @@
       ]
     },
     "composition": {
-      "schemaHash": "sha256-bd7881dd39a596e5fdd00521de6ab2d9867e89faf2671acaad3f0b8c583415ec",
+      "schemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334",
       "primaryPlugin": {
         "id": "com.roomkit.chord.plugin",
         "version": "1.0.0",
@@ -2304,32 +2304,32 @@
           "views": {},
           "shapes": {
             "channels": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "head",
+              "integrityClass": "signature",
               "storage": "array",
               "partition": "channels"
             },
             "messages": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "window",
+              "integrityClass": "seq",
               "storage": "map",
               "partition": "messages"
             },
             "memberRoles": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "head",
+              "integrityClass": "signature",
               "storage": "map",
               "partition": "memberRoles"
             },
             "roleDefinitions": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "head",
+              "integrityClass": "signature",
               "storage": "map",
               "partition": "roleDefinitions"
             },
             "activity": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "window",
+              "integrityClass": "seq",
               "storage": "array",
               "partition": "activity"
             }
@@ -3756,32 +3756,32 @@
             "views": {},
             "shapes": {
               "channels": {
-                "readClass": "full-fold",
-                "integrityClass": "checkpoint",
+                "readClass": "head",
+                "integrityClass": "signature",
                 "storage": "array",
                 "partition": "channels"
               },
               "messages": {
-                "readClass": "full-fold",
-                "integrityClass": "checkpoint",
+                "readClass": "window",
+                "integrityClass": "seq",
                 "storage": "map",
                 "partition": "messages"
               },
               "memberRoles": {
-                "readClass": "full-fold",
-                "integrityClass": "checkpoint",
+                "readClass": "head",
+                "integrityClass": "signature",
                 "storage": "map",
                 "partition": "memberRoles"
               },
               "roleDefinitions": {
-                "readClass": "full-fold",
-                "integrityClass": "checkpoint",
+                "readClass": "head",
+                "integrityClass": "signature",
                 "storage": "map",
                 "partition": "roleDefinitions"
               },
               "activity": {
-                "readClass": "full-fold",
-                "integrityClass": "checkpoint",
+                "readClass": "window",
+                "integrityClass": "seq",
                 "storage": "array",
                 "partition": "activity"
               }
@@ -4498,7 +4498,7 @@
             }
           }
         },
-        "schemaHash": "sha256-bd7881dd39a596e5fdd00521de6ab2d9867e89faf2671acaad3f0b8c583415ec"
+        "schemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
       }
     },
     {
@@ -4579,7 +4579,7 @@
             "com.roomkit.examples.plugins.reactions",
             "com.roomkit.examples.plugins.screen-share"
           ],
-          "compositionSchemaHash": "sha256-bd7881dd39a596e5fdd00521de6ab2d9867e89faf2671acaad3f0b8c583415ec"
+          "compositionSchemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
         }
       ],
       "recommendedFor": {
@@ -4666,7 +4666,6 @@
     }
   },
   "roomkit": {
-    "bridgeGlobalName": "ROOMKIT_CHORD_HOST",
     "frontendProjection": "chat"
   },
   "compositionSchema": {
@@ -5387,32 +5386,32 @@
         "views": {},
         "shapes": {
           "channels": {
-            "readClass": "full-fold",
-            "integrityClass": "checkpoint",
+            "readClass": "head",
+            "integrityClass": "signature",
             "storage": "array",
             "partition": "channels"
           },
           "messages": {
-            "readClass": "full-fold",
-            "integrityClass": "checkpoint",
+            "readClass": "window",
+            "integrityClass": "seq",
             "storage": "map",
             "partition": "messages"
           },
           "memberRoles": {
-            "readClass": "full-fold",
-            "integrityClass": "checkpoint",
+            "readClass": "head",
+            "integrityClass": "signature",
             "storage": "map",
             "partition": "memberRoles"
           },
           "roleDefinitions": {
-            "readClass": "full-fold",
-            "integrityClass": "checkpoint",
+            "readClass": "head",
+            "integrityClass": "signature",
             "storage": "map",
             "partition": "roleDefinitions"
           },
           "activity": {
-            "readClass": "full-fold",
-            "integrityClass": "checkpoint",
+            "readClass": "window",
+            "integrityClass": "seq",
             "storage": "array",
             "partition": "activity"
           }
@@ -6129,7 +6128,7 @@
         }
       }
     },
-    "schemaHash": "sha256-bd7881dd39a596e5fdd00521de6ab2d9867e89faf2671acaad3f0b8c583415ec"
+    "schemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
   },
   "artifacts": {
     "composition": {
@@ -6850,32 +6849,32 @@
           "views": {},
           "shapes": {
             "channels": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "head",
+              "integrityClass": "signature",
               "storage": "array",
               "partition": "channels"
             },
             "messages": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "window",
+              "integrityClass": "seq",
               "storage": "map",
               "partition": "messages"
             },
             "memberRoles": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "head",
+              "integrityClass": "signature",
               "storage": "map",
               "partition": "memberRoles"
             },
             "roleDefinitions": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "head",
+              "integrityClass": "signature",
               "storage": "map",
               "partition": "roleDefinitions"
             },
             "activity": {
-              "readClass": "full-fold",
-              "integrityClass": "checkpoint",
+              "readClass": "window",
+              "integrityClass": "seq",
               "storage": "array",
               "partition": "activity"
             }
@@ -7592,7 +7591,7 @@
           }
         }
       },
-      "schemaHash": "sha256-bd7881dd39a596e5fdd00521de6ab2d9867e89faf2671acaad3f0b8c583415ec"
+      "schemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
     },
     "model": {
       "kind": "roomkit.primary-model.schema",
@@ -8301,32 +8300,32 @@
       "views": {},
       "shapes": {
         "channels": {
-          "readClass": "full-fold",
-          "integrityClass": "checkpoint",
+          "readClass": "head",
+          "integrityClass": "signature",
           "storage": "array",
           "partition": "channels"
         },
         "messages": {
-          "readClass": "full-fold",
-          "integrityClass": "checkpoint",
+          "readClass": "window",
+          "integrityClass": "seq",
           "storage": "map",
           "partition": "messages"
         },
         "memberRoles": {
-          "readClass": "full-fold",
-          "integrityClass": "checkpoint",
+          "readClass": "head",
+          "integrityClass": "signature",
           "storage": "map",
           "partition": "memberRoles"
         },
         "roleDefinitions": {
-          "readClass": "full-fold",
-          "integrityClass": "checkpoint",
+          "readClass": "head",
+          "integrityClass": "signature",
           "storage": "map",
           "partition": "roleDefinitions"
         },
         "activity": {
-          "readClass": "full-fold",
-          "integrityClass": "checkpoint",
+          "readClass": "window",
+          "integrityClass": "seq",
           "storage": "array",
           "partition": "activity"
         }

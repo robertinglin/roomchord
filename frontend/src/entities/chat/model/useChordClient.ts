@@ -1,28 +1,105 @@
-import { createRoomKitConnector, type RoomKitLiveClient } from "roomkit-sdk/browser/liveRoomConnector";
-import { useLiveRoom } from "roomkit-sdk/react";
+import { useMemo } from "react";
+import { getDirectMessageThreads } from "roomkit-sdk/browser/directMessages";
+import type { RoomKitRoom } from "roomkit-sdk/client";
+import { useRoom } from "roomkit-sdk/react";
 import type { Chord } from "../../../../../src/types";
-import { emptyChatState } from "@entities/chat/model/state";
+import type { Actor, ChatEmbed, ChatState } from "@entities/chat/model/types";
 import type { ChatProps } from "@entities/chat/model/types";
 
-const chordConnector = createRoomKitConnector<Chord>({
-  bridgeName: "ROOMKIT_CHORD_HOST",
-  appName: "Chord",
-  defaultBackendPort: 43732,
-  emptyState: emptyChatState,
-  fallbackBridgeNames: ["ROOMKIT_HOST", "ROOMKIT_EXAMPLE_HOST", "ROOMKIT_CHAT_HOST"],
-  offlineMessage: "Chord backend offline - run pnpm run dev from the app package.",
-  queries: {
-    channelSummary: (state) => state.channels,
-    roomDirectory: (state) => state.rooms,
-    onlineMembers: (state) => Object.values(state.presence || {}).filter((member) => member.status !== "offline")
-  }
-});
+type ChordRoom = RoomKitRoom<Chord>;
 
-export type ChordLiveClient = RoomKitLiveClient<Chord>;
+export type ChordLiveClient = Omit<ChordRoom, "actor" | "can" | "state" | "subscribe"> & {
+  readonly actor: Actor;
+  readonly state: ChatState;
+  readonly ready: boolean;
+  readonly message: string;
+  readonly mediaHost: ChordRoom["media"];
+  readonly core: { sendPresence(input?: { status?: string; activity?: string; at?: number }): Promise<boolean> };
+  readonly select: {
+    embedsByScope(input: { scopeType: string; scopeId: string }): ChatEmbed[];
+    messagesByChannel(channelId: string): Chord.Message[];
+  };
+  can(action: Chord.ActionName | string): boolean;
+  getDMs(topicPattern?: RegExp): ReturnType<typeof getDirectMessageThreads<Chord.DirectThread, Chord.DirectMessage>>;
+  subscribe(listener: (client: ChordLiveClient) => void): () => void;
+};
 
-export function useChordClient(props: ChatProps): ChordLiveClient {
-  return useLiveRoom<Chord>(chordConnector, {
-    envelope: props.envelope,
-    initialState: props.initialState
-  });
+export function useChordClient(_props: ChatProps = {}): ChordLiveClient {
+  const room = useRoom<Chord>();
+  return useMemo(() => {
+    const client = {
+      get state() {
+        return room.state;
+      },
+      get envelope() {
+        return room.envelope;
+      },
+      get actions() {
+        return room.actions;
+      },
+      get queries() {
+        return room.queries;
+      },
+      get actor() {
+        return room.actor as Actor;
+      },
+      get status() {
+        return room.status;
+      },
+      get crypto() {
+        return room.crypto;
+      },
+      get media() {
+        return room.media;
+      },
+      get presence() {
+        return room.presence;
+      },
+      get notifications() {
+        return room.notifications;
+      },
+      get ready() {
+        return room.status !== "connecting";
+      },
+      get message() {
+        return room.status;
+      },
+      get mediaHost() {
+        return room.media;
+      },
+      core: {
+        sendPresence(input?: { status?: string; activity?: string; at?: number }) {
+          return room.presence.send(input);
+        }
+      },
+      select: {
+        embedsByScope(input: { scopeType: string; scopeId: string }) {
+          return Object.values(room.state.embeds || {})
+            .filter((embed) => embed.scopeType === input.scopeType && embed.scopeId === input.scopeId) as ChatEmbed[];
+        },
+        messagesByChannel(channelId: string) {
+          return Object.values(room.state.messages || {}).filter((message) => message.channelId === channelId);
+        }
+      },
+      can(action: Chord.ActionName | string) {
+        return room.can[action]?.().status === "allowed";
+      },
+      dispatch(action: string, payload?: Record<string, unknown>) {
+        return room.dispatch(action, payload);
+      },
+      getDMs(topicPattern?: RegExp) {
+        return getDirectMessageThreads(room.state, topicPattern);
+      },
+      refresh() {
+        return room.refresh();
+      },
+      subscribe(listener: (client: ChordLiveClient) => void) {
+        return room.subscribe(() => listener(client as ChordLiveClient));
+      },
+      close() {
+        room.close();
+      }
+    };
+    return client as ChordLiveClient;
+  }, [room]);
 }

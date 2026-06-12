@@ -6,7 +6,6 @@ import { ChannelSidebar } from "@features/channel-navigation/ui/ChannelSidebar";
 import { DirectMessages } from "@features/direct-messages/ui/DirectMessages";
 import { UserControls } from "@features/user-controls/ui/UserControls";
 import { CloseIcon } from "@shared/ui/Icons";
-import { useIsMobile } from "@shared/ui/useIsMobile";
 
 export function ChatSidebar({
   onClose,
@@ -21,7 +20,6 @@ export function ChatSidebar({
   const localMediaSettings = useChatUiStore((value) => value.localMediaSettings);
   const mutedVoiceParticipantIds = useChatUiStore((value) => value.mutedVoiceParticipantIds);
   const voicePreferences = useChatUiStore((value) => value.voicePreferences);
-  const isMobile = useIsMobile();
   function closeSidebar() {
     onClose?.();
   }
@@ -128,7 +126,6 @@ export function ChatSidebar({
         onReconnect={actions.reconnectVoiceRoom}
         onDismissReconnect={ui.dismissReconnect}
         onStopShare={(shareId) => { void actions.stopScreenShare(shareId); }}
-        hideVoicePanel={activeView === "media" && isMobile}
         onUpdateVoicePreferences={ui.updateVoicePreferences}
         onVoiceSettingsOpenChange={ui.setVoiceSettingsOpen}
         onUpdateStatus={actions.updatePresence}

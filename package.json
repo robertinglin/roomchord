@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "description": "Chord RoomKit chat app with channels, private messages, presence, camera-capable rooms, and screen-share state.",
   "type": "commonjs",
-  "main": "src/index.cjs",
+  "main": "src/sdk-app.cjs",
   "exports": {
-    ".": "./src/index.cjs",
+    ".": "./src/sdk-app.cjs",
     "./sdk-app": "./src/sdk-app.cjs",
     "./types": {
       "types": "./src/types.d.ts",
@@ -28,6 +28,9 @@
     "start:backend": "node shared/liveBackend.cjs --app . --port 43732"
   },
   "dependencies": {
+    "@roomkit-core/base": "link:../roomkit/packages/roomkit-core",
+    "@roomkit-core/host-runtime": "link:../roomkit/packages/roomkit-host-runtime",
+    "@roomkit-core/protocol": "link:../roomkit/packages/roomkit-protocol",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "roomkit-sdk": "link:../roomkit/packages/roomkit-sdk",
@@ -37,7 +40,7 @@
     "node": ">=22.12"
   },
   "roomkit": {
-    "app": "./src/index.cjs"
+    "app": "./src/sdk-app.cjs"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",

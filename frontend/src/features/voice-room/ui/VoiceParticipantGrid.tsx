@@ -90,7 +90,6 @@ export function VoiceParticipantGrid({
           return (
             <article
               className="voice-video-tile has-video local-screen-share-tile"
-              aria-label="Your screen share"
               key={key}
             >
               {stream ? (
@@ -114,7 +113,6 @@ export function VoiceParticipantGrid({
           return (
             <article
               className="voice-video-tile screen-share-preview-tile"
-              aria-label={`${participant.name} screen share preview`}
               key={key}
             >
               {preview?.dataUrl ? (
