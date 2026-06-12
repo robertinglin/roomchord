@@ -16,7 +16,9 @@ import {
   roomkitEmbedSupportsFullscreenDialog,
   roomkitEmbedTitle
 } from "roomkit-sdk/browser/embedFrame";
+import { mentionSegments, renderMentionNames } from "@entities/chat/model/mentions";
 import { CloseIcon, MaximizeIcon } from "@shared/ui/Icons";
+import { MemberContextMenu } from "@shared/ui/MemberContextMenu";
 
 const SINGLE_EMOJI_RE = /^(?:[\d#*]\uFE0F?\u20E3|\p{Regional_Indicator}{2}|\p{Extended_Pictographic}\uFE0F?\p{Emoji_Modifier}?(?:\u200D\p{Extended_Pictographic}\uFE0F?\p{Emoji_Modifier}?)*)$/u;
 
@@ -40,12 +42,66 @@ type EmbedDialogState = {
   src: string;
 };
 
-function Inline({ tokens, onFullscreen }: { tokens?: RoomkitMarkdownToken[]; onFullscreen?: (embed: RoomkitMarkdownEmbed) => void }) {
+function InlineText({
+  currentUserId,
+  memberNamesById,
+  onDirectMessage,
+  value
+}: {
+  currentUserId?: string;
+  memberNamesById: Record<string, string>;
+  onDirectMessage?: (memberId: string) => void;
+  value: string;
+}) {
+  return (
+    <>
+      {mentionSegments(value, memberNamesById).map((segment, index) => {
+        if (segment.type === "text") return <React.Fragment key={index}>{segment.text}</React.Fragment>;
+        return (
+          <MemberContextMenu
+            currentUserId={currentUserId}
+            memberId={segment.memberId}
+            memberName={memberNamesById[segment.memberId] || segment.memberId}
+            onDirectMessage={onDirectMessage}
+            key={index}
+          >
+            <span className="message-mention" data-member-id={segment.memberId}>{segment.text}</span>
+          </MemberContextMenu>
+        );
+      })}
+    </>
+  );
+}
+
+function Inline({
+  currentUserId,
+  memberNamesById,
+  onDirectMessage,
+  onFullscreen,
+  tokens
+}: {
+  currentUserId?: string;
+  memberNamesById: Record<string, string>;
+  onDirectMessage?: (memberId: string) => void;
+  onFullscreen?: (embed: RoomkitMarkdownEmbed) => void;
+  tokens?: RoomkitMarkdownToken[];
+}) {
   if (!tokens || tokens.length === 0) return null;
   return (
     <>
       {tokens.map((token, index) => {
-        if (token.type !== "link") return <React.Fragment key={index}>{token.value}</React.Fragment>;
+        if (token.type !== "link") {
+          return (
+            <React.Fragment key={index}>
+              <InlineText
+                currentUserId={currentUserId}
+                memberNamesById={memberNamesById}
+                onDirectMessage={onDirectMessage}
+                value={token.value}
+              />
+            </React.Fragment>
+          );
+        }
         const embed = token.embed && token.embed.provider !== "link" ? token.embed : undefined;
         const title = embed ? roomkitEmbedTitle(embed) : token.text;
         const canFullscreen = Boolean(embed && roomkitEmbedSupportsFullscreenDialog(embed));
@@ -80,7 +136,20 @@ function Inline({ tokens, onFullscreen }: { tokens?: RoomkitMarkdownToken[]; onF
   );
 }
 
-function MarkdownNodes({ nodes, onFullscreen }: { nodes: RoomkitMarkdownNode[]; onFullscreen: (embed: RoomkitMarkdownEmbed) => void }) {
+function MarkdownNodes({
+  currentUserId,
+  memberNamesById,
+  nodes,
+  onDirectMessage,
+  onFullscreen
+}: {
+  currentUserId?: string;
+  memberNamesById: Record<string, string>;
+  nodes: RoomkitMarkdownNode[];
+  onDirectMessage?: (memberId: string) => void;
+  onFullscreen: (embed: RoomkitMarkdownEmbed) => void;
+}) {
+  const inlineProps = { currentUserId, memberNamesById, onDirectMessage, onFullscreen };
   return (
     <>
       {nodes.map((node, index) => {
@@ -90,7 +159,7 @@ function MarkdownNodes({ nodes, onFullscreen }: { nodes: RoomkitMarkdownNode[]; 
             const Tag = `h${depth}` as keyof JSX.IntrinsicElements;
             return (
               <Tag key={index} className="md-heading">
-                <Inline tokens={node.children} onFullscreen={onFullscreen} />
+                <Inline tokens={node.children} {...inlineProps} />
               </Tag>
             );
           }
@@ -103,7 +172,7 @@ function MarkdownNodes({ nodes, onFullscreen }: { nodes: RoomkitMarkdownNode[]; 
           case "blockquote":
             return (
               <blockquote key={index} className="md-quote">
-                <Inline tokens={node.children} onFullscreen={onFullscreen} />
+                <Inline tokens={node.children} {...inlineProps} />
               </blockquote>
             );
           case "list":
@@ -111,7 +180,7 @@ function MarkdownNodes({ nodes, onFullscreen }: { nodes: RoomkitMarkdownNode[]; 
               <ul key={index} className="md-list">
                 {(node.items || []).map((item, itemIndex) => (
                   <li key={itemIndex}>
-                    <Inline tokens={item.children} onFullscreen={onFullscreen} />
+                    <Inline tokens={item.children} {...inlineProps} />
                   </li>
                 ))}
               </ul>
@@ -122,7 +191,7 @@ function MarkdownNodes({ nodes, onFullscreen }: { nodes: RoomkitMarkdownNode[]; 
           default:
             return (
               <p key={index} className="message-body">
-                <Inline tokens={node.children} onFullscreen={onFullscreen} />
+                <Inline tokens={node.children} {...inlineProps} />
               </p>
             );
         }
@@ -284,8 +353,19 @@ function richEmbeds(embeds: RoomkitMarkdownEmbed[]): RoomkitMarkdownEmbed[] {
   });
 }
 
-export function MarkdownMessage({ body }: { body: string }) {
-  const largeEmoji = useMemo(() => singleEmojiBody(body), [body]);
+export function MarkdownMessage({
+  body,
+  currentUserId,
+  memberNamesById = {},
+  onDirectMessage
+}: {
+  body: string;
+  currentUserId?: string;
+  memberNamesById?: Record<string, string>;
+  onDirectMessage?: (memberId: string) => void;
+}) {
+  const displayBody = useMemo(() => renderMentionNames(body, memberNamesById), [body, memberNamesById]);
+  const largeEmoji = useMemo(() => singleEmojiBody(displayBody), [displayBody]);
   const parsed = useMemo(() => parseBody(body), [body]);
   const cards = richEmbeds(parsed.embeds);
   const [dialog, setDialog] = useState<EmbedDialogState | null>(null);
@@ -304,7 +384,13 @@ export function MarkdownMessage({ body }: { body: string }) {
   return (
     <>
       <div className="message-markdown">
-        <MarkdownNodes nodes={parsed.nodes} onFullscreen={openFullscreen} />
+        <MarkdownNodes
+          currentUserId={currentUserId}
+          memberNamesById={memberNamesById}
+          nodes={parsed.nodes}
+          onDirectMessage={onDirectMessage}
+          onFullscreen={openFullscreen}
+        />
       </div>
       {cards.length > 0 ? (
         <div className="embed-stack">

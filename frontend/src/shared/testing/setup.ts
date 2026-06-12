@@ -29,6 +29,41 @@ Object.defineProperty(window, "localStorage", {
   }
 });
 
+Object.defineProperty(document, "execCommand", {
+  configurable: true,
+  value(command: string, _showUi?: boolean, value?: string) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return false;
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+
+    if (command === "insertText") {
+      const node = document.createTextNode(value || "");
+      range.insertNode(node);
+      range.setStartAfter(node);
+    } else if (command === "insertLineBreak") {
+      const node = document.createElement("br");
+      range.insertNode(node);
+      range.setStartAfter(node);
+    } else if (command === "insertHTML") {
+      const template = document.createElement("template");
+      template.innerHTML = value || "";
+      const nodes = Array.from(template.content.childNodes);
+      for (const node of nodes) {
+        range.insertNode(node);
+        range.setStartAfter(node);
+      }
+    } else {
+      return false;
+    }
+
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return true;
+  }
+});
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();

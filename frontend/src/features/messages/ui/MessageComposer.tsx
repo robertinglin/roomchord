@@ -3,9 +3,10 @@ import type { Message } from "@entities/chat/model/types";
 import { LinkIcon, SendArrowIcon, SmileIcon } from "@shared/ui/Icons";
 import { InlineEmojiPicker } from "@features/messages/ui/InlineEmojiPicker";
 import { authorName, previewText } from "@features/messages/model/messageDisplay";
+import { mentionToken } from "@entities/chat/model/mentions";
 
 const ZWSP = "\u200B"; // zero-width space used as a caret anchor around pills
-const MENTION_QUERY_RE = /(?:^|[\s\u200B])@([\p{L}\p{N}._-]*)$/u;
+const MENTION_QUERY_RE = /(?:^|[\s\u200B])@([^\n@]*)$/u;
 
 type MentionCandidate = { id: string; name: string };
 
@@ -42,13 +43,16 @@ function queryAtCaret(editor: HTMLElement): { node: Text; offset: number; query:
   return { node, offset: range.startOffset, query: match[1] };
 }
 
-/** Serialize editor DOM to plain text. Mentions become "@Name"; &nbsp; becomes a space; ZWSP anchors are dropped. */
+/** Serialize editor DOM to plain text. Mentions become stable member-id tokens; &nbsp; becomes a space; ZWSP anchors are dropped. */
 function serialize(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) {
     return (node.textContent ?? "").replace(/\u00A0/g, " ").replace(/\u200B/g, "");
   }
   if (!(node instanceof HTMLElement)) return "";
-  if (node.classList.contains("composer-mention")) return node.textContent ?? "";
+  if (node.classList.contains("composer-mention")) {
+    const memberId = node.dataset.mentionId;
+    return memberId ? mentionToken(memberId) : node.textContent ?? "";
+  }
   if (node.tagName === "BR") return "\n";
   const inner = Array.from(node.childNodes).map(serialize).join("");
   return node.tagName === "DIV" || node.tagName === "P" ? `\n${inner}` : inner;
@@ -133,6 +137,8 @@ export function MessageComposer({
       editor.innerHTML = "";
     }
     setHasContent(hasMentions || text.trim().length > 0);
+    const hit = queryAtCaret(editor);
+    setMentionQuery(hit ? hit.query : null);
   }
 
   /** execCommand keeps the browser's native undo stack intact, which manual DOM edits would destroy. */

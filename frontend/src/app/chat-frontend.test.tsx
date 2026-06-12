@@ -660,7 +660,6 @@ describe("ChatApp", () => {
 
       expect(composer.textContent).toContain("Line one");
       expect(composer.textContent).toContain("Line two");
-      await waitFor(() => expect(composer).toHaveStyle({ height: "72px" }));
       expect(sent).toHaveLength(0);
 
       await user.keyboard("{Enter}");
@@ -686,12 +685,12 @@ describe("ChatApp", () => {
     await user.type(composer, "@L");
     await user.click(await screen.findByRole("option", { name: "Lee" }));
 
-    expect(document.querySelector(".composer-backdrop [data-mention-id='lee']")).toHaveTextContent("@Lee");
-    expect(composer).toHaveValue("@Lee ");
+    expect(document.querySelector(".composer-mention[data-mention-id='lee']")).toHaveTextContent("@Lee");
+    expect(composer).toHaveTextContent("@Lee");
 
     await user.keyboard("{Backspace}");
-    expect(document.querySelector(".composer-backdrop [data-mention-id='lee']")).toBeNull();
-    expect(composer).toHaveValue("");
+    expect(document.querySelector(".composer-mention[data-mention-id='lee']")).toBeNull();
+    expect(composer).toHaveTextContent("");
 
     await user.type(composer, "@L");
     await user.click(await screen.findByRole("option", { name: "Lee" }));
@@ -703,7 +702,7 @@ describe("ChatApp", () => {
       type: "messageSend",
       schemaAction: "messageSend",
       payload: {
-        body: "@Lee can you review this?",
+        body: "@[lee] can you review this?",
         mentionIds: ["lee"]
       }
     });
@@ -720,8 +719,8 @@ describe("ChatApp", () => {
     fireEvent.keyDown(composer, { key: "Enter" });
 
     expect(sent).toHaveLength(0);
-    expect(document.querySelector(".composer-backdrop [data-mention-id='lee']")).toHaveTextContent("@Lee");
-    expect(composer).toHaveValue("@Lee ");
+    expect(document.querySelector(".composer-mention[data-mention-id='lee']")).toHaveTextContent("@Lee");
+    expect(composer).toHaveTextContent("@Lee");
 
     await user.keyboard("{Backspace}");
     await user.type(composer, "@");
@@ -734,11 +733,41 @@ describe("ChatApp", () => {
     await user.keyboard("{ArrowDown}{Enter}");
 
     expect(sent).toHaveLength(0);
-    expect(document.querySelector(".composer-backdrop [data-mention-id='lee']")).toHaveTextContent("@Lee");
-    expect(composer).toHaveValue("@Lee ");
+    expect(document.querySelector(".composer-mention[data-mention-id='lee']")).toHaveTextContent("@Lee");
+    expect(composer).toHaveTextContent("@Lee");
   });
 
-  it("keeps native left and right caret movement through completed mentions", async () => {
+  it("renders internal user mentions as nicknames and highlights messages mentioning the current actor", async () => {
+    renderChat(undefined, {
+      ...state,
+      members: {
+        ...state.members,
+        guest_650: { id: "guest_650", memberId: "guest_650", displayName: "Guest 650", role: "member" }
+      },
+      messages: {
+        ...state.messages,
+        m1: { ...state.messages.m1, body: "Ping @[alice], @[lee], and @[guest_650]" }
+      }
+    });
+
+    await screen.findByText("@Guest 650");
+    const body = document.querySelector(".message-body");
+    if (!body) throw new Error("Expected rendered message body");
+    expect(body).toHaveTextContent("Ping @Alice, @Lee, and @Guest 650");
+    expect(body.closest(".message-row")).toHaveClass("mentioned");
+    expect(screen.queryByText("Ping @[alice], @[lee], and @[guest_650]")).not.toBeInTheDocument();
+
+    const leeMention = document.querySelector(".message-mention[data-member-id='lee']");
+    expect(leeMention).toHaveTextContent("@Lee");
+    const guestMention = document.querySelector(".message-mention[data-member-id='guest_650']");
+    expect(guestMention).toHaveTextContent("@Guest 650");
+
+    fireEvent.contextMenu(leeMention!);
+    expect(await screen.findByRole("menuitem", { name: "Send DM" })).toBeInTheDocument();
+    expect(within(screen.getByRole("menu")).getByText("Lee")).toBeInTheDocument();
+  });
+
+  it("keeps completed mention nicknames in the editable composer", async () => {
     const user = userEvent.setup();
     renderChat();
 
@@ -747,14 +776,36 @@ describe("ChatApp", () => {
     expect(await screen.findByRole("option", { name: "Lee" })).toBeInTheDocument();
     fireEvent.keyDown(composer, { key: "Enter" });
 
-    expect(composer).toHaveValue("@Lee ");
+    expect(document.querySelector(".composer-mention[data-mention-id='lee']")).toHaveTextContent("@Lee");
+    expect(composer).toHaveTextContent("@Lee");
+  });
 
-    await user.click(composer);
-    (composer as HTMLTextAreaElement).setSelectionRange(0, 0);
-    await user.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}{ArrowRight}");
-    expect((composer as HTMLTextAreaElement).selectionStart).toBe(5);
-    await user.keyboard("{ArrowLeft}");
-    expect((composer as HTMLTextAreaElement).selectionStart).toBe(4);
+  it("supports mention suggestions for display names with spaces while storing the member id", async () => {
+    const user = userEvent.setup();
+    const sent: any[] = [];
+    renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }), {
+      ...state,
+      members: {
+        ...state.members,
+        guest_650: { id: "guest_650", memberId: "guest_650", displayName: "Guest 650", role: "member" }
+      }
+    });
+
+    const composer = await screen.findByLabelText("Message # general");
+    await user.type(composer, "@Guest 65");
+    await user.click(await screen.findByRole("option", { name: "Guest 650" }));
+    await user.type(composer, "what's up");
+    await user.keyboard("{Enter}");
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      type: "messageSend",
+      schemaAction: "messageSend",
+      payload: {
+        body: "@[guest_650] what's up",
+        mentionIds: ["guest_650"]
+      }
+    });
   });
 
   it("resolves punctuated channel mentions before dispatch", async () => {
@@ -2313,7 +2364,7 @@ describe("ChatApp", () => {
     fireEvent.contextMenu(await memberRailAvatar("Lee", "Lee, online"), { clientX: 80, clientY: 90 });
     await user.click(await screen.findByRole("menuitem", { name: "Send DM" }));
     await user.type(screen.getByLabelText("Message Lee"), "Private update");
-    const composer = screen.getByLabelText("Message Lee").closest("form");
+    const composer = screen.getByLabelText("Message Lee").closest(".message-composer");
     if (!composer) throw new Error("Expected direct-message composer");
     await user.click(within(composer).getByRole("button", { name: "Send DM" }));
 

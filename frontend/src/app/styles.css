@@ -1210,6 +1210,34 @@ button {
   padding: 18px 0;
 }
 
+.new-messages-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 0 20px 8px;
+  pointer-events: none;
+}
+
+.new-messages-button {
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 0 12px;
+  color: var(--text);
+  background: var(--accent);
+  box-shadow: 0 10px 24px oklch(0.12 0.006 260 / 0.28);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  pointer-events: auto;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.new-messages-button:hover,
+.new-messages-button:focus {
+  background: var(--accent-hover);
+  outline: none;
+  transform: translateY(-1px);
+}
+
 .voice-room-main {
   grid-template-rows: auto minmax(0, 1fr);
 }
@@ -1548,6 +1576,19 @@ button {
   background: oklch(0.32 0.06 82 / 0.18);
 }
 
+.message-row.mentioned {
+  background: oklch(0.42 0.095 224 / 0.22);
+}
+
+.message-row.mentioned::before {
+  content: "";
+  position: absolute;
+  inset: 6px auto 6px 0;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: var(--mention-fg);
+}
+
 .message-row.deleted {
   color: var(--quiet);
 }
@@ -1589,6 +1630,21 @@ button {
   line-height: 1.45;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.message-mention {
+  display: inline-block;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--mention-bg);
+  color: var(--mention-fg);
+  font-weight: 700;
+  line-height: 1.25;
+  cursor: context-menu;
+}
+
+.message-mention:hover {
+  background: oklch(0.5 0.11 224 / 0.5);
 }
 
 .message-body-emoji {
@@ -2609,6 +2665,10 @@ button {
     min-height: 0;
     overflow: auto;
     padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .new-messages-wrap {
+    padding: 0 12px 8px;
   }
 
   .composer-wrap {

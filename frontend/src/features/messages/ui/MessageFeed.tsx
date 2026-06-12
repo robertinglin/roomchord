@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import type { Message } from "@entities/chat/model/types";
 import { MessageComposer } from "@features/messages/ui/MessageComposer";
 import { MessageRow } from "@features/messages/ui/MessageRow";
@@ -20,6 +20,7 @@ export type MessageFeedProps = {
   currentUserId?: string;
   mode: "channel" | "dm";
   disabled?: boolean;
+  feedKey?: string;
   onSend: (body: string) => void;
   onReply?: (messageId: string, body: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
@@ -44,6 +45,7 @@ export function MessageFeed({
   currentUserId,
   mode,
   disabled,
+  feedKey,
   onSend,
   onReply,
   onReact,
@@ -58,15 +60,60 @@ export function MessageFeed({
 }: MessageFeedProps) {
   const [replyTo, setReplyTo] = useState<Message | undefined>();
   const [recentReactions, setRecentReactions] = useState(loadRecentReactions);
+  const [showNewMessages, setShowNewMessages] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
+  const atBottomRef = useRef(true);
+  const lastFeedKeyRef = useRef<string | undefined>();
+  const lastMessageIdRef = useRef<string | undefined>();
+  const forceNextBottomRef = useRef(false);
   const sidebarOpen = useChatUiStore((value) => value.sidebarOpen);
   const ui = useChatUiActions();
   const messagesById = new Map(messages.map((message) => [message.id, message]));
+  const activeFeedKey = feedKey ?? `${mode}:${title}`;
+  const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : undefined;
   const displayMessages = [
     ...messages.filter((message) => message.pinnedAt && !message.deletedAt).map((message) => ({ message, pinnedCopy: true, instanceKey: `${message.id}:pinned` })),
     ...messages.map((message) => ({ message, pinnedCopy: false, instanceKey: message.id }))
   ];
 
+  function isAtBottom(element: HTMLElement) {
+    return element.scrollHeight - element.scrollTop - element.clientHeight <= 40;
+  }
+
+  function scrollToBottom() {
+    const list = listRef.current;
+    if (!list) return;
+    list.scrollTop = list.scrollHeight;
+    atBottomRef.current = true;
+    setShowNewMessages(false);
+  }
+
+  function updateScrollPosition() {
+    const list = listRef.current;
+    if (!list) return;
+    const atBottom = isAtBottom(list);
+    atBottomRef.current = atBottom;
+    if (atBottom) setShowNewMessages(false);
+  }
+
+  useLayoutEffect(() => {
+    const feedChanged = lastFeedKeyRef.current !== activeFeedKey;
+    const messageChanged = lastMessageIdRef.current !== lastMessageId;
+
+    if (feedChanged || forceNextBottomRef.current || atBottomRef.current) {
+      scrollToBottom();
+    } else if (messageChanged) {
+      setShowNewMessages(true);
+    }
+
+    forceNextBottomRef.current = false;
+    lastFeedKeyRef.current = activeFeedKey;
+    lastMessageIdRef.current = lastMessageId;
+  }, [activeFeedKey, lastMessageId, messages.length]);
+
   function submitMessage(body: string) {
+    forceNextBottomRef.current = true;
+    scrollToBottom();
     if (replyTo && onReply) {
       onReply(replyTo.id, body);
       setReplyTo(undefined);
@@ -92,7 +139,7 @@ export function MessageFeed({
         </div>
       </header>
 
-      <div className="message-list" role="log" aria-label={`${title} messages`}>
+      <div ref={listRef} className="message-list" role="log" aria-label={`${title} messages`} onScroll={updateScrollPosition}>
         {messages.length === 0 ? (
           <div className="empty-thread">
             <strong>No messages yet</strong>
@@ -125,6 +172,14 @@ export function MessageFeed({
           />
         ))}
       </div>
+
+      {showNewMessages ? (
+        <div className="new-messages-wrap">
+          <button className="new-messages-button" type="button" onClick={scrollToBottom}>
+            New messages
+          </button>
+        </div>
+      ) : null}
 
       <MessageComposer
         disabled={disabled}

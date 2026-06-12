@@ -9,6 +9,7 @@ import { MemberContextMenu } from "@shared/ui/MemberContextMenu";
 import { InlineEmojiPicker } from "@features/messages/ui/InlineEmojiPicker";
 import { authorName, focusMessage, formatMessageTime, messageAvatar, previewText } from "@features/messages/model/messageDisplay";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
+import { parseMentionedMemberIds, renderMentionNames } from "@entities/chat/model/mentions";
 
 function ReplyPreview({
   message,
@@ -34,7 +35,7 @@ function ReplyPreview({
     );
   }
   const name = authorName(message, memberNamesById);
-  const preview = previewText(message.body);
+  const preview = previewText(renderMentionNames(message.body, memberNamesById));
   return (
     <a className="reply-preview" href={messageHref(message.id)} aria-label={`Replying to ${name}: ${preview}`} onClick={() => onFollow(message.id)}>
       <span>Replying to {name}</span>
@@ -100,6 +101,13 @@ export function MessageRow({
   const showMore = Boolean(canPin || canEdit || canDelete);
   const replyMessage = message.replyToId ? messagesById.get(message.replyToId) : undefined;
   const avatar = <Avatar name={name} avatar={messageAvatar(message, memberAvatarsById)} />;
+  const mentionedCurrentUser = Boolean(
+    currentUserId &&
+    !isDeleted &&
+    parseMentionedMemberIds(message.body, memberNamesById).includes(currentUserId)
+  );
+  const rowClassName =
+    `message-row${message.pinnedAt ? " pinned" : ""}${isDeleted ? " deleted" : ""}${mentionedCurrentUser ? " mentioned" : ""}`;
 
   function closeMenus() {
     setReactionPickerOpen(false);
@@ -126,7 +134,7 @@ export function MessageRow({
   }
 
   return (
-    <article className={`message-row${message.pinnedAt ? " pinned" : ""}${isDeleted ? " deleted" : ""}`} id={pinnedCopy ? undefined : messageAnchorId(message.id)} tabIndex={-1} key={instanceKey}>
+    <article className={rowClassName} id={pinnedCopy ? undefined : messageAnchorId(message.id)} tabIndex={-1} key={instanceKey}>
       {message.authorId ? (
         <MemberContextMenu currentUserId={currentUserId} memberId={message.authorId} memberName={name} onDirectMessage={onDirectMessage}>
           {avatar}
@@ -153,7 +161,12 @@ export function MessageRow({
             <button className="ghost-action" type="button" onClick={() => setEditing(undefined)}>Cancel</button>
           </form>
         ) : (
-          <MarkdownMessage body={message.body} />
+          <MarkdownMessage
+            body={message.body}
+            currentUserId={currentUserId}
+            memberNamesById={memberNamesById}
+            onDirectMessage={onDirectMessage}
+          />
         )}
         {!isDeleted && canReact ? (
           <div className="message-reactions">

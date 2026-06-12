@@ -91,6 +91,7 @@ export function ChatContent() {
       focusKey={composerFocusKey > 0 ? composerFocusKey : undefined}
       currentUserId={live.actor.memberId}
       mode={view.showingDm ? "dm" : "channel"}
+      feedKey={view.showingDm ? `dm:${view.currentThreadId || ""}` : `channel:${view.currentChannelId || ""}`}
       disabled={view.showingDm ? !view.currentThreadId : !view.currentChannelId}
       onSend={(body) => view.showingDm ? actions.sendDirectMessage(body) : actions.sendChannelMessage(body)}
       onReply={view.showingDm ? undefined : actions.replyToMessage}
