@@ -10,7 +10,7 @@ describe("notificationLinkParam", () => {
 
   it("reads link params from kind-wrapped notification intents", () => {
     const intent = {
-      kind: "roomkit.notification-intent",
+      kind: "matterhorn.notification-intent",
       value: { link: { params: { memberId: "lee" } } }
     };
 
@@ -19,9 +19,9 @@ describe("notificationLinkParam", () => {
 
   it("reads link params from nested payload wrappers", () => {
     const intent = {
-      kind: "roomkit.notification-envelope",
+      kind: "matterhorn.notification-envelope",
       payload: {
-        kind: "roomkit.notification-intent",
+        kind: "matterhorn.notification-intent",
         value: { link: { params: { channelId: "launch" } } }
       }
     };

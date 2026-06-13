@@ -1,4 +1,4 @@
-const CLOSED_DIRECT_STORAGE_PREFIX = "roomkit:chord:direct-closed:";
+const CLOSED_DIRECT_STORAGE_PREFIX = "matterhorn:chord:direct-closed:";
 const CLOSED_DIRECT_STORAGE_VERSION = 1;
 
 type StoredClosedDirectThreads = {

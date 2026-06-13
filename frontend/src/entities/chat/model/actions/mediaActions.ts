@@ -1,4 +1,4 @@
-import type { CallMediaSettings } from "roomkit-sdk/browser/types";
+import type { CallMediaSettings } from "matterhorn-sdk/browser/types";
 import { mediaWithVoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import { canEditRoom } from "@entities/chat/model/roles";
 import type { MediaRoom } from "@entities/chat/model/types";

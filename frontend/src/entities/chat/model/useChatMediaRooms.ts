@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MeshRoomCallController, type MeshRoomParticipant } from "roomkit-sdk/browser/meshRoomCalls";
-import { SfuCallController } from "roomkit-sdk/browser/sfuCalls";
-import { mediaStreamForTrackRole, mediaTrackRole, normalizeCallMediaSettings, publicCallMediaSettings, startScreenPreviewSnapshots } from "roomkit-sdk/browser/mediaCapture";
-import type { CallMediaSettings, PeerJsMediaConnection, SfuCallState, ScreenPreviewSnapshot } from "roomkit-sdk/browser/types";
-import type { RoomKitEphemeralToken, RoomKitEphemeralTokenHandle } from "roomkit-sdk/browser/liveRoomConnector";
+import { MeshRoomCallController, type MeshRoomParticipant } from "matterhorn-sdk/browser/meshRoomCalls";
+import { SfuCallController } from "matterhorn-sdk/browser/sfuCalls";
+import { mediaStreamForTrackRole, mediaTrackRole, normalizeCallMediaSettings, publicCallMediaSettings, startScreenPreviewSnapshots } from "matterhorn-sdk/browser/mediaCapture";
+import type { CallMediaSettings, PeerJsMediaConnection, SfuCallState, ScreenPreviewSnapshot } from "matterhorn-sdk/browser/types";
+import type { MatterhornEphemeralToken, MatterhornEphemeralTokenHandle } from "matterhorn-sdk/browser/liveRoomConnector";
 import { mediaBridgeFromHost } from "@entities/chat/api/callBridge";
 import type { Actor, MediaRoom } from "@entities/chat/model/types";
 
@@ -33,11 +33,11 @@ export function useChatMediaRooms(input: Input) {
   const clientId = bridge?.clientId || input.live.actor.memberId;
   const [sfuState, setSfuState] = useState<SfuCallState>({ status: "unavailable", remoteStreams: [] });
   const [meshState, setMeshState] = useState<SfuCallState>({ status: "idle", remoteStreams: [] });
-  const [voiceTokens, setVoiceTokens] = useState<RoomKitEphemeralToken[]>(() => bridge?.getEphemeralTokens?.().filter((token) => token.kind === "media-room.join") || []);
+  const [voiceTokens, setVoiceTokens] = useState<MatterhornEphemeralToken[]>(() => bridge?.getEphemeralTokens?.().filter((token) => token.kind === "media-room.join") || []);
   const [error, setError] = useState("");
   const sfuRef = useRef<SfuCallController>();
   const meshRef = useRef<MeshRoomCallController>();
-  const voiceTokenRef = useRef<RoomKitEphemeralTokenHandle>();
+  const voiceTokenRef = useRef<MatterhornEphemeralTokenHandle>();
   const activeRoomRef = useRef<MediaRoom>();
   const screenPreviewRef = useRef<ScreenPreviewSnapshot>();
 
@@ -89,7 +89,7 @@ export function useChatMediaRooms(input: Input) {
     return sfuState.status !== "unavailable" ? sfuState : meshState;
   }
 
-  function meshParticipantFromToken(token: RoomKitEphemeralToken): MeshRoomParticipant | undefined {
+  function meshParticipantFromToken(token: MatterhornEphemeralToken): MeshRoomParticipant | undefined {
     const payload = token.payload || {};
     if (typeof payload.roomId !== "string" || payload.roomId !== activeCallState().mediaRoomId) return undefined;
     if (typeof payload.clientId !== "string" || typeof payload.callPubkey !== "string") return undefined;

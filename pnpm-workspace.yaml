@@ -1,7 +1,7 @@
 packages:
   - "."
 overrides:
-  roomkit-sdk: link:../roomkit/packages/roomkit-sdk
+  matterhorn-sdk: link:../roomkit/packages/matterhorn-sdk
 allowBuilds:
   esbuild: true
   protobufjs: true

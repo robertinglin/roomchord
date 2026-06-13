@@ -1,16 +1,16 @@
 {
-  "kind": "roomkit.app-composition.schema",
+  "kind": "matterhorn.app-composition.schema",
   "schemaVersion": 1,
   "app": {
-    "id": "com.roomkit.chord",
+    "id": "gg.matterhorn.chord",
     "version": "1.0.0",
     "name": "Chord"
   },
   "primaryPlugin": {
-    "id": "com.roomkit.chord.plugin",
+    "id": "gg.matterhorn.chord.plugin",
     "version": "1.0.0",
     "model": {
-      "kind": "roomkit.primary-model.schema",
+      "kind": "matterhorn.primary-model.schema",
       "schemaVersion": 1,
       "state": {
         "initial": {
@@ -751,19 +751,19 @@
   "plugins": [
     {
       "key": "comments",
-      "id": "com.roomkit.examples.plugins.comments",
+      "id": "gg.matterhorn.examples.plugins.comments",
       "version": "1.0.0",
       "required": true
     },
     {
       "key": "presence",
-      "id": "com.roomkit.examples.plugins.presence",
+      "id": "gg.matterhorn.examples.plugins.presence",
       "version": "1.0.0",
       "required": true
     },
     {
       "key": "mediaRooms",
-      "id": "com.roomkit.examples.plugins.media-rooms",
+      "id": "gg.matterhorn.examples.plugins.media-rooms",
       "version": "1.0.0",
       "required": true,
       "config": {
@@ -781,19 +781,19 @@
     },
     {
       "key": "screenShare",
-      "id": "com.roomkit.examples.plugins.screen-share",
+      "id": "gg.matterhorn.examples.plugins.screen-share",
       "version": "1.0.0",
       "required": true
     },
     {
       "key": "embeds",
-      "id": "com.roomkit.examples.plugins.embeds",
+      "id": "gg.matterhorn.examples.plugins.embeds",
       "version": "1.0.0",
       "required": true
     },
     {
       "key": "reactions",
-      "id": "com.roomkit.examples.plugins.reactions",
+      "id": "gg.matterhorn.examples.plugins.reactions",
       "version": "1.0.0",
       "required": true
     }
@@ -1320,22 +1320,22 @@
       "path": "/",
       "component": "ChatRoomPage",
       "requiredPlugins": [
-        "com.roomkit.chord.plugin"
+        "gg.matterhorn.chord.plugin"
       ]
     },
     {
       "path": "/dms",
       "component": "DirectMessagesPage",
       "requiredPlugins": [
-        "com.roomkit.chord.plugin"
+        "gg.matterhorn.chord.plugin"
       ]
     },
     {
       "path": "/rooms",
       "component": "MediaRoomsPage",
       "requiredPlugins": [
-        "com.roomkit.examples.plugins.media-rooms",
-        "com.roomkit.examples.plugins.screen-share"
+        "gg.matterhorn.examples.plugins.media-rooms",
+        "gg.matterhorn.examples.plugins.screen-share"
       ]
     }
   ],
@@ -1458,5 +1458,5 @@
       }
     }
   },
-  "schemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
+  "schemaHash": "sha256-496c40679e244272765b70cd9c8d8a38f414811d0780ea2646ed1412dbd72fb0"
 }

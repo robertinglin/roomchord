@@ -1,30 +1,30 @@
 {
-  "kind": "roomkit.app-bundle",
+  "kind": "matterhorn.app-bundle",
   "schemaVersion": 1,
-  "id": "com.roomkit.chord",
+  "id": "gg.matterhorn.chord",
   "name": "Chord",
   "version": "1.0.0",
   "appPack": {
-    "kind": "roomkit.app-pack",
-    "id": "com.roomkit.chord",
+    "kind": "matterhorn.app-pack",
+    "id": "gg.matterhorn.chord",
     "name": "Chord",
     "version": "1.0.0",
     "publisher": {
-      "id": "com.roomkit.schema",
-      "name": "RoomKit Schema Builder",
+      "id": "gg.matterhorn.schema",
+      "name": "Matterhorn Schema Builder",
       "publicKey": "rk_pub_schema_builder"
     },
-    "roomkitVersion": ">=0.1 <0.2",
+    "matterhornVersion": ">=0.1 <0.2",
     "hostPack": {
-      "url": "workspace:roomkit-chord#hostPack",
-      "integrity": "sha256-46f6d078fb1105170901933a48f66b13deef1389d06efc2d7994a1bc9e492e23"
+      "url": "workspace:matterhorn-chord#hostPack",
+      "integrity": "sha256-1573af87bf347aa1e7ebb1fe188ca8e019fe8d2f105cbd2d1707bda94318b8de"
     },
     "playerPacks": [
       {
-        "id": "com.roomkit.chord.player",
+        "id": "gg.matterhorn.chord.player",
         "name": "Chord Player",
-        "url": "workspace:roomkit-chord#playerPack",
-        "integrity": "sha256-908f82195a2e06b11c2351d8877181338d0d81739c466260a4381154c8b1658f",
+        "url": "workspace:matterhorn-chord#playerPack",
+        "integrity": "sha256-21fbc4799d79c91b3d0da7485b4fab42045fc8c853f1c95b95259f02a7c0f9ca",
         "recommendedFor": {
           "devices": [
             "desktop",
@@ -38,25 +38,25 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-6658db8d17bb941ba7085d25bea789feb838369d3a87174ec0da610296bc5c9a",
-      "operationSchemaHash": "sha256-be37eabd0370eb7549aee3798a165b69c04a70a7f5cba18454f850f2b2bf6026",
-      "stateSchemaHash": "sha256-c474bf84ccc49ca668b4570910cd4a965165fc70816791453ffb121c8aac02ef",
-      "pluginGraphHash": "sha256-b34a653b1a7bb22d01a1512557f0c61601cefd016366fce4a0120e2825d389fe",
-      "compositionSchemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
+      "appProtocolHash": "sha256-75669f07968ece2876315ed3739ec8a99407c12b9005dd24af66f948ddd65b46",
+      "operationSchemaHash": "sha256-ed3ea798f740d4e01e9e0f64ef5560707c6a18a5a9eca0bc7d4394558023bf2f",
+      "stateSchemaHash": "sha256-e423f6defc7705018bd8dda4a0940d72f5c666a869b758a507f590b570195e08",
+      "pluginGraphHash": "sha256-cc8a5f08ffd7dc1bf39b46df1b7fbb8b8dd7fe2bdfbcbd90543bc931bc62fc90",
+      "compositionSchemaHash": "sha256-496c40679e244272765b70cd9c8d8a38f414811d0780ea2646ed1412dbd72fb0"
     },
     "composition": {
-      "kind": "roomkit.app-composition.schema",
+      "kind": "matterhorn.app-composition.schema",
       "schemaVersion": 1,
       "app": {
-        "id": "com.roomkit.chord",
+        "id": "gg.matterhorn.chord",
         "version": "1.0.0",
         "name": "Chord"
       },
       "primaryPlugin": {
-        "id": "com.roomkit.chord.plugin",
+        "id": "gg.matterhorn.chord.plugin",
         "version": "1.0.0",
         "model": {
-          "kind": "roomkit.primary-model.schema",
+          "kind": "matterhorn.primary-model.schema",
           "schemaVersion": 1,
           "state": {
             "initial": {
@@ -797,19 +797,19 @@
       "plugins": [
         {
           "key": "comments",
-          "id": "com.roomkit.examples.plugins.comments",
+          "id": "gg.matterhorn.examples.plugins.comments",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "presence",
-          "id": "com.roomkit.examples.plugins.presence",
+          "id": "gg.matterhorn.examples.plugins.presence",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "mediaRooms",
-          "id": "com.roomkit.examples.plugins.media-rooms",
+          "id": "gg.matterhorn.examples.plugins.media-rooms",
           "version": "1.0.0",
           "required": true,
           "config": {
@@ -827,19 +827,19 @@
         },
         {
           "key": "screenShare",
-          "id": "com.roomkit.examples.plugins.screen-share",
+          "id": "gg.matterhorn.examples.plugins.screen-share",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "embeds",
-          "id": "com.roomkit.examples.plugins.embeds",
+          "id": "gg.matterhorn.examples.plugins.embeds",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "reactions",
-          "id": "com.roomkit.examples.plugins.reactions",
+          "id": "gg.matterhorn.examples.plugins.reactions",
           "version": "1.0.0",
           "required": true
         }
@@ -1366,22 +1366,22 @@
           "path": "/",
           "component": "ChatRoomPage",
           "requiredPlugins": [
-            "com.roomkit.chord.plugin"
+            "gg.matterhorn.chord.plugin"
           ]
         },
         {
           "path": "/dms",
           "component": "DirectMessagesPage",
           "requiredPlugins": [
-            "com.roomkit.chord.plugin"
+            "gg.matterhorn.chord.plugin"
           ]
         },
         {
           "path": "/rooms",
           "component": "MediaRoomsPage",
           "requiredPlugins": [
-            "com.roomkit.examples.plugins.media-rooms",
-            "com.roomkit.examples.plugins.screen-share"
+            "gg.matterhorn.examples.plugins.media-rooms",
+            "gg.matterhorn.examples.plugins.screen-share"
           ]
         }
       ],
@@ -1504,7 +1504,7 @@
           }
         }
       },
-      "schemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
+      "schemaHash": "sha256-496c40679e244272765b70cd9c8d8a38f414811d0780ea2646ed1412dbd72fb0"
     },
     "capabilities": {
       "required": [
@@ -1527,60 +1527,60 @@
     }
   },
   "hostPack": {
-    "kind": "roomkit.host-pack",
-    "id": "com.roomkit.chord.host",
-    "appPackId": "com.roomkit.chord",
+    "kind": "matterhorn.host-pack",
+    "id": "gg.matterhorn.chord.host",
+    "appPackId": "gg.matterhorn.chord",
     "version": "1.0.0",
     "plugins": [
       {
-        "id": "com.roomkit.chord.plugin",
+        "id": "gg.matterhorn.chord.plugin",
         "version": "1.0.0",
-        "source": "schema:roomkit.primary-model",
-        "integrity": "sha256-e4053e71d693b1957174997581a631d808ab3083127c592b910854c553837cc0"
+        "source": "schema:matterhorn.primary-model",
+        "integrity": "sha256-230c9c033b5e6fa4375c82d28b1c51da233483ec5022617c1bcc842336f6dd2a"
       },
       {
-        "id": "com.roomkit.examples.plugins.comments",
+        "id": "gg.matterhorn.examples.plugins.comments",
         "version": "1.0.0",
-        "source": "workspace:@roomkit-core/base-plugins#commentsHostPlugin",
-        "integrity": "sha256-c9c59fd976658caf2f451eb4e34031f9c96831f2b9fedb25af6df145167520f7"
+        "source": "workspace:@mh-gg/base-plugins#commentsHostPlugin",
+        "integrity": "sha256-26827345066d04255d4e0f0073db0830a31ab7a3a86649f21b0a11d92f30ae61"
       },
       {
-        "id": "com.roomkit.examples.plugins.presence",
+        "id": "gg.matterhorn.examples.plugins.presence",
         "version": "1.0.0",
-        "source": "workspace:@roomkit-core/base-plugins#presenceHostPlugin",
-        "integrity": "sha256-039612b99951f11f2ec3d89c0f698fb6bd6f5e1d611089cad33e2a36e33af436"
+        "source": "workspace:@mh-gg/base-plugins#presenceHostPlugin",
+        "integrity": "sha256-8a808f0a010a1304c375dece7cec84816a13a624fed1d22f5afed1641b931c1d"
       },
       {
-        "id": "com.roomkit.examples.plugins.media-rooms",
+        "id": "gg.matterhorn.examples.plugins.media-rooms",
         "version": "1.0.0",
-        "source": "workspace:@roomkit-core/base-plugins#mediaRoomsHostPlugin",
-        "integrity": "sha256-f4f7e75e85502dedf7f3b28cef528439b62ccec54854be703036f066aad9538f"
+        "source": "workspace:@mh-gg/base-plugins#mediaRoomsHostPlugin",
+        "integrity": "sha256-a9c833460b3a4fd3f642b5dcb38eda566695ac9a29fbd96c6d9584a975ef95ee"
       },
       {
-        "id": "com.roomkit.examples.plugins.screen-share",
+        "id": "gg.matterhorn.examples.plugins.screen-share",
         "version": "1.0.0",
-        "source": "workspace:@roomkit-core/base-plugins#screenShareHostPlugin",
-        "integrity": "sha256-8d07da9236d96e5ce6a62d8cc6a68b5ede5d59ea0ea5ac4830b15c8b4eeac792"
+        "source": "workspace:@mh-gg/base-plugins#screenShareHostPlugin",
+        "integrity": "sha256-3a5531dce2b2f416e14dbcf46fddc8a133256cb1c939e248ac41ccaa6a5fe71e"
       },
       {
-        "id": "com.roomkit.examples.plugins.embeds",
+        "id": "gg.matterhorn.examples.plugins.embeds",
         "version": "1.0.0",
-        "source": "workspace:@roomkit-core/base-plugins#embedsHostPlugin",
-        "integrity": "sha256-6f77d5df0e8818f316148ac70715005ebaff16d4cb41720d74339b0225cd9ea6"
+        "source": "workspace:@mh-gg/base-plugins#embedsHostPlugin",
+        "integrity": "sha256-6108335126f92bf2facfbec21233b2eccf35174cc548a9ad339548a39f008ef5"
       },
       {
-        "id": "com.roomkit.examples.plugins.reactions",
+        "id": "gg.matterhorn.examples.plugins.reactions",
         "version": "1.0.0",
-        "source": "workspace:@roomkit-core/base-plugins#reactionsHostPlugin",
-        "integrity": "sha256-d726039379dd40fa917fa5b030dbbbd84aaf273299eba8c6a7a3e98eca17bc99"
+        "source": "workspace:@mh-gg/base-plugins#reactionsHostPlugin",
+        "integrity": "sha256-d11cb845b01cf6a3e5ec9bb66e62cf53fa94eb63199030aeb5845476a4568bb4"
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-6658db8d17bb941ba7085d25bea789feb838369d3a87174ec0da610296bc5c9a",
-      "pluginGraphHash": "sha256-b34a653b1a7bb22d01a1512557f0c61601cefd016366fce4a0120e2825d389fe"
+      "appProtocolHash": "sha256-75669f07968ece2876315ed3739ec8a99407c12b9005dd24af66f948ddd65b46",
+      "pluginGraphHash": "sha256-cc8a5f08ffd7dc1bf39b46df1b7fbb8b8dd7fe2bdfbcbd90543bc931bc62fc90"
     },
     "runtime": {
-      "minRoomKitVersion": "0.1.0",
+      "minMatterhornVersion": "0.1.0",
       "sandbox": "process"
     },
     "capabilities": {
@@ -1593,12 +1593,12 @@
       ]
     },
     "composition": {
-      "schemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334",
+      "schemaHash": "sha256-496c40679e244272765b70cd9c8d8a38f414811d0780ea2646ed1412dbd72fb0",
       "primaryPlugin": {
-        "id": "com.roomkit.chord.plugin",
+        "id": "gg.matterhorn.chord.plugin",
         "version": "1.0.0",
         "model": {
-          "kind": "roomkit.primary-model.schema",
+          "kind": "matterhorn.primary-model.schema",
           "schemaVersion": 1,
           "state": {
             "initial": {
@@ -2339,19 +2339,19 @@
       "plugins": [
         {
           "key": "comments",
-          "id": "com.roomkit.examples.plugins.comments",
+          "id": "gg.matterhorn.examples.plugins.comments",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "presence",
-          "id": "com.roomkit.examples.plugins.presence",
+          "id": "gg.matterhorn.examples.plugins.presence",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "mediaRooms",
-          "id": "com.roomkit.examples.plugins.media-rooms",
+          "id": "gg.matterhorn.examples.plugins.media-rooms",
           "version": "1.0.0",
           "required": true,
           "config": {
@@ -2369,19 +2369,19 @@
         },
         {
           "key": "screenShare",
-          "id": "com.roomkit.examples.plugins.screen-share",
+          "id": "gg.matterhorn.examples.plugins.screen-share",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "embeds",
-          "id": "com.roomkit.examples.plugins.embeds",
+          "id": "gg.matterhorn.examples.plugins.embeds",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "reactions",
-          "id": "com.roomkit.examples.plugins.reactions",
+          "id": "gg.matterhorn.examples.plugins.reactions",
           "version": "1.0.0",
           "required": true
         }
@@ -3035,22 +3035,22 @@
   },
   "hostPlugins": [
     {
-      "kind": "roomkit.schema-model-host-plugin",
-      "id": "com.roomkit.chord.plugin",
+      "kind": "matterhorn.schema-model-host-plugin",
+      "id": "gg.matterhorn.chord.plugin",
       "version": "1.0.0",
       "composition": {
-        "kind": "roomkit.app-composition.schema",
+        "kind": "matterhorn.app-composition.schema",
         "schemaVersion": 1,
         "app": {
-          "id": "com.roomkit.chord",
+          "id": "gg.matterhorn.chord",
           "version": "1.0.0",
           "name": "Chord"
         },
         "primaryPlugin": {
-          "id": "com.roomkit.chord.plugin",
+          "id": "gg.matterhorn.chord.plugin",
           "version": "1.0.0",
           "model": {
-            "kind": "roomkit.primary-model.schema",
+            "kind": "matterhorn.primary-model.schema",
             "schemaVersion": 1,
             "state": {
               "initial": {
@@ -3791,19 +3791,19 @@
         "plugins": [
           {
             "key": "comments",
-            "id": "com.roomkit.examples.plugins.comments",
+            "id": "gg.matterhorn.examples.plugins.comments",
             "version": "1.0.0",
             "required": true
           },
           {
             "key": "presence",
-            "id": "com.roomkit.examples.plugins.presence",
+            "id": "gg.matterhorn.examples.plugins.presence",
             "version": "1.0.0",
             "required": true
           },
           {
             "key": "mediaRooms",
-            "id": "com.roomkit.examples.plugins.media-rooms",
+            "id": "gg.matterhorn.examples.plugins.media-rooms",
             "version": "1.0.0",
             "required": true,
             "config": {
@@ -3821,19 +3821,19 @@
           },
           {
             "key": "screenShare",
-            "id": "com.roomkit.examples.plugins.screen-share",
+            "id": "gg.matterhorn.examples.plugins.screen-share",
             "version": "1.0.0",
             "required": true
           },
           {
             "key": "embeds",
-            "id": "com.roomkit.examples.plugins.embeds",
+            "id": "gg.matterhorn.examples.plugins.embeds",
             "version": "1.0.0",
             "required": true
           },
           {
             "key": "reactions",
-            "id": "com.roomkit.examples.plugins.reactions",
+            "id": "gg.matterhorn.examples.plugins.reactions",
             "version": "1.0.0",
             "required": true
           }
@@ -4360,22 +4360,22 @@
             "path": "/",
             "component": "ChatRoomPage",
             "requiredPlugins": [
-              "com.roomkit.chord.plugin"
+              "gg.matterhorn.chord.plugin"
             ]
           },
           {
             "path": "/dms",
             "component": "DirectMessagesPage",
             "requiredPlugins": [
-              "com.roomkit.chord.plugin"
+              "gg.matterhorn.chord.plugin"
             ]
           },
           {
             "path": "/rooms",
             "component": "MediaRoomsPage",
             "requiredPlugins": [
-              "com.roomkit.examples.plugins.media-rooms",
-              "com.roomkit.examples.plugins.screen-share"
+              "gg.matterhorn.examples.plugins.media-rooms",
+              "gg.matterhorn.examples.plugins.screen-share"
             ]
           }
         ],
@@ -4498,25 +4498,25 @@
             }
           }
         },
-        "schemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
+        "schemaHash": "sha256-496c40679e244272765b70cd9c8d8a38f414811d0780ea2646ed1412dbd72fb0"
       }
     },
     {
-      "kind": "roomkit.registry-host-plugin",
+      "kind": "matterhorn.registry-host-plugin",
       "key": "comments",
-      "id": "com.roomkit.examples.plugins.comments",
+      "id": "gg.matterhorn.examples.plugins.comments",
       "version": "1.0.0"
     },
     {
-      "kind": "roomkit.registry-host-plugin",
+      "kind": "matterhorn.registry-host-plugin",
       "key": "presence",
-      "id": "com.roomkit.examples.plugins.presence",
+      "id": "gg.matterhorn.examples.plugins.presence",
       "version": "1.0.0"
     },
     {
-      "kind": "roomkit.registry-host-plugin",
+      "kind": "matterhorn.registry-host-plugin",
       "key": "mediaRooms",
-      "id": "com.roomkit.examples.plugins.media-rooms",
+      "id": "gg.matterhorn.examples.plugins.media-rooms",
       "version": "1.0.0",
       "config": {
         "defaultRooms": [
@@ -4532,54 +4532,54 @@
       }
     },
     {
-      "kind": "roomkit.registry-host-plugin",
+      "kind": "matterhorn.registry-host-plugin",
       "key": "screenShare",
-      "id": "com.roomkit.examples.plugins.screen-share",
+      "id": "gg.matterhorn.examples.plugins.screen-share",
       "version": "1.0.0"
     },
     {
-      "kind": "roomkit.registry-host-plugin",
+      "kind": "matterhorn.registry-host-plugin",
       "key": "embeds",
-      "id": "com.roomkit.examples.plugins.embeds",
+      "id": "gg.matterhorn.examples.plugins.embeds",
       "version": "1.0.0"
     },
     {
-      "kind": "roomkit.registry-host-plugin",
+      "kind": "matterhorn.registry-host-plugin",
       "key": "reactions",
-      "id": "com.roomkit.examples.plugins.reactions",
+      "id": "gg.matterhorn.examples.plugins.reactions",
       "version": "1.0.0"
     }
   ],
   "playerPacks": [
     {
-      "kind": "roomkit.player-pack",
-      "id": "com.roomkit.chord.player",
+      "kind": "matterhorn.player-pack",
+      "id": "gg.matterhorn.chord.player",
       "name": "Chord Player",
       "version": "1.0.0",
       "publisher": {
-        "id": "com.roomkit.schema",
-        "name": "RoomKit Schema Builder",
+        "id": "gg.matterhorn.schema",
+        "name": "Matterhorn Schema Builder",
         "publicKey": "rk_pub_schema_builder"
       },
       "entrypoints": {
-        "default": "https://apps.roomkit.app/roomkit-chord/player/1.0.0/",
-        "admin": "https://apps.roomkit.app/roomkit-chord/admin/1.0.0/"
+        "default": "https://apps.matterhorn.gg/matterhorn-chord/player/1.0.0/",
+        "admin": "https://apps.matterhorn.gg/matterhorn-chord/admin/1.0.0/"
       },
       "supports": [
         {
-          "appPackId": "com.roomkit.chord",
+          "appPackId": "gg.matterhorn.chord",
           "appPackRange": "^1.0.0",
-          "appProtocolHash": "sha256-6658db8d17bb941ba7085d25bea789feb838369d3a87174ec0da610296bc5c9a",
+          "appProtocolHash": "sha256-75669f07968ece2876315ed3739ec8a99407c12b9005dd24af66f948ddd65b46",
           "pluginIds": [
-            "com.roomkit.chord.plugin",
-            "com.roomkit.examples.plugins.comments",
-            "com.roomkit.examples.plugins.embeds",
-            "com.roomkit.examples.plugins.media-rooms",
-            "com.roomkit.examples.plugins.presence",
-            "com.roomkit.examples.plugins.reactions",
-            "com.roomkit.examples.plugins.screen-share"
+            "gg.matterhorn.chord.plugin",
+            "gg.matterhorn.examples.plugins.comments",
+            "gg.matterhorn.examples.plugins.embeds",
+            "gg.matterhorn.examples.plugins.media-rooms",
+            "gg.matterhorn.examples.plugins.presence",
+            "gg.matterhorn.examples.plugins.reactions",
+            "gg.matterhorn.examples.plugins.screen-share"
           ],
-          "compositionSchemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
+          "compositionSchemaHash": "sha256-496c40679e244272765b70cd9c8d8a38f414811d0780ea2646ed1412dbd72fb0"
         }
       ],
       "recommendedFor": {
@@ -4594,7 +4594,7 @@
       },
       "mode": "external",
       "trust": {
-        "integrity": "sha256-48ca69c22cd86709b2392b489b4c5fae13520c41d5589496193545d90459c582",
+        "integrity": "sha256-2bde5b40d12f4e1d0f70b78cad14028f06113d5c80206611a89a17e5a47f01cd",
         "signatures": [
           {
             "publicKey": "rk_pub_schema_builder",
@@ -4605,9 +4605,9 @@
     }
   ],
   "deployment": {
-    "kind": "roomkit.self-contained-app",
+    "kind": "matterhorn.self-contained-app",
     "host": {
-      "runner": "roomkit-example-host"
+      "runner": "matterhorn-example-host"
     },
     "relay": {
       "mode": "embedded",
@@ -4619,8 +4619,8 @@
     }
   },
   "frontend": {
-    "kind": "roomkit-player-bundle",
-    "appId": "com.roomkit.chord",
+    "kind": "matterhorn-player-bundle",
+    "appId": "gg.matterhorn.chord",
     "root": "C:\\workspace\\roomchord",
     "defaultPort": 42732,
     "locations": [
@@ -4635,10 +4635,10 @@
       "path": "src/chord-icon.svg"
     },
     "bundle": {
-      "mountPath": "/roomkit/apps/com.roomkit.chord/",
+      "mountPath": "/matterhorn/apps/gg.matterhorn.chord/",
       "defaultPort": 42732,
       "devEntry": "src/index.tsx",
-      "builtEntry": "roomkit-chord.js",
+      "builtEntry": "matterhorn-chord.js",
       "healthPath": "src/index.tsx",
       "dev": {
         "command": "C:\\nvm4w\\nodejs\\node.exe",
@@ -4665,22 +4665,22 @@
       "dist": "frontend/dist"
     }
   },
-  "roomkit": {
+  "matterhorn": {
     "frontendProjection": "chat"
   },
   "compositionSchema": {
-    "kind": "roomkit.app-composition.schema",
+    "kind": "matterhorn.app-composition.schema",
     "schemaVersion": 1,
     "app": {
-      "id": "com.roomkit.chord",
+      "id": "gg.matterhorn.chord",
       "version": "1.0.0",
       "name": "Chord"
     },
     "primaryPlugin": {
-      "id": "com.roomkit.chord.plugin",
+      "id": "gg.matterhorn.chord.plugin",
       "version": "1.0.0",
       "model": {
-        "kind": "roomkit.primary-model.schema",
+        "kind": "matterhorn.primary-model.schema",
         "schemaVersion": 1,
         "state": {
           "initial": {
@@ -5421,19 +5421,19 @@
     "plugins": [
       {
         "key": "comments",
-        "id": "com.roomkit.examples.plugins.comments",
+        "id": "gg.matterhorn.examples.plugins.comments",
         "version": "1.0.0",
         "required": true
       },
       {
         "key": "presence",
-        "id": "com.roomkit.examples.plugins.presence",
+        "id": "gg.matterhorn.examples.plugins.presence",
         "version": "1.0.0",
         "required": true
       },
       {
         "key": "mediaRooms",
-        "id": "com.roomkit.examples.plugins.media-rooms",
+        "id": "gg.matterhorn.examples.plugins.media-rooms",
         "version": "1.0.0",
         "required": true,
         "config": {
@@ -5451,19 +5451,19 @@
       },
       {
         "key": "screenShare",
-        "id": "com.roomkit.examples.plugins.screen-share",
+        "id": "gg.matterhorn.examples.plugins.screen-share",
         "version": "1.0.0",
         "required": true
       },
       {
         "key": "embeds",
-        "id": "com.roomkit.examples.plugins.embeds",
+        "id": "gg.matterhorn.examples.plugins.embeds",
         "version": "1.0.0",
         "required": true
       },
       {
         "key": "reactions",
-        "id": "com.roomkit.examples.plugins.reactions",
+        "id": "gg.matterhorn.examples.plugins.reactions",
         "version": "1.0.0",
         "required": true
       }
@@ -5990,22 +5990,22 @@
         "path": "/",
         "component": "ChatRoomPage",
         "requiredPlugins": [
-          "com.roomkit.chord.plugin"
+          "gg.matterhorn.chord.plugin"
         ]
       },
       {
         "path": "/dms",
         "component": "DirectMessagesPage",
         "requiredPlugins": [
-          "com.roomkit.chord.plugin"
+          "gg.matterhorn.chord.plugin"
         ]
       },
       {
         "path": "/rooms",
         "component": "MediaRoomsPage",
         "requiredPlugins": [
-          "com.roomkit.examples.plugins.media-rooms",
-          "com.roomkit.examples.plugins.screen-share"
+          "gg.matterhorn.examples.plugins.media-rooms",
+          "gg.matterhorn.examples.plugins.screen-share"
         ]
       }
     ],
@@ -6128,22 +6128,22 @@
         }
       }
     },
-    "schemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
+    "schemaHash": "sha256-496c40679e244272765b70cd9c8d8a38f414811d0780ea2646ed1412dbd72fb0"
   },
   "artifacts": {
     "composition": {
-      "kind": "roomkit.app-composition.schema",
+      "kind": "matterhorn.app-composition.schema",
       "schemaVersion": 1,
       "app": {
-        "id": "com.roomkit.chord",
+        "id": "gg.matterhorn.chord",
         "version": "1.0.0",
         "name": "Chord"
       },
       "primaryPlugin": {
-        "id": "com.roomkit.chord.plugin",
+        "id": "gg.matterhorn.chord.plugin",
         "version": "1.0.0",
         "model": {
-          "kind": "roomkit.primary-model.schema",
+          "kind": "matterhorn.primary-model.schema",
           "schemaVersion": 1,
           "state": {
             "initial": {
@@ -6884,19 +6884,19 @@
       "plugins": [
         {
           "key": "comments",
-          "id": "com.roomkit.examples.plugins.comments",
+          "id": "gg.matterhorn.examples.plugins.comments",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "presence",
-          "id": "com.roomkit.examples.plugins.presence",
+          "id": "gg.matterhorn.examples.plugins.presence",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "mediaRooms",
-          "id": "com.roomkit.examples.plugins.media-rooms",
+          "id": "gg.matterhorn.examples.plugins.media-rooms",
           "version": "1.0.0",
           "required": true,
           "config": {
@@ -6914,19 +6914,19 @@
         },
         {
           "key": "screenShare",
-          "id": "com.roomkit.examples.plugins.screen-share",
+          "id": "gg.matterhorn.examples.plugins.screen-share",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "embeds",
-          "id": "com.roomkit.examples.plugins.embeds",
+          "id": "gg.matterhorn.examples.plugins.embeds",
           "version": "1.0.0",
           "required": true
         },
         {
           "key": "reactions",
-          "id": "com.roomkit.examples.plugins.reactions",
+          "id": "gg.matterhorn.examples.plugins.reactions",
           "version": "1.0.0",
           "required": true
         }
@@ -7453,22 +7453,22 @@
           "path": "/",
           "component": "ChatRoomPage",
           "requiredPlugins": [
-            "com.roomkit.chord.plugin"
+            "gg.matterhorn.chord.plugin"
           ]
         },
         {
           "path": "/dms",
           "component": "DirectMessagesPage",
           "requiredPlugins": [
-            "com.roomkit.chord.plugin"
+            "gg.matterhorn.chord.plugin"
           ]
         },
         {
           "path": "/rooms",
           "component": "MediaRoomsPage",
           "requiredPlugins": [
-            "com.roomkit.examples.plugins.media-rooms",
-            "com.roomkit.examples.plugins.screen-share"
+            "gg.matterhorn.examples.plugins.media-rooms",
+            "gg.matterhorn.examples.plugins.screen-share"
           ]
         }
       ],
@@ -7591,10 +7591,10 @@
           }
         }
       },
-      "schemaHash": "sha256-c0a654dc1fb796be11c0f2fbc1f06f705eb2bd5c32806ba21e388cca4ead5334"
+      "schemaHash": "sha256-496c40679e244272765b70cd9c8d8a38f414811d0780ea2646ed1412dbd72fb0"
     },
     "model": {
-      "kind": "roomkit.primary-model.schema",
+      "kind": "matterhorn.primary-model.schema",
       "schemaVersion": 1,
       "state": {
         "initial": {

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { messageAnchorId, messageHref } from "@entities/chat/model/messageLinks";
-import { reactionCount } from "@entities/chat/model/state";
 import type { Message } from "@entities/chat/model/types";
 import { Avatar } from "@shared/ui/Avatar";
 import { ForwardIcon, MoreIcon, ReplyIcon, SmileIcon } from "@shared/ui/Icons";
@@ -10,6 +9,19 @@ import { InlineEmojiPicker } from "@features/messages/ui/InlineEmojiPicker";
 import { authorName, focusMessage, formatMessageTime, messageAvatar, previewText } from "@features/messages/model/messageDisplay";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
 import { parseMentionedMemberIds, renderMentionNames } from "@entities/chat/model/mentions";
+
+type MessageMenuPosition = { anchored: true } | { anchored: false; x: number; y: number };
+
+type MessageMenuItem = {
+  ariaLabel?: string;
+  disabled?: boolean;
+  icon?: string;
+  id: string;
+  label: string;
+  onSelect?: () => void;
+  sectionBefore?: boolean;
+  variant?: "danger";
+};
 
 function ReplyPreview({
   message,
@@ -90,7 +102,7 @@ export function MessageRow({
   const [editing, setEditing] = useState<{ id: string; body: string } | undefined>();
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [forwardMenuOpen, setForwardMenuOpen] = useState(false);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [messageMenuPosition, setMessageMenuPosition] = useState<MessageMenuPosition | undefined>();
   const name = authorName(message, memberNamesById);
   const isDeleted = Boolean(message.deletedAt);
   const reactions = Object.entries(message.reactions || {}).filter(([, members]) => members.length > 0);
@@ -98,7 +110,7 @@ export function MessageRow({
   const canEdit = Boolean(!pinnedCopy && onEdit && !isDeleted && (!canEditMessage || canEditMessage(message)));
   const canDelete = Boolean(onDelete && !isDeleted && (!canDeleteMessage || canDeleteMessage(message)));
   const canReact = Boolean(onReact);
-  const showMore = Boolean(canPin || canEdit || canDelete);
+  const showMore = !isDeleted;
   const replyMessage = message.replyToId ? messagesById.get(message.replyToId) : undefined;
   const avatar = <Avatar name={name} avatar={messageAvatar(message, memberAvatarsById)} />;
   const mentionedCurrentUser = Boolean(
@@ -112,7 +124,26 @@ export function MessageRow({
   function closeMenus() {
     setReactionPickerOpen(false);
     setForwardMenuOpen(false);
-    setMoreMenuOpen(false);
+    setMessageMenuPosition(undefined);
+  }
+
+  function openMessageMenuAt(x: number, y: number) {
+    const menuWidth = 244;
+    const menuHeight = 446;
+    setMessageMenuPosition({
+      anchored: false,
+      x: Math.max(8, Math.min(x, window.innerWidth - menuWidth - 8)),
+      y: Math.max(8, Math.min(y, window.innerHeight - menuHeight - 8))
+    });
+  }
+
+  function copyText(value: string) {
+    void navigator.clipboard?.writeText(value);
+  }
+
+  function messageLink() {
+    if (typeof window === "undefined") return messageHref(message.id);
+    return new URL(messageHref(message.id), window.location.href).toString();
   }
 
   function submitEdit(event: React.FormEvent<HTMLFormElement>) {
@@ -133,8 +164,85 @@ export function MessageRow({
     onForward?.(message, target);
   }
 
+  const messageMenuItems: MessageMenuItem[] = [
+    {
+      disabled: !canReact,
+      icon: "›",
+      id: "add-reaction",
+      label: "Add Reaction",
+      onSelect: () => {
+        setMessageMenuPosition(undefined);
+        setReactionPickerOpen(true);
+      }
+    },
+    {
+      ariaLabel: canEdit ? "Edit" : undefined,
+      disabled: !canEdit,
+      icon: "✎",
+      id: "edit",
+      label: "Edit Message",
+      onSelect: () => setEditing({ id: message.id, body: message.body }),
+      sectionBefore: true
+    },
+    {
+      disabled: !onReply,
+      icon: "↩",
+      id: "reply",
+      label: "Reply",
+      onSelect: () => onReply?.(message)
+    },
+    {
+      disabled: !onForward,
+      icon: "↪",
+      id: "forward",
+      label: "Forward",
+      onSelect: () => setForwardMenuOpen(true)
+    },
+    { disabled: true, icon: "▥", id: "create-thread", label: "Create Thread" },
+    { icon: "⧉", id: "copy-text", label: "Copy Text", onSelect: () => copyText(message.body), sectionBefore: true },
+    {
+      ariaLabel: canPin ? (message.pinnedAt ? "Unpin" : "Pin") : undefined,
+      disabled: !canPin,
+      icon: "⌖",
+      id: "pin",
+      label: message.pinnedAt ? "Unpin Message" : "Pin Message",
+      onSelect: () => message.pinnedAt ? onUnpin?.(message.id) : onPin?.(message.id)
+    },
+    { disabled: true, icon: "›", id: "apps", label: "Apps" },
+    { disabled: true, icon: "◔", id: "mark-unread", label: "Mark Unread" },
+    { icon: "🔗", id: "copy-link", label: "Copy Message Link", onSelect: () => copyText(messageLink()) },
+    { disabled: true, icon: "◉", id: "speak", label: "Speak Message" },
+    {
+      ariaLabel: canDelete ? "Delete" : undefined,
+      disabled: !canDelete,
+      icon: "⌫",
+      id: "delete",
+      label: "Delete Message",
+      onSelect: () => onDelete?.(message.id),
+      sectionBefore: true,
+      variant: "danger"
+    }
+  ];
+
+  function selectMessageMenuItem(item: MessageMenuItem) {
+    if (item.disabled || !item.onSelect) return;
+    setMessageMenuPosition(undefined);
+    item.onSelect();
+  }
+
   return (
-    <article className={rowClassName} id={pinnedCopy ? undefined : messageAnchorId(message.id)} tabIndex={-1} key={instanceKey}>
+    <article
+      className={rowClassName}
+      id={pinnedCopy ? undefined : messageAnchorId(message.id)}
+      tabIndex={-1}
+      key={instanceKey}
+      onContextMenu={(event) => {
+        if (!showMore) return;
+        event.preventDefault();
+        closeMenus();
+        openMessageMenuAt(event.clientX, event.clientY);
+      }}
+    >
       {message.authorId ? (
         <MemberContextMenu currentUserId={currentUserId} memberId={message.authorId} memberName={name} onDirectMessage={onDirectMessage}>
           {avatar}
@@ -168,37 +276,44 @@ export function MessageRow({
             onDirectMessage={onDirectMessage}
           />
         )}
-        {!isDeleted && canReact ? (
+        {!isDeleted && canReact && reactions.length > 0 ? (
           <div className="message-reactions">
             {reactions.map(([emoji, members]) => (
               <button key={emoji} type="button" onClick={() => reactWith(message.id, emoji)}>{emoji} {members.length}</button>
             ))}
-            {reactionCount(message.reactions) === 0 ? <span>No reactions</span> : null}
           </div>
         ) : null}
         {!isDeleted && canReact && reactionPickerOpen ? (
-          <InlineEmojiPicker
-            ariaLabel="Reaction emoji picker"
-            searchPlaceholder="Search reactions"
-            onSelect={(emoji) => {
-              reactWith(message.id, emoji);
-              setReactionPickerOpen(false);
-            }}
-          />
+          <>
+            <span className="context-menu-shroud" role="presentation" onMouseDown={closeMenus} />
+            <span className="context-menu-popover reaction-menu-popover" onMouseDown={(event) => event.stopPropagation()}>
+              <InlineEmojiPicker
+                ariaLabel="Reaction emoji picker"
+                searchPlaceholder="Search reactions"
+                onSelect={(emoji) => {
+                  reactWith(message.id, emoji);
+                  setReactionPickerOpen(false);
+                }}
+              />
+            </span>
+          </>
         ) : null}
         {!isDeleted && forwardMenuOpen ? (
-          <div className="message-forward-panel">
-            <strong>Forward to</strong>
-            <div className="message-forward-list">
-              {forwardTargets.length === 0 ? <span>No other chats available</span> : null}
-              {forwardTargets.map((target) => (
-                <button key={target.id} type="button" aria-label={`Forward to ${target.label}`} onClick={() => forwardTo(target)}>
-                  {target.type === "channel" ? "Channel" : "DM"}
-                  <span>{target.label}</span>
-                </button>
-              ))}
+          <>
+            <span className="context-menu-shroud" role="presentation" onMouseDown={closeMenus} />
+            <div className="message-forward-panel context-menu-popover" onMouseDown={(event) => event.stopPropagation()}>
+              <strong>Forward to</strong>
+              <div className="message-forward-list">
+                {forwardTargets.length === 0 ? <span>No other chats available</span> : null}
+                {forwardTargets.map((target) => (
+                  <button key={target.id} type="button" aria-label={`Forward to ${target.label}`} onClick={() => forwardTo(target)}>
+                    {target.type === "channel" ? "Channel" : "DM"}
+                    <span>{target.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          </>
         ) : null}
       </div>
       {!isDeleted ? (
@@ -225,15 +340,55 @@ export function MessageRow({
           ) : null}
           {showMore ? (
             <span className="message-more-wrap">
-              <button className="message-action-icon" type="button" aria-label={`More actions for message from ${name}`} title="More" onClick={() => { closeMenus(); setMoreMenuOpen((open) => !open); }}>
+              <button
+                className="message-action-icon"
+                type="button"
+                aria-label={`More actions for message from ${name}`}
+                title="More"
+                onClick={() => {
+                  const open = Boolean(messageMenuPosition);
+                  closeMenus();
+                  if (!open) setMessageMenuPosition({ anchored: true });
+                }}
+              >
                 <MoreIcon />
               </button>
-              {moreMenuOpen ? (
-                <span className="message-more-menu" role="menu">
-                  {canPin ? <button type="button" role="menuitem" onClick={() => { setMoreMenuOpen(false); message.pinnedAt ? onUnpin?.(message.id) : onPin?.(message.id); }}>{message.pinnedAt ? "Unpin" : "Pin"}</button> : null}
-                  {canEdit ? <button type="button" role="menuitem" onClick={() => { setMoreMenuOpen(false); setEditing({ id: message.id, body: message.body }); }}>Edit</button> : null}
-                  {canDelete ? <button type="button" role="menuitem" onClick={() => { setMoreMenuOpen(false); onDelete?.(message.id); }}>Delete</button> : null}
+              {messageMenuPosition ? (
+                <>
+                  <span className="context-menu-shroud" role="presentation" onMouseDown={closeMenus} />
+                  <span
+                    className={`message-more-menu rich-context-menu${messageMenuPosition.anchored ? "" : " fixed"}`}
+                    role="menu"
+                    style={messageMenuPosition.anchored ? undefined : { left: messageMenuPosition.x, top: messageMenuPosition.y }}
+                    onMouseDown={(event) => event.stopPropagation()}
+                  >
+                    {canReact ? (
+                      <span className="message-menu-reaction-row">
+                        {(recentReactions.length ? recentReactions : ["👍", "😆", "😂", "🤘"]).slice(0, 4).map((emoji) => (
+                          <button key={emoji} type="button" aria-label={`React with ${emoji}`} onClick={() => reactWith(message.id, emoji)}>
+                            {emoji}
+                          </button>
+                        ))}
+                      </span>
+                    ) : null}
+                    {messageMenuItems.map((item) => (
+                      <button
+                        aria-label={item.ariaLabel}
+                        className={`${item.sectionBefore ? "sectioned" : ""}${item.variant === "danger" ? " danger" : ""}`}
+                        disabled={item.disabled}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => selectMessageMenuItem(item)}
+                        key={item.id}
+                      >
+                        <span>
+                          <strong>{item.label}</strong>
+                        </span>
+                        {item.icon ? <span className="context-menu-icon">{item.icon}</span> : null}
+                      </button>
+                    ))}
                 </span>
+                </>
               ) : null}
             </span>
           ) : null}

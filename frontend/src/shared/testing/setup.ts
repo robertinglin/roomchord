@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
-import { removeStorage } from "roomkit-sdk/browser/storage/base";
+import { removeStorage } from "matterhorn-sdk/browser/storage/base";
 
 const localStorageData = new Map<string, string>();
 
@@ -67,8 +67,8 @@ Object.defineProperty(document, "execCommand", {
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
-  removeStorage("roomkit:notification-read-state");
-  document.getElementById("roomkit-chord-styles")?.remove();
-  document.getElementById("roomkit-emoji-picker-styles")?.remove();
+  removeStorage("matterhorn:notification-read-state");
+  document.getElementById("matterhorn-chord-styles")?.remove();
+  document.getElementById("matterhorn-emoji-picker-styles")?.remove();
   window.location.hash = "";
 });

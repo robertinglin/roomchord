@@ -1,7 +1,7 @@
 {
-  "name": "roomkit-chord",
+  "name": "matterhorn-chord",
   "version": "0.1.0",
-  "description": "Chord RoomKit chat app with channels, private messages, presence, camera-capable rooms, and screen-share state.",
+  "description": "Chord Matterhorn chat app with channels, private messages, presence, camera-capable rooms, and screen-share state.",
   "type": "commonjs",
   "main": "src/sdk-app.cjs",
   "exports": {
@@ -28,18 +28,18 @@
     "start:backend": "node shared/liveBackend.cjs --app . --port 43732"
   },
   "dependencies": {
-    "@roomkit-core/base": "link:../roomkit/packages/roomkit-core",
-    "@roomkit-core/host-runtime": "link:../roomkit/packages/roomkit-host-runtime",
-    "@roomkit-core/protocol": "link:../roomkit/packages/roomkit-protocol",
+    "@mh-gg/base": "link:../roomkit/packages/matterhorn-core",
+    "@mh-gg/host-runtime": "link:../roomkit/packages/matterhorn-host-runtime",
+    "@mh-gg/protocol": "link:../roomkit/packages/matterhorn-protocol",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "roomkit-sdk": "link:../roomkit/packages/roomkit-sdk",
+    "matterhorn-sdk": "link:../roomkit/packages/matterhorn-sdk",
     "zustand": "^4.5.7"
   },
   "engines": {
     "node": ">=22.12"
   },
-  "roomkit": {
+  "matterhorn": {
     "app": "./src/sdk-app.cjs"
   },
   "devDependencies": {

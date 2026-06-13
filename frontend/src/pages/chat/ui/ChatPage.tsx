@@ -17,14 +17,14 @@ export function ChatApp(props: ChatProps) {
   if (!live.ready) {
     return (
       <ChatLoading
-        roomName={live.envelope.room?.name || live.envelope.room?.id || "roomkit-chord"}
+        roomName={live.envelope.room?.name || live.envelope.room?.id || "matterhorn-chord"}
         message={live.message}
         status={live.status}
       />
     );
   }
 
-  const roomName = live.envelope.room?.id || live.envelope.room?.name || "roomkit-chord";
+  const roomName = live.envelope.room?.id || live.envelope.room?.name || "matterhorn-chord";
   const storageKeys: ChatStorageKeys = {
     closedDirectThreads: closedDirectThreadsStorageKey(roomName, live.actor.memberId),
     readAtByThread: directReadStorageKey(roomName, live.actor.memberId),

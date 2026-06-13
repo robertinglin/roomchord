@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useRef, type ReactNode } from "react";
 import { useStore } from "zustand";
 import { createStore, type StoreApi } from "zustand/vanilla";
-import type { CallMediaSettings } from "roomkit-sdk/browser/types";
+import type { CallMediaSettings } from "matterhorn-sdk/browser/types";
 import { clearRecentVoiceJoin, loadRecentVoiceJoin, saveRecentVoiceJoin, type RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { loadClosedDirectThreads, saveClosedDirectThreads } from "@entities/chat/model/localClosedDirectThreads";
 import { loadDirectReadState, saveDirectReadState } from "@entities/chat/model/localReadState";

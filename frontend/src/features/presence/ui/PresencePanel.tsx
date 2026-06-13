@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { roomkitDisplayName } from "roomkit-sdk/browser/displayName";
-import type { RoomKitEphemeralToken } from "roomkit-sdk/browser/liveRoomConnector";
+import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
+import type { MatterhornEphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
 import type { Actor, ChatEmbed, CommentThread, MediaRoom, MemberRoleAssignment, Presence, RoleDefinition, RoomMember, ScreenShare } from "@entities/chat/model/types";
 import { assignedRoleIds, roleNames } from "@entities/chat/model/roles";
 import { Avatar } from "@shared/ui/Avatar";
@@ -19,7 +19,7 @@ type MemberRow = {
 };
 
 function memberName(member: RoomMember, id: string) {
-  return roomkitDisplayName({ member, fallbackId: id });
+  return matterhornDisplayName({ member, fallbackId: id });
 }
 
 function avatarFor(member?: RoomMember, presence?: Presence, actor?: Actor) {
@@ -50,7 +50,7 @@ function memberRows(roomMembers: Record<string, RoomMember> | undefined, presenc
     const current = rows.get(memberId);
     rows.set(memberId, {
       id: memberId,
-      name: roomkitDisplayName({ presence: item, fallback: current?.name, fallbackId: memberId }),
+      name: matterhornDisplayName({ presence: item, fallback: current?.name, fallbackId: memberId }),
       status: item.visible === false ? "offline" : item.status || current?.status || "online",
       activity: item.activity ?? current?.activity,
       avatar: avatarFor(safeRoomMembers[memberId], item, actor?.memberId === memberId ? actor : undefined) || current?.avatar,
@@ -63,7 +63,7 @@ function memberRows(roomMembers: Record<string, RoomMember> | undefined, presenc
   if (actor && !rows.has(actor.memberId)) {
     rows.set(actor.memberId, {
       id: actor.memberId,
-      name: roomkitDisplayName({ actor, fallbackId: actor.memberId }),
+      name: matterhornDisplayName({ actor, fallbackId: actor.memberId }),
       status: "online",
       activity: actor.role,
       avatar: avatarFor(undefined, undefined, actor),
@@ -102,7 +102,7 @@ export function PresencePanel({
   threads: CommentThread[];
   rooms: MediaRoom[];
   screenShares: ScreenShare[];
-  voiceTokens: RoomKitEphemeralToken[];
+  voiceTokens: MatterhornEphemeralToken[];
   roleDefinitions?: Record<string, RoleDefinition>;
   memberRoles?: Record<string, MemberRoleAssignment>;
   canManageRoles: boolean;

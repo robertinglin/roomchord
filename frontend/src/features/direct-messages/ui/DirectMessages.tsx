@@ -37,7 +37,7 @@ export function DirectMessages({
           const title = threadTitle(thread, memberNamesById, currentUserId);
           const unread = unreadCounts[thread.id] || 0;
           return (
-            <div className="dm-row" key={thread.id}>
+            <div className={`dm-row${thread.id === activeThreadId ? " active" : ""}`} key={thread.id}>
               <button
                 className={`sidebar-item dm-button${thread.id === activeThreadId ? " active" : ""}`}
                 type="button"

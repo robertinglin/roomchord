@@ -1,5 +1,5 @@
-import { roomkitDisplayName } from "roomkit-sdk/browser/displayName";
-import { parseRoomkitMarkdown, type RoomkitMarkdownEmbed } from "roomkit-sdk/browser/markdown";
+import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
+import { parseMarkdown, type MarkdownEmbed } from "matterhorn-sdk/browser/markdown";
 import type { Actor, AvatarSource, ChatState, DirectThread, MemberId, Message, MessageId, RoomMember, ThreadId } from "@entities/chat/model/types";
 import {
   CHAT_DIRECT_PROTOCOL,
@@ -21,10 +21,10 @@ export function currentHash() {
   return typeof window === "undefined" ? "" : window.location.hash;
 }
 
-export function messageEmbeds(body: string): RoomkitMarkdownEmbed[] {
+export function messageEmbeds(body: string): MarkdownEmbed[] {
   try {
     const seen = new Set<string>();
-    return parseRoomkitMarkdown(body).embeds.filter((embed) => {
+    return parseMarkdown(body).embeds.filter((embed) => {
       if (!embed?.url || seen.has(embed.url)) return false;
       seen.add(embed.url);
       return true;
@@ -49,7 +49,7 @@ export function linkedMessageLocation(state: ChatState, hash: string, messageIdF
 }
 
 function roomMemberName(member: RoomMember, id: string) {
-  return roomkitDisplayName({ member, fallbackId: id });
+  return matterhornDisplayName({ member, fallbackId: id });
 }
 
 export function memberNamesForState(state: ChatState, actor: Actor): Record<string, string> {
@@ -60,9 +60,9 @@ export function memberNamesForState(state: ChatState, actor: Actor): Record<stri
   }
   for (const [key, item] of Object.entries(state.presence || {})) {
     const id = item.memberId || key;
-    if (id) names[id] = roomkitDisplayName({ presence: item, member: state.members?.[id as MemberId], fallback: names[id], fallbackId: id });
+    if (id) names[id] = matterhornDisplayName({ presence: item, member: state.members?.[id as MemberId], fallback: names[id], fallbackId: id });
   }
-  names[actor.memberId] = roomkitDisplayName({ actor, fallback: names[actor.memberId], fallbackId: actor.memberId });
+  names[actor.memberId] = matterhornDisplayName({ actor, fallback: names[actor.memberId], fallbackId: actor.memberId });
   return names;
 }
 

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { roomkitDisplayName } from "roomkit-sdk/browser/displayName";
+import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
 import type { ActiveView } from "@entities/chat/model/chatUiStore";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
@@ -111,9 +111,9 @@ export function useChatViewData(input: ChatViewDataInput) {
     memberNamesById,
     state
   }), [channels, currentChannelId, currentThreadId, input.activeView, live.actor.memberId, memberNamesById, state]);
-  const actorName = roomkitDisplayName({ actor: live.actor, fallbackId: live.actor.memberId });
-  const roomLabel = live.envelope.room?.name || live.envelope.room?.id || "roomkit-chord";
-  const roomName = live.envelope.room?.id || live.envelope.room?.name || "roomkit-chord";
+  const actorName = matterhornDisplayName({ actor: live.actor, fallbackId: live.actor.memberId });
+  const roomLabel = live.envelope.room?.name || live.envelope.room?.id || "matterhorn-chord";
+  const roomName = live.envelope.room?.id || live.envelope.room?.name || "matterhorn-chord";
 
   return {
     activeChannel,

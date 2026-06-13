@@ -1,6 +1,6 @@
 const publisher = {
-  id: "com.roomkit.examples",
-  name: "RoomKit Examples",
+  id: "gg.matterhorn.examples",
+  name: "Matterhorn Examples",
   publicKey: "rk_pub_examples"
 };
 

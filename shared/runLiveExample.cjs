@@ -30,9 +30,9 @@ function pnpmCommand(args) {
 async function main() {
   const appRoot = path.resolve(process.argv[2] || process.cwd());
   const pkg = readPackage(appRoot);
-  const port = Number(process.env.ROOMKIT_EXAMPLE_BACKEND_PORT || (frontendPort(pkg) ? frontendPort(pkg) + 1000 : 0));
+  const port = Number(process.env.MATTERHORN_EXAMPLE_BACKEND_PORT || (frontendPort(pkg) ? frontendPort(pkg) + 1000 : 0));
   const backend = await startLiveExampleServer({ appRoot, port });
-  const env = { ...process.env, VITE_ROOMKIT_EXAMPLE_BACKEND_URL: backend.url, ROOMKIT_EXAMPLE_BACKEND_URL: backend.url };
+  const env = { ...process.env, VITE_MATTERHORN_EXAMPLE_BACKEND_URL: backend.url, MATTERHORN_EXAMPLE_BACKEND_URL: backend.url };
   const command = pnpmCommand(['run', 'dev:frontend']);
   const child = spawn(command.command, command.args, { cwd: appRoot, env, stdio: 'inherit' });
   const shutdown = async () => {

@@ -107,7 +107,7 @@ export function useChatSyncEffects(input: ChatSyncEffectsInput) {
     const latest = latestDirectMessageTime(state, currentThreadId);
     ui.markDirectThreadRead(currentThreadId, latest);
 
-    // Also mark RoomKit notifications read for each sender in this thread.
+    // Also mark Matterhorn notifications read for each sender in this thread.
     const notifications = input.live?.notifications;
     if (notifications) {
       const messages = Object.values(state.directMessages || {})

@@ -6,7 +6,7 @@ function isPrimaryAction(action, composition) {
 }
 
 function isCoreAction(action) {
-  return action.plugin === 'core' || action.plugin === 'roomkit.core';
+  return action.plugin === 'core' || action.plugin === 'matterhorn.core';
 }
 
 const scopedRole = { type: 'enum', values: ['none', 'viewer', 'editor', 'moderator', 'admin'] };
@@ -118,14 +118,13 @@ function typeLabelForField(spec) {
   return spec.type || 'string';
 }
 
-function fieldDoc(name, spec, optional = false) {
+function fieldDoc(name, spec) {
   const constraints = [];
   const label = typeLabelForField(spec);
   if (spec && typeof spec === 'object') {
     if (spec.min !== undefined) constraints.push(`>= ${spec.min}`);
     if (spec.max !== undefined) constraints.push(`<= ${spec.max}`);
     if (spec.nullable || spec.clearable) constraints.push('nullable');
-    if (optional && (spec.nullable || spec.clearable)) constraints.push('omit to leave unchanged; null to clear');
   }
   return `${name}: ${[label, ...constraints].join(', ')}`;
 }
@@ -136,11 +135,8 @@ function actionPayloadDocs(action, composition, model, registry = builtinMicroPl
   if (roles.length === 1) docs.push(`Requires \`${roles[0]}\` role.`);
   else if (roles.length > 1) docs.push(`Requires one of ${roles.map((role) => `\`${role}\``).join(', ')} roles.`);
   const payloadSchema = payloadSchemaForAction(action, composition, model, registry);
-  for (const [name, spec] of schemaEntries(payloadSchema.required)) {
+  for (const [name, spec] of [...schemaEntries(payloadSchema.required), ...schemaEntries(payloadSchema.optional)]) {
     docs.push(fieldDoc(name, spec));
-  }
-  for (const [name, spec] of schemaEntries(payloadSchema.optional)) {
-    docs.push(fieldDoc(name, spec, true));
   }
   return docs;
 }

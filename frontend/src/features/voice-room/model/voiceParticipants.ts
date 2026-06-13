@@ -1,20 +1,20 @@
-import { mediaStreamForTrackRole, mediaTrackRole } from "roomkit-sdk/browser/mediaCapture";
-import type { CallMediaSettings, CallMediaTrackInfo, ScreenPreviewSnapshot } from "roomkit-sdk/browser/types";
-import type { RoomKitEphemeralToken } from "roomkit-sdk/browser/liveRoomConnector";
+import { mediaStreamForTrackRole, mediaTrackRole } from "matterhorn-sdk/browser/mediaCapture";
+import type { CallMediaSettings, CallMediaTrackInfo, ScreenPreviewSnapshot } from "matterhorn-sdk/browser/types";
+import type { MatterhornEphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
 import type { VoiceParticipant, VoiceRoomViewProps } from "@features/voice-room/model/types";
 
-function tokenMedia(token: RoomKitEphemeralToken): CallMediaSettings | undefined {
+function tokenMedia(token: MatterhornEphemeralToken): CallMediaSettings | undefined {
   const media = token.payload?.media;
   if (!media || typeof media !== "object") return undefined;
   return media as CallMediaSettings;
 }
 
-function tokenMediaTracks(token: RoomKitEphemeralToken): CallMediaTrackInfo[] | undefined {
+function tokenMediaTracks(token: MatterhornEphemeralToken): CallMediaTrackInfo[] | undefined {
   const mediaTracks = token.payload?.mediaTracks;
   return Array.isArray(mediaTracks) ? mediaTracks as CallMediaTrackInfo[] : undefined;
 }
 
-function tokenScreenPreview(token: RoomKitEphemeralToken): ScreenPreviewSnapshot | undefined {
+function tokenScreenPreview(token: MatterhornEphemeralToken): ScreenPreviewSnapshot | undefined {
   const preview = token.payload?.screenPreview;
   if (!preview || typeof preview !== "object") return undefined;
   const snapshot = preview as ScreenPreviewSnapshot;
@@ -23,7 +23,7 @@ function tokenScreenPreview(token: RoomKitEphemeralToken): ScreenPreviewSnapshot
   return snapshot;
 }
 
-function tokenAvatar(token: RoomKitEphemeralToken) {
+function tokenAvatar(token: MatterhornEphemeralToken) {
   return typeof token.payload?.avatar === "string" ? token.payload.avatar : undefined;
 }
 

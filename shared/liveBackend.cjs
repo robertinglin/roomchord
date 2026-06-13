@@ -2,37 +2,37 @@
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
-const { manifestHash } = require('@roomkit-core/base');
-const { ensureOperationIdentity, validateRoomOperation } = require('@roomkit-core/protocol');
-const { applyExampleOperations, createExampleRuntime } = require('./roomkitExample/runtime.cjs');
-const { createExampleActor } = require('./roomkitExample/identity.cjs');
+const { manifestHash } = require('@mh-gg/base');
+const { ensureOperationIdentity, validateRoomOperation } = require('@mh-gg/protocol');
+const { applyExampleOperations, createExampleRuntime } = require('./matterhornExample/runtime.cjs');
+const { createExampleActor } = require('./matterhornExample/identity.cjs');
 
 const SHARED_PLUGIN_IDS = Object.freeze({
-  comments: 'com.roomkit.examples.plugins.comments',
-  presence: 'com.roomkit.examples.plugins.presence',
-  mediaRooms: 'com.roomkit.examples.plugins.media-rooms',
-  screenShare: 'com.roomkit.examples.plugins.screen-share',
-  embeds: 'com.roomkit.examples.plugins.embeds',
-  reactions: 'com.roomkit.examples.plugins.reactions',
-  attachments: 'com.roomkit.examples.plugins.attachments',
-  approvals: 'com.roomkit.examples.plugins.approvals',
-  labels: 'com.roomkit.examples.plugins.labels',
-  checklists: 'com.roomkit.examples.plugins.checklists',
-  calendar: 'com.roomkit.examples.plugins.calendar',
-  markdown: 'com.roomkit.examples.plugins.markdown',
-  locationPins: 'com.roomkit.examples.plugins.location-pins'
+  comments: 'gg.matterhorn.examples.plugins.comments',
+  presence: 'gg.matterhorn.examples.plugins.presence',
+  mediaRooms: 'gg.matterhorn.examples.plugins.media-rooms',
+  screenShare: 'gg.matterhorn.examples.plugins.screen-share',
+  embeds: 'gg.matterhorn.examples.plugins.embeds',
+  reactions: 'gg.matterhorn.examples.plugins.reactions',
+  attachments: 'gg.matterhorn.examples.plugins.attachments',
+  approvals: 'gg.matterhorn.examples.plugins.approvals',
+  labels: 'gg.matterhorn.examples.plugins.labels',
+  checklists: 'gg.matterhorn.examples.plugins.checklists',
+  calendar: 'gg.matterhorn.examples.plugins.calendar',
+  markdown: 'gg.matterhorn.examples.plugins.markdown',
+  locationPins: 'gg.matterhorn.examples.plugins.location-pins'
 });
 
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
 
-function loadRoomKitExampleApp(appRoot = process.cwd()) {
+function loadMatterhornExampleApp(appRoot = process.cwd()) {
   const resolved = path.resolve(appRoot);
   const entry = path.join(resolved, 'src', 'sdk-app.cjs');
-  if (!fs.existsSync(entry)) throw new Error(`RoomKit example app entry not found: ${entry}`);
+  if (!fs.existsSync(entry)) throw new Error(`Matterhorn example app entry not found: ${entry}`);
   const definition = require(entry);
-  return { appRoot: resolved, app: definition.toRoomKitExports() };
+  return { appRoot: resolved, app: definition.toMatterhornExports() };
 }
 
 function appSlug(appRoot, app) {
@@ -57,7 +57,7 @@ function actorFromRequest(value = {}) {
 
 function pluginSelectionId(app, selection) {
   if (!selection || selection === 'primary' || selection === '$primary') return app.hostPlugin.id;
-  if (selection === 'core' || selection === 'roomkit.core') return 'roomkit.core';
+  if (selection === 'core' || selection === 'matterhorn.core') return 'matterhorn.core';
   const schemaPlugin = app.compositionSchema?.plugins?.find((plugin) => plugin.key === selection || plugin.id === selection);
   if (schemaPlugin?.id) return schemaPlugin.id;
   const packPlugin = app.appPack?.composition?.plugins?.find((plugin) => plugin.key === selection || plugin.id === selection);
@@ -240,7 +240,7 @@ function projectEventsState(primary = {}, plugins = {}) {
 function projectStateForFrontend(app, runtimeState) {
   const plugins = runtimeState?.plugins || {};
   const primary = { ...clone(plugins[app.hostPlugin.id] || {}), access: clone(runtimeState?.access || {}) };
-  const slug = appSlug(app.roomkitApp?.frontend?.root || '', app);
+  const slug = appSlug(app.matterhornApp?.frontend?.root || '', app);
   const lowerId = String(app.appPack?.id || '').toLowerCase();
 
   if (lowerId.includes('react') || lowerId.includes('svelte') || lowerId.includes('vue') || lowerId.includes('lit') || lowerId.includes('vanilla')) {
@@ -332,7 +332,7 @@ function safeObjectFileName(value) {
 }
 
 function gitObjectStoreDir(appRoot, roomId) {
-  return path.join(appRoot, '.roomkit-live-objects', roomId.replace(/[^A-Za-z0-9_.-]/g, '_'));
+  return path.join(appRoot, '.matterhorn-live-objects', roomId.replace(/[^A-Za-z0-9_.-]/g, '_'));
 }
 
 function gitObjectFile(appRoot, roomId, objectId) {
@@ -356,7 +356,7 @@ function loadGitObjectEnvelope(appRoot, roomId, objectId) {
 }
 
 function dataFileFor(appRoot, roomId) {
-  const dataDir = path.join(appRoot, '.roomkit-live');
+  const dataDir = path.join(appRoot, '.matterhorn-live');
   return path.join(dataDir, `${roomId.replace(/[^A-Za-z0-9_.-]/g, '_')}.json`);
 }
 
@@ -399,7 +399,7 @@ function operationsWithCurrentAppPack(app, roomId, operations = []) {
 }
 
 async function createLiveExampleBackend(options = {}) {
-  const { appRoot, app } = loadRoomKitExampleApp(options.appRoot || process.cwd());
+  const { appRoot, app } = loadMatterhornExampleApp(options.appRoot || process.cwd());
   const roomId = appRoomId(appRoot, app, options.roomId);
   const persistedFile = options.persist === false ? undefined : (options.dataFile || dataFileFor(appRoot, roomId));
   const runtime = createExampleRuntime({
@@ -495,22 +495,22 @@ async function startLiveExampleServer(options = {}) {
     try {
       if (req.method === 'OPTIONS') return sendJson(res, 204, {});
       const url = new URL(req.url || '/', `http://${req.headers.host || '127.0.0.1'}`);
-      if (req.method === 'GET' && url.pathname === '/roomkit/health') return sendJson(res, 200, { ok: true, roomId: backend.roomId, appId: backend.app.appPack.id });
-      if (req.method === 'GET' && url.pathname === '/roomkit/app') return sendJson(res, 200, { ok: true, roomId: backend.roomId, appPack: backend.app.appPack, composition: backend.app.compositionSchema });
-      if (req.method === 'GET' && url.pathname === '/roomkit/state') return sendJson(res, 200, { ok: true, state: await backend.getState() });
-      if (req.method === 'POST' && url.pathname === '/roomkit/git/object') return sendJson(res, 200, { ok: true, object: saveGitObjectEnvelope(backend.appRoot, backend.roomId, await readJson(req, 32 * 1024 * 1024)) });
-      if (req.method === 'GET' && url.pathname.startsWith('/roomkit/git/object/')) {
-        const objectId = decodeURIComponent(url.pathname.slice('/roomkit/git/object/'.length));
+      if (req.method === 'GET' && url.pathname === '/matterhorn/health') return sendJson(res, 200, { ok: true, roomId: backend.roomId, appId: backend.app.appPack.id });
+      if (req.method === 'GET' && url.pathname === '/matterhorn/app') return sendJson(res, 200, { ok: true, roomId: backend.roomId, appPack: backend.app.appPack, composition: backend.app.compositionSchema });
+      if (req.method === 'GET' && url.pathname === '/matterhorn/state') return sendJson(res, 200, { ok: true, state: await backend.getState() });
+      if (req.method === 'POST' && url.pathname === '/matterhorn/git/object') return sendJson(res, 200, { ok: true, object: saveGitObjectEnvelope(backend.appRoot, backend.roomId, await readJson(req, 32 * 1024 * 1024)) });
+      if (req.method === 'GET' && url.pathname.startsWith('/matterhorn/git/object/')) {
+        const objectId = decodeURIComponent(url.pathname.slice('/matterhorn/git/object/'.length));
         const object = loadGitObjectEnvelope(backend.appRoot, backend.roomId, objectId);
         return object ? sendJson(res, 200, { ok: true, object }) : sendJson(res, 404, { ok: false, reason: 'Object not found' });
       }
-      if (req.method === 'POST' && url.pathname === '/roomkit/operation') return sendJson(res, 200, await backend.sendOperation(await readJson(req)));
+      if (req.method === 'POST' && url.pathname === '/matterhorn/operation') return sendJson(res, 200, await backend.sendOperation(await readJson(req)));
       sendJson(res, 404, { ok: false, reason: 'Not found' });
     } catch (error) {
       sendJson(res, 500, { ok: false, reason: error?.message || String(error) });
     }
   });
-  const port = Number(options.port || process.env.ROOMKIT_EXAMPLE_BACKEND_PORT || 0);
+  const port = Number(options.port || process.env.MATTERHORN_EXAMPLE_BACKEND_PORT || 0);
   await new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(port, options.host || '127.0.0.1', resolve);
@@ -540,7 +540,7 @@ function parseArgs(argv) {
 
 if (require.main === module) {
   startLiveExampleServer(parseArgs(process.argv.slice(2))).then((server) => {
-    console.log(`RoomKit live example backend for ${server.app.appPack.id} listening on ${server.url}`);
+    console.log(`Matterhorn live example backend for ${server.app.appPack.id} listening on ${server.url}`);
     console.log(`Room: ${server.roomId}`);
     if (server.persistedFile) console.log(`Data: ${server.persistedFile}`);
   }).catch((error) => {
@@ -551,7 +551,7 @@ if (require.main === module) {
 
 module.exports = {
   createLiveExampleBackend,
-  loadRoomKitExampleApp,
+  loadMatterhornExampleApp,
   operationFromDraft,
   pluginIdForOperationType,
   projectStateForFrontend,

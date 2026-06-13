@@ -103,10 +103,10 @@ class RemoteAudioSinkController {
   }
 
   private ensureContainer(): HTMLElement {
-    const existing = document.getElementById("roomkit-chord-audio-sink");
+    const existing = document.getElementById("matterhorn-chord-audio-sink");
     if (existing) return existing;
     const container = document.createElement("div");
-    container.id = "roomkit-chord-audio-sink";
+    container.id = "matterhorn-chord-audio-sink";
     container.style.position = "fixed";
     container.style.left = "-9999px";
     container.style.bottom = "0";

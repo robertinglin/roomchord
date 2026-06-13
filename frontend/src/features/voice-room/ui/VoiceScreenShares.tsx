@@ -1,5 +1,5 @@
 import React from "react";
-import type { ScreenPreviewSnapshot } from "roomkit-sdk/browser/types";
+import type { ScreenPreviewSnapshot } from "matterhorn-sdk/browser/types";
 import { VideoStream } from "@shared/ui/CallMedia";
 import type { VoiceParticipant } from "@features/voice-room/model/types";
 

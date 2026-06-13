@@ -1,12 +1,12 @@
-import { buildHashRoute, hashPath, hashSearchParams } from "roomkit-sdk/browser/hashRoute";
-import { roomSearchParamsWithoutConfig } from "roomkit-sdk/browser/roomLink";
+import { buildHashRoute, hashPath, hashSearchParams } from "matterhorn-sdk/browser/hashRoute";
+import { roomSearchParamsWithoutConfig } from "matterhorn-sdk/browser/roomLink";
 
 const MESSAGE_HASH_PREFIX = "message-";
 const MESSAGE_QUERY_PARAM = "messageId";
 const NOTIFY_CHANNEL_PARAM = "notifyChannel";
 const NOTIFY_DM_PARAM = "notifyDm";
 
-const ROOM_DEEP_LINK_PREFIXES = ["/room/", "/roomkit/launch/", "/roomkit/invite/"];
+const ROOM_DEEP_LINK_PREFIXES = ["/room/", "/matterhorn/launch/", "/matterhorn/invite/"];
 
 function currentRoomDeepLinkPath() {
   const path = hashPath();

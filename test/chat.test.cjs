@@ -9,18 +9,18 @@ const {
   validateAppPackManifest,
   validateHostPackManifest,
   validatePlayerPackManifest
-} = require("@roomkit-core/base");
+} = require("@mh-gg/base");
 const {
   HostPluginRuntime,
   createMemoryOperationLog,
   createMemoryRoomStore
-} = require("@roomkit-core/host-runtime");
+} = require("@mh-gg/host-runtime");
 const {
   ensureOperationIdentity
-} = require("@roomkit-core/protocol");
+} = require("@mh-gg/protocol");
 const { createLiveExampleBackend } = require("../shared/liveBackend.cjs");
 const sdkApp = require("../src/sdk-app.cjs");
-const app = require("../src/sdk-app.cjs").toRoomKitExports();
+const app = require("../src/sdk-app.cjs").toMatterhornExports();
 
 function primaryAction(type) {
   return app.appPack.composition.actions.find((action) => (action.plugin === "primary" || action.plugin === "$primary") && (!type || action.type === type));
@@ -84,7 +84,7 @@ function assertCleanChordTypes(types) {
   assert.match(types, /omit to leave unchanged; null to clear/);
 }
 
-test("Chat exports schema-only RoomKit manifests", () => {
+test("Chat exports schema-only Matterhorn manifests", () => {
   assert.equal(validateAppPackManifest(app.appPack).id, app.CHORD_APP_ID);
   assert.equal(validateHostPackManifest(app.hostPack).appPackId, app.appPack.id);
   assert.equal(validatePlayerPackManifest(app.playerPack).supports[0].appPackId, app.appPack.id);
@@ -92,42 +92,42 @@ test("Chat exports schema-only RoomKit manifests", () => {
   assert.equal(app.appPack.hostPack.integrity, manifestHash(app.hostPack));
   assert.equal(app.hostPlugin.id, app.CHORD_PLUGIN_ID);
   assert.equal(app.hostPlugin.schemaDefined, true);
-  assert.equal(app.hostPlugin.schemaSource, "schema:roomkit.primary-model");
+  assert.equal(app.hostPlugin.schemaSource, "schema:matterhorn.primary-model");
   assert.equal(app.appPack.composition.primaryPlugin.source, undefined);
   assert.equal(typeof app.appPack.composition.primaryPlugin.model, "object");
-  assert.equal(app.roomkitApp.roomkit.frontendProjection, "chat");
-  assert.equal(app.roomkitApp.frontend.backgroundColor, "oklch(0.205 0.008 260)");
-  assert.deepEqual(app.roomkitApp.frontend.icon, { path: "src/chord-icon.svg" });
+  assert.equal(app.matterhornApp.matterhorn.frontendProjection, "chat");
+  assert.equal(app.matterhornApp.frontend.backgroundColor, "oklch(0.205 0.008 260)");
+  assert.deepEqual(app.matterhornApp.frontend.icon, { path: "src/chord-icon.svg" });
 });
 
 test("Chat generated TypeScript contract stays flattened across SDK export helpers", () => {
   const checkedInTypes = fs.readFileSync(path.join(__dirname, "..", "src", "types.d.ts"), "utf8");
-  const exports = sdkApp.toRoomKitExports();
-  const bundle = sdkApp.toRoomKitBundle();
+  const exports = sdkApp.toMatterhornExports();
+  const bundle = sdkApp.toMatterhornBundle();
 
   for (const types of [
     checkedInTypes,
     app.generatedTypes,
     app.schemaArtifacts.types,
-    app.roomkitApp.types.declaration,
-    app.roomkitApp.artifacts.types,
+    app.matterhornApp.types.declaration,
+    app.matterhornApp.artifacts.types,
     sdkApp.toTypes(),
     exports.generatedTypes,
-    exports.roomkitApp.types.declaration,
-    exports.roomkitApp.artifacts.types
+    exports.matterhornApp.types.declaration,
+    exports.matterhornApp.artifacts.types
   ]) {
     assertCleanChordTypes(types);
   }
 
   assert.equal("types" in bundle, false);
   assert.equal("types" in bundle.artifacts, false);
-  assert.equal(sdkApp.toJSON().kind, "roomkit.app-composition.schema");
+  assert.equal(sdkApp.toJSON().kind, "matterhorn.app-composition.schema");
   assert.deepEqual(Object.keys(sdkApp.toJSONFragments()).sort(), ["actions", "composition", "model"]);
 });
 
 test("Chat emit writes flattened TypeScript contract artifacts", () => {
-  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "roomkit-chord-emit-"));
-  const bundleOut = sdkApp.emitRoomKitBundle({ outDir });
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "matterhorn-chord-emit-"));
+  const bundleOut = sdkApp.emitMatterhornBundle({ outDir });
   const emittedBundle = JSON.parse(fs.readFileSync(bundleOut.bundlePath, "utf8"));
 
   assert.equal("types" in bundleOut.bundle, false);
@@ -165,7 +165,7 @@ test("Chat schema starts with default text and voice channels", async () => {
     archivedAt: null
   });
 
-  const defaultRoom = state.plugins["com.roomkit.examples.plugins.media-rooms"].rooms.general_voice;
+  const defaultRoom = state.plugins["gg.matterhorn.examples.plugins.media-rooms"].rooms.general_voice;
   assert.equal(defaultRoom.id, "general_voice");
   assert.equal(defaultRoom.name, "General");
   assert.equal(defaultRoom.group, "General");
@@ -191,7 +191,7 @@ test("Chat message authors can edit and delete their own messages while admins c
     actor: mina
   }));
   assert.equal(send.ok, true, send.reason);
-  const messageId = "message_send_mina_message";
+  const messageId = `message_${send.acceptedLedgerId}`;
 
   const memberEdit = await rt.handleOperation(operation({ type: "message.edit" }, {
     id: "lee_edits_mina_message",
@@ -254,7 +254,7 @@ test("Chat message authors can edit and delete their own messages while admins c
     id: "admin_deletes_lee_message",
     seq: 8,
     createdAt: 1700,
-    payload: { messageId: "message_send_lee_message" },
+    payload: { messageId: `message_${sendSecond.acceptedLedgerId}` },
     actor: admin
   }));
   assert.equal(adminDelete.ok, true, adminDelete.reason);
@@ -265,7 +265,7 @@ test("Chat message authors can edit and delete their own messages while admins c
   assert.deepEqual(messages[messageId].embeds, []);
   assert.deepEqual(messages[messageId].reactions, {});
   assert.equal(messages[messageId].deletedBy, "mina");
-  assert.equal(messages.message_send_lee_message.deletedBy, "admin");
+  assert.equal(messages[`message_${sendSecond.acceptedLedgerId}`].deletedBy, "admin");
 });
 
 test("Chat moderators can pin and unpin messages", async () => {
@@ -281,7 +281,7 @@ test("Chat moderators can pin and unpin messages", async () => {
     actor: mina
   }));
   assert.equal(send.ok, true, send.reason);
-  const messageId = "message_send_mina_pinnable";
+  const messageId = `message_${send.acceptedLedgerId}`;
 
   const pin = await rt.handleOperation(operation({ type: "message.pin" }, {
     id: "mod_pins_mina_message",
@@ -323,7 +323,7 @@ test("Chat live backend upgrades same-app persisted operations after schema hash
     ...operation,
     appPackHash: oldHash
   }, { now: operation.createdAt, nodeId: operation.actor?.deviceId || "dev" }));
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "roomkit-chord-schema-"));
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "matterhorn-chord-schema-"));
   const dataFile = path.join(dataDir, "chat.json");
   fs.writeFileSync(dataFile, JSON.stringify({ version: 1, operations }, null, 2));
 
@@ -349,7 +349,7 @@ test("Chat generated player actions dispatch composition descriptors", async () 
 });
 
 test("Chat SDK client uses app scope for role gates and dispatch errors", async () => {
-  const { RoomKit, RoomKitValidationError, installRoomKitAppScope, resetRoomKitForTests } = await import("roomkit-sdk/client");
+  const { Matterhorn, MatterhornValidationError, installMatterhornAppScope, resetMatterhornForTests } = await import("matterhorn-sdk/client");
   const state = {
     channels: [],
     messages: {
@@ -360,9 +360,9 @@ test("Chat SDK client uses app scope for role gates and dispatch errors", async 
       embed_1: { id: "embed_1", scopeType: "channel", scopeId: "general", url: "https://example.test", note: null, addedAt: 3, removedAt: null }
     }
   };
-  resetRoomKitForTests();
-  installRoomKitAppScope({
-    appId: "com.roomkit.chord",
+  resetMatterhornForTests();
+  installMatterhornAppScope({
+    appId: "gg.matterhorn.chord",
     appName: "Chord",
     metadata: { composition: app.compositionSchema },
     host: {
@@ -375,15 +375,15 @@ test("Chat SDK client uses app scope for role gates and dispatch errors", async 
     actor: { memberId: "ada", deviceId: "dev_ada", role: "member", displayName: "Ada" },
     envelope: { room: { id: "chat" }, actor: { memberId: "ada", deviceId: "dev_ada", role: "member", displayName: "Ada" } }
   });
-  const room = RoomKit();
+  const room = Matterhorn();
 
   assert.equal(room.can.messageSend().status, "allowed");
   assert.equal(room.can.channelCreate().status, "denied");
   await assert.rejects(
     () => room.dispatch("messageSend", { channelId: "general", body: "x".repeat(4001) }),
-    (error) => error instanceof RoomKitValidationError && /body/.test(error.message)
+    (error) => error instanceof MatterhornValidationError && /body/.test(error.message)
   );
-  resetRoomKitForTests();
+  resetMatterhornForTests();
 });
 
 test("Chat defineApp export does not depend on a demo sidecar", async () => {
@@ -430,23 +430,23 @@ test("Chat media rooms enforce composite role tags for hidden and read-only room
 
   const create = await rt.handleOperation(operation({ type: "media.room.create" }, {
     id: "create_launch_room",
-    pluginId: "com.roomkit.examples.plugins.media-rooms",
+    pluginId: "gg.matterhorn.examples.plugins.media-rooms",
     payload: { name: "Launch Leads", group: "Launch", allowsVideo: true, roleAccess: { launch: "readonly", moderator: "editor" } },
     actor: admin
   }));
   assert.equal(create.ok, true, create.reason);
-  const roomId = "media_room_create_launch_room";
-  let mediaRooms = (await rt.getState()).plugins["com.roomkit.examples.plugins.media-rooms"].rooms;
+  const roomId = `media_room_${create.acceptedLedgerId}`;
+  let mediaRooms = (await rt.getState()).plugins["gg.matterhorn.examples.plugins.media-rooms"].rooms;
   assert.equal(mediaRooms[roomId].group, "Launch");
 
   const leeView = await rt.publicView(lee);
-  assert.equal(leeView.plugins["com.roomkit.examples.plugins.media-rooms"].rooms.some((room) => room.id === roomId), true);
+  assert.equal(leeView.plugins["gg.matterhorn.examples.plugins.media-rooms"].rooms.some((room) => room.id === roomId), true);
   const samView = await rt.publicView(sam);
-  assert.equal(samView.plugins["com.roomkit.examples.plugins.media-rooms"].rooms.some((room) => room.id === roomId), false);
+  assert.equal(samView.plugins["gg.matterhorn.examples.plugins.media-rooms"].rooms.some((room) => room.id === roomId), false);
 
   const leeJoinReadonly = await rt.handleOperation(operation({ type: "media.room.join" }, {
     id: "lee_join_readonly_launch_room",
-    pluginId: "com.roomkit.examples.plugins.media-rooms",
+    pluginId: "gg.matterhorn.examples.plugins.media-rooms",
     payload: { roomId, media: { audio: true, video: false } },
     actor: lee
   }));
@@ -455,7 +455,7 @@ test("Chat media rooms enforce composite role tags for hidden and read-only room
 
   const modJoin = await rt.handleOperation(operation({ type: "media.room.join" }, {
     id: "mod_join_launch_room",
-    pluginId: "com.roomkit.examples.plugins.media-rooms",
+    pluginId: "gg.matterhorn.examples.plugins.media-rooms",
     payload: { roomId, media: { audio: true, video: false } },
     actor: mod
   }));
@@ -463,17 +463,17 @@ test("Chat media rooms enforce composite role tags for hidden and read-only room
 
   const update = await rt.handleOperation(operation({ type: "media.room.update" }, {
     id: "make_launch_room_editable",
-    pluginId: "com.roomkit.examples.plugins.media-rooms",
+    pluginId: "gg.matterhorn.examples.plugins.media-rooms",
     payload: { roomId, group: null, roleAccess: { launch: "editor" } },
     actor: admin
   }));
   assert.equal(update.ok, true, update.reason);
-  mediaRooms = (await rt.getState()).plugins["com.roomkit.examples.plugins.media-rooms"].rooms;
+  mediaRooms = (await rt.getState()).plugins["gg.matterhorn.examples.plugins.media-rooms"].rooms;
   assert.equal(mediaRooms[roomId].group, null);
 
   const leeJoin = await rt.handleOperation(operation({ type: "media.room.join" }, {
     id: "lee_join_editable_launch_room",
-    pluginId: "com.roomkit.examples.plugins.media-rooms",
+    pluginId: "gg.matterhorn.examples.plugins.media-rooms",
     payload: { roomId, media: { audio: true, video: false } },
     actor: lee
   }));

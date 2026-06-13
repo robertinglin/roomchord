@@ -6,7 +6,7 @@ import { ChatApp } from "@pages/chat/ui/ChatPage";
 import type { ChatProps } from "@entities/chat/model/types";
 
 function ensureChatStyles() {
-  const id = "roomkit-chord-styles";
+  const id = "matterhorn-chord-styles";
   if (document.getElementById(id)) return;
   const style = document.createElement("style");
   style.id = id;
@@ -23,7 +23,7 @@ function ensureKeyboardOverlayMode() {
   if (keyboard) keyboard.overlaysContent = true;
 }
 
-export function mountRoomKitChat(target: HTMLElement, options: ChatProps = {}) {
+export function mountMatterhornChat(target: HTMLElement, options: ChatProps = {}) {
   ensureChatStyles();
   ensureKeyboardOverlayMode();
   const root: Root = createRoot(target);
@@ -31,9 +31,9 @@ export function mountRoomKitChat(target: HTMLElement, options: ChatProps = {}) {
   return () => root.unmount();
 }
 
-export function mountRoomKitApp(target: HTMLElement, options: ChatProps = {}) {
-  return mountRoomKitChat(target, options);
+export function mountMatterhornApp(target: HTMLElement, options: ChatProps = {}) {
+  return mountMatterhornChat(target, options);
 }
 
-const autoMountTarget = typeof document !== "undefined" ? document.getElementById("roomkit-chord-root") : null;
-if (autoMountTarget) mountRoomKitApp(autoMountTarget);
+const autoMountTarget = typeof document !== "undefined" ? document.getElementById("matterhorn-chord-root") : null;
+if (autoMountTarget) mountMatterhornApp(autoMountTarget);

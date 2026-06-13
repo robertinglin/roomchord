@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { CallMediaSettings, SfuCallState } from "roomkit-sdk/browser/types";
+import type { CallMediaSettings, SfuCallState } from "matterhorn-sdk/browser/types";
 import { mediaWithVoicePreferences, type VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { MediaRoom, ScreenShare } from "@entities/chat/model/types";
 import { VoiceSettingsDialog } from "@features/user-controls/ui/VoiceSettingsDialog";
@@ -174,7 +174,12 @@ export function UserControls({
 
   return (
     <footer className="self-panel" aria-label="User controls">
-      {statusMenuOpen ? <StatusMenu onSetStatus={setStatus} /> : null}
+      {statusMenuOpen ? (
+        <>
+          <span className="context-menu-shroud" role="presentation" onMouseDown={() => setStatusMenuOpen(false)} />
+          <StatusMenu onSetStatus={setStatus} />
+        </>
+      ) : null}
 
       {!hideVoicePanel && joined && room ? (
         <VoiceControlPanel

@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { runVoiceProcessingPipelineDiagnostic, type VoicePipelineDiagnosticResult } from "roomkit-sdk/browser/voicePipelineDiagnostics";
+import { runVoiceProcessingPipelineDiagnostic, type VoicePipelineDiagnosticResult } from "matterhorn-sdk/browser/voicePipelineDiagnostics";
 import {
   startVoiceProcessingRecordingTest,
   stopVoiceProcessingRecordingForPlayback,
   stopVoiceProcessingRecordingTest,
   updateVoiceProcessingRecordingTestPlayback,
   type VoiceProcessingRecordingTestSession
-} from "roomkit-sdk/browser/voiceOutboundRecordingTest";
+} from "matterhorn-sdk/browser/voiceOutboundRecordingTest";
 import { pttKeyFromKeyboardEvent, voiceProcessingSettingsFromPreferences, type VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import { CloseIcon } from "@shared/ui/Icons";
 import { CleanupSettingsSection, GainSettingsSection, InputModeSettingsSection, VoiceTestSettingsSection } from "@features/user-controls/ui/voiceSettings/VoiceSettingsSections";

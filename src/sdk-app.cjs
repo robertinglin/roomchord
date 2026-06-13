@@ -1,7 +1,7 @@
-// roomkit-chord/src/sdk-app.cjs
+// matterhorn-chord/src/sdk-app.cjs
 //
 // Chat primary backend authored through the declarative schema builder.
-// This is the source of truth; running this file emits the full RoomKit app
+// This is the source of truth; running this file emits the full Matterhorn app
 // bundle at the package root. Nothing here is a reducer function: fx/guard/ref
 // produce the same declarative effect/guard
 // descriptors that model/effects.cjs interprets, so no app code runs on a node.
@@ -9,7 +9,7 @@
 const path = require("node:path");
 const {
   p, action, query, defineModel, defineApp
-} = require("roomkit-sdk");
+} = require("matterhorn-sdk");
 
 const packageRoot = path.join(__dirname, "..");
 const frontendCommand = path.join(packageRoot, "shared", "frontendCommand.cjs");
@@ -253,12 +253,12 @@ const notifications = {
 /* ----- compose with shared plugins + views + routes ----- */
 
 const app = defineApp({
-  id: "com.roomkit.chord",
+  id: "gg.matterhorn.chord",
   name: "Chord",
   version: "1.0.0",
-  pluginId: "com.roomkit.chord.plugin",
-  slug: "roomkit-chord",
-  packageName: "roomkit-chord",
+  pluginId: "gg.matterhorn.chord.plugin",
+  slug: "matterhorn-chord",
+  packageName: "matterhorn-chord",
   packageRoot,
   exportPrefix: "chord",
   constantPrefix: "CHORD",
@@ -267,19 +267,19 @@ const app = defineApp({
     icon: "src/chord-icon.svg",
     port: 42732,
     devEntry: "src/index.tsx",
-    builtEntry: "roomkit-chord.js",
+    builtEntry: "matterhorn-chord.js",
     dev: {
       command: process.execPath,
       args: [frontendCommand, "dev", packageRoot, "--", "--host", "127.0.0.1", "--port", "${bundlePort}", "--strictPort"]
     },
     build: { command: process.execPath, args: [frontendCommand, "build", packageRoot] }
   },
-  roomkit: {
+  matterhorn: {
     frontendProjection: "chat"
   },
   example: {
-    id: "roomkit-chord",
-    title: "Chord RoomKit example"
+    id: "matterhorn-chord",
+    title: "Chord Matterhorn example"
   },
   model: chat.withOperations(operations),
   actions: {
@@ -312,16 +312,16 @@ const app = defineApp({
     onlineMembers: { plugin: "presence", query: "onlineMembers" }
   },
   routes: [
-    { path: "/", component: "ChatRoomPage", requires: ["com.roomkit.chord.plugin"] },
-    { path: "/dms", component: "DirectMessagesPage", requires: ["com.roomkit.chord.plugin"] },
-    { path: "/rooms", component: "MediaRoomsPage", requires: ["com.roomkit.examples.plugins.media-rooms", "com.roomkit.examples.plugins.screen-share"] }
+    { path: "/", component: "ChatRoomPage", requires: ["gg.matterhorn.chord.plugin"] },
+    { path: "/dms", component: "DirectMessagesPage", requires: ["gg.matterhorn.chord.plugin"] },
+    { path: "/rooms", component: "MediaRoomsPage", requires: ["gg.matterhorn.examples.plugins.media-rooms", "gg.matterhorn.examples.plugins.screen-share"] }
   ]
 });
 
 module.exports = app;
 
 if (require.main === module) {
-  const out = app.emitRoomKitBundle({ outDir: packageRoot });
+  const out = app.emitMatterhornBundle({ outDir: packageRoot });
   app.emit({
     outDir: path.join(packageRoot, "src", "chat"),
     typesFile: "../types.d.ts"

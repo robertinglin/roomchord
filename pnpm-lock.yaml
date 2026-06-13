@@ -5,30 +5,30 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  roomkit-sdk: link:../roomkit/packages/roomkit-sdk
+  matterhorn-sdk: link:../roomkit/packages/matterhorn-sdk
 
 importers:
 
   .:
     dependencies:
-      '@roomkit-core/base':
-        specifier: link:../roomkit/packages/roomkit-core
-        version: link:../roomkit/packages/roomkit-core
-      '@roomkit-core/host-runtime':
-        specifier: link:../roomkit/packages/roomkit-host-runtime
-        version: link:../roomkit/packages/roomkit-host-runtime
-      '@roomkit-core/protocol':
-        specifier: link:../roomkit/packages/roomkit-protocol
-        version: link:../roomkit/packages/roomkit-protocol
+      '@mh-gg/base':
+        specifier: link:../roomkit/packages/matterhorn-core
+        version: link:../roomkit/packages/matterhorn-core
+      '@mh-gg/host-runtime':
+        specifier: link:../roomkit/packages/matterhorn-host-runtime
+        version: link:../roomkit/packages/matterhorn-host-runtime
+      '@mh-gg/protocol':
+        specifier: link:../roomkit/packages/matterhorn-protocol
+        version: link:../roomkit/packages/matterhorn-protocol
+      matterhorn-sdk:
+        specifier: link:../roomkit/packages/matterhorn-sdk
+        version: link:../roomkit/packages/matterhorn-sdk
       react:
         specifier: ^18.3.1
         version: 18.3.1
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
-      roomkit-sdk:
-        specifier: link:../roomkit/packages/roomkit-sdk
-        version: link:../roomkit/packages/roomkit-sdk
       zustand:
         specifier: ^4.5.7
         version: 4.5.7(@types/react@18.3.30)(react@18.3.1)

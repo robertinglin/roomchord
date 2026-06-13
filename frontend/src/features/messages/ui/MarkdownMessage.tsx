@@ -1,33 +1,33 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  parseRoomkitMarkdown,
-  type RoomkitMarkdownDocument,
-  type RoomkitMarkdownEmbed,
-  type RoomkitMarkdownNode,
-type RoomkitMarkdownToken
-} from "roomkit-sdk/browser/markdown";
+  parseMarkdown,
+  type MarkdownDocument,
+  type MarkdownEmbed,
+  type MarkdownNode,
+type MarkdownToken
+} from "matterhorn-sdk/browser/markdown";
 import {
-  ROOMKIT_EMBED_FRAME_ALLOW,
-  ROOMKIT_EMBED_FRAME_SANDBOX,
-  roomkitEmbedExternalUrl,
-  roomkitEmbedFrameUrl,
-  roomkitEmbedProviderLabel,
-  roomkitEmbedSourceUrl,
-  roomkitEmbedSupportsFullscreenDialog,
-  roomkitEmbedTitle
-} from "roomkit-sdk/browser/embedFrame";
+  MATTERHORN_EMBED_FRAME_ALLOW,
+  MATTERHORN_EMBED_FRAME_SANDBOX,
+  matterhornEmbedExternalUrl,
+  matterhornEmbedFrameUrl,
+  matterhornEmbedProviderLabel,
+  matterhornEmbedSourceUrl,
+  matterhornEmbedSupportsFullscreenDialog,
+  matterhornEmbedTitle
+} from "matterhorn-sdk/browser/embedFrame";
 import { mentionSegments, renderMentionNames } from "@entities/chat/model/mentions";
 import { CloseIcon, MaximizeIcon } from "@shared/ui/Icons";
 import { MemberContextMenu } from "@shared/ui/MemberContextMenu";
 
 const SINGLE_EMOJI_RE = /^(?:[\d#*]\uFE0F?\u20E3|\p{Regional_Indicator}{2}|\p{Extended_Pictographic}\uFE0F?\p{Emoji_Modifier}?(?:\u200D\p{Extended_Pictographic}\uFE0F?\p{Emoji_Modifier}?)*)$/u;
 
-function parseBody(body: string): RoomkitMarkdownDocument {
+function parseBody(body: string): MarkdownDocument {
   try {
-    return parseRoomkitMarkdown(body || "");
+    return parseMarkdown(body || "");
   } catch {
     // Never let an unparseable message blank out the feed; fall back to plain text.
-    return { kind: "roomkit.markdown-document", version: 1, nodes: [{ type: "paragraph", text: body, children: [{ type: "text", value: body }] }], embeds: [], text: body, embedCount: 0 };
+    return { kind: "matterhorn.markdown-document", version: 1, nodes: [{ type: "paragraph", text: body, children: [{ type: "text", value: body }] }], embeds: [], text: body, embedCount: 0 };
   }
 }
 
@@ -37,7 +37,7 @@ function singleEmojiBody(body: string) {
 }
 
 type EmbedDialogState = {
-  embed: RoomkitMarkdownEmbed;
+  embed: MarkdownEmbed;
   title: string;
   src: string;
 };
@@ -83,8 +83,8 @@ function Inline({
   currentUserId?: string;
   memberNamesById: Record<string, string>;
   onDirectMessage?: (memberId: string) => void;
-  onFullscreen?: (embed: RoomkitMarkdownEmbed) => void;
-  tokens?: RoomkitMarkdownToken[];
+  onFullscreen?: (embed: MarkdownEmbed) => void;
+  tokens?: MarkdownToken[];
 }) {
   if (!tokens || tokens.length === 0) return null;
   return (
@@ -103,8 +103,8 @@ function Inline({
           );
         }
         const embed = token.embed && token.embed.provider !== "link" ? token.embed : undefined;
-        const title = embed ? roomkitEmbedTitle(embed) : token.text;
-        const canFullscreen = Boolean(embed && roomkitEmbedSupportsFullscreenDialog(embed));
+        const title = embed ? matterhornEmbedTitle(embed) : token.text;
+        const canFullscreen = Boolean(embed && matterhornEmbedSupportsFullscreenDialog(embed));
         if (!embed) {
           return (
             <a key={index} href={token.url} target="_blank" rel="noreferrer">
@@ -114,7 +114,7 @@ function Inline({
         }
         return (
           <span key={index} className="embed-link-inline">
-            <strong className="embed-link-provider">{roomkitEmbedProviderLabel(embed)}</strong>
+            <strong className="embed-link-provider">{matterhornEmbedProviderLabel(embed)}</strong>
             {canFullscreen && onFullscreen ? (
               <button
                 type="button"
@@ -145,9 +145,9 @@ function MarkdownNodes({
 }: {
   currentUserId?: string;
   memberNamesById: Record<string, string>;
-  nodes: RoomkitMarkdownNode[];
+  nodes: MarkdownNode[];
   onDirectMessage?: (memberId: string) => void;
-  onFullscreen: (embed: RoomkitMarkdownEmbed) => void;
+  onFullscreen: (embed: MarkdownEmbed) => void;
 }) {
   const inlineProps = { currentUserId, memberNamesById, onDirectMessage, onFullscreen };
   return (
@@ -200,11 +200,11 @@ function MarkdownNodes({
   );
 }
 
-function frameUrl(embed: RoomkitMarkdownEmbed) {
-  return roomkitEmbedFrameUrl(embed, { parentHost: typeof window === "undefined" ? undefined : window.location.hostname });
+function frameUrl(embed: MarkdownEmbed) {
+  return matterhornEmbedFrameUrl(embed, { parentHost: typeof window === "undefined" ? undefined : window.location.hostname });
 }
 
-function providerClassName(embed: RoomkitMarkdownEmbed) {
+function providerClassName(embed: MarkdownEmbed) {
   const provider = String(embed.provider || embed.kind || "embed")
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, "-")
@@ -212,7 +212,7 @@ function providerClassName(embed: RoomkitMarkdownEmbed) {
   return provider ? `message-embed-${provider}` : "";
 }
 
-function EmbedDialog({ embed, title, src, onClose }: { embed: RoomkitMarkdownEmbed; title: string; src: string; onClose: () => void }) {
+function EmbedDialog({ embed, title, src, onClose }: { embed: MarkdownEmbed; title: string; src: string; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -257,10 +257,10 @@ function EmbedDialog({ embed, title, src, onClose }: { embed: RoomkitMarkdownEmb
             title={title}
             src={src}
             loading="lazy"
-            allow={ROOMKIT_EMBED_FRAME_ALLOW}
+            allow={MATTERHORN_EMBED_FRAME_ALLOW}
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
-            sandbox={ROOMKIT_EMBED_FRAME_SANDBOX}
+            sandbox={MATTERHORN_EMBED_FRAME_SANDBOX}
           />
         </div>
       </section>
@@ -268,9 +268,9 @@ function EmbedDialog({ embed, title, src, onClose }: { embed: RoomkitMarkdownEmb
   );
 }
 
-export function EmbedCard({ embed }: { embed: RoomkitMarkdownEmbed }) {
-  const href = roomkitEmbedExternalUrl(embed);
-  const title = roomkitEmbedTitle(embed);
+export function EmbedCard({ embed }: { embed: MarkdownEmbed }) {
+  const href = matterhornEmbedExternalUrl(embed);
+  const title = matterhornEmbedTitle(embed);
   const embedClassName = `message-embed message-embed-inline ${providerClassName(embed)}`;
   if (embed.renderMode === "iframe" || embed.renderMode === "file-preview") {
     const src = frameUrl(embed);
@@ -283,10 +283,10 @@ export function EmbedCard({ embed }: { embed: RoomkitMarkdownEmbed }) {
               title={title}
               src={src}
               loading="lazy"
-              allow={ROOMKIT_EMBED_FRAME_ALLOW}
+              allow={MATTERHORN_EMBED_FRAME_ALLOW}
               allowFullScreen
               referrerPolicy="strict-origin-when-cross-origin"
-              sandbox={ROOMKIT_EMBED_FRAME_SANDBOX}
+              sandbox={MATTERHORN_EMBED_FRAME_SANDBOX}
             />
           </span>
         </figure>
@@ -294,7 +294,7 @@ export function EmbedCard({ embed }: { embed: RoomkitMarkdownEmbed }) {
     }
   }
   if (embed.renderMode === "image") {
-    const src = roomkitEmbedSourceUrl(embed);
+    const src = matterhornEmbedSourceUrl(embed);
     if (src) {
       return (
         <figure className={`${embedClassName} message-embed-image`}>
@@ -306,7 +306,7 @@ export function EmbedCard({ embed }: { embed: RoomkitMarkdownEmbed }) {
     }
   }
   if (embed.renderMode === "video") {
-    const src = roomkitEmbedSourceUrl(embed);
+    const src = matterhornEmbedSourceUrl(embed);
     if (src) {
       return (
         <figure className={`${embedClassName} message-embed-video`}>
@@ -318,7 +318,7 @@ export function EmbedCard({ embed }: { embed: RoomkitMarkdownEmbed }) {
     }
   }
   if (embed.renderMode === "audio") {
-    const src = roomkitEmbedSourceUrl(embed);
+    const src = matterhornEmbedSourceUrl(embed);
     if (src) {
       return (
         <figure className={`${embedClassName} message-embed-audio`}>
@@ -343,7 +343,7 @@ export function EmbedCard({ embed }: { embed: RoomkitMarkdownEmbed }) {
 
 // Rich embeds are the provider-specific ones (youtube, github, maps). Plain links
 // resolve to the generic "link" provider and stay inline rather than as a card.
-function richEmbeds(embeds: RoomkitMarkdownEmbed[]): RoomkitMarkdownEmbed[] {
+function richEmbeds(embeds: MarkdownEmbed[]): MarkdownEmbed[] {
   const seen = new Set<string>();
   return embeds.filter((embed) => {
     if (!embed || !embed.url || embed.provider === "link") return false;
@@ -369,10 +369,10 @@ export function MarkdownMessage({
   const parsed = useMemo(() => parseBody(body), [body]);
   const cards = richEmbeds(parsed.embeds);
   const [dialog, setDialog] = useState<EmbedDialogState | null>(null);
-  const openFullscreen = (embed: RoomkitMarkdownEmbed) => {
+  const openFullscreen = (embed: MarkdownEmbed) => {
     const src = frameUrl(embed);
     if (!src) return;
-    setDialog({ embed, title: roomkitEmbedTitle(embed), src });
+    setDialog({ embed, title: matterhornEmbedTitle(embed), src });
   };
   if (largeEmoji) {
     return (

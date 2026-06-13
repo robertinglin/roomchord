@@ -1,6 +1,6 @@
-import type { CallMediaSettings, CallVoiceProcessingSettings } from "roomkit-sdk/browser/types";
+import type { CallMediaSettings, CallVoiceProcessingSettings } from "matterhorn-sdk/browser/types";
 
-const VOICE_PREFERENCES_STORAGE_PREFIX = "roomkit:chord:voice-preferences:";
+const VOICE_PREFERENCES_STORAGE_PREFIX = "matterhorn:chord:voice-preferences:";
 const DEFAULT_PTT_KEY = "Backquote";
 const DTLN_WORKLET_FILE = "audio-worklet.js";
 const SILERO_ASSET_DIR = "vad/";

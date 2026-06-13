@@ -41,7 +41,7 @@ function linkResult(url: string | undefined) {
   return url ? { kind: "url", url } : undefined;
 }
 
-// Wires roomchord into the RoomKit notification Player API. The declarative
+// Wires roomchord into the Matterhorn notification Player API. The declarative
 // `notifications` block in the app schema drives *who* gets pushed; here we
 // customize the deep link a recipient lands on when they click, and route the
 // app to the right channel / DM when that link is opened.

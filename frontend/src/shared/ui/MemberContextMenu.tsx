@@ -8,7 +8,21 @@ export type MemberContextMenuAction = {
   onSelect: () => void;
 };
 
+type ContextMenuItem = {
+  ariaLabel?: string;
+  disabled?: boolean;
+  icon?: string;
+  id: string;
+  label: string;
+  meta?: string;
+  onSelect?: () => void;
+  sectionBefore?: boolean;
+  variant?: "danger";
+};
+
 type MenuPosition = { x: number; y: number };
+
+function noop() {}
 
 export function MemberContextMenu({
   additionalActions = [],
@@ -26,16 +40,39 @@ export function MemberContextMenu({
   onDirectMessage?: (memberId: string) => void;
 }) {
   const [position, setPosition] = useState<MenuPosition | undefined>();
-  const actions = useMemo(() => {
-    const items = additionalActions.filter((action) => !action.disabled);
-    if (!memberId || memberId === currentUserId || !onDirectMessage) return items;
+  const menuItems = useMemo<ContextMenuItem[]>(() => {
+    const activeActions = additionalActions.filter((action) => !action.disabled);
+    const roleAction = activeActions.find((action) => action.id === "set-roles");
+    const canMessage = Boolean(memberId && memberId !== currentUserId && onDirectMessage);
+    const canManageRoles = Boolean(roleAction);
+    const actionItems = activeActions.map((action, index) => ({
+      ariaLabel: action.label,
+      id: action.id,
+      label: action.label,
+      onSelect: action.onSelect,
+      sectionBefore: index === 0
+    }));
     return [
+      { id: "profile", label: "Profile", onSelect: noop },
+      { id: "mention", label: "Mention", onSelect: noop },
       {
-        id: "send-dm",
-        label: "Send DM",
-        onSelect: () => onDirectMessage(memberId)
+        ariaLabel: canMessage ? "Send DM" : undefined,
+        disabled: !canMessage,
+        id: "message",
+        label: "Message",
+        onSelect: canMessage && memberId ? () => onDirectMessage?.(memberId) : undefined
       },
-      ...items
+      { disabled: true, id: "start-call", label: "Start a Call" },
+      { disabled: true, id: "edit-note", label: "Edit Note", meta: "Only visible to you" },
+      { disabled: true, id: "nickname", label: "Add Friend Nickname" },
+      ...actionItems,
+      { disabled: true, icon: "›", id: "apps", label: "Apps", sectionBefore: actionItems.length === 0 },
+      { disabled: true, icon: "›", id: "invite", label: "Invite to Server" },
+      { disabled: true, id: "remove-friend", label: "Remove Friend" },
+      { disabled: true, id: "ignore", label: "Ignore" },
+      { disabled: true, id: "block", label: "Block", variant: "danger" },
+      { disabled: !canManageRoles, icon: "›", id: "roles", label: "Roles", onSelect: roleAction?.onSelect, sectionBefore: true },
+      { disabled: !canManageRoles, id: "mod-view", label: "Open in Mod View", onSelect: roleAction?.onSelect, sectionBefore: true }
     ];
   }, [additionalActions, currentUserId, memberId, onDirectMessage]);
 
@@ -54,39 +91,55 @@ export function MemberContextMenu({
   }, [position]);
 
   function openMenu(event: React.MouseEvent) {
-    if (!actions.length) return;
     event.preventDefault();
     event.stopPropagation();
-    const menuWidth = 190;
-    const menuHeight = 42 + actions.length * 36;
+    const menuWidth = 224;
+    const menuHeight = 66 + menuItems.length * 36;
     setPosition({
       x: Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8)),
       y: Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8))
     });
   }
 
-  function selectAction(action: MemberContextMenuAction) {
+  function selectItem(item: ContextMenuItem) {
+    if (item.disabled || !item.onSelect) return;
     setPosition(undefined);
-    action.onSelect();
+    item.onSelect();
   }
 
   return (
     <span className="member-context-target" onContextMenu={openMenu}>
       {children}
       {position ? createPortal(
-        <div
-          className="member-context-menu"
-          role="menu"
-          style={{ left: position.x, top: position.y }}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {actions.map((action) => (
-            <button type="button" role="menuitem" onClick={() => selectAction(action)} key={action.id}>
-              {action.label}
-            </button>
-          ))}
-          <span>{memberName}</span>
-        </div>,
+        <>
+          <div className="context-menu-shroud" role="presentation" onMouseDown={() => setPosition(undefined)} />
+          <div
+            className="member-context-menu rich-context-menu"
+            role="menu"
+            style={{ left: position.x, top: position.y }}
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="context-menu-header">{memberName}</div>
+            {menuItems.map((item) => (
+              <button
+                aria-label={item.ariaLabel}
+                className={`${item.sectionBefore ? "sectioned" : ""}${item.variant === "danger" ? " danger" : ""}`}
+                disabled={item.disabled}
+                type="button"
+                role="menuitem"
+                onClick={() => selectItem(item)}
+                key={item.id}
+              >
+                <span>
+                  <strong>{item.label}</strong>
+                  {item.meta ? <small>{item.meta}</small> : null}
+                </span>
+                {item.icon ? <span className="context-menu-icon">{item.icon}</span> : null}
+              </button>
+            ))}
+          </div>
+        </>,
         document.body
       ) : null}
     </span>

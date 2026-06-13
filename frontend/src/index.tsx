@@ -1,1 +1,1 @@
-export { mountRoomKitApp, mountRoomKitChat } from "@app/roomkitChat";
+export { mountMatterhornApp, mountMatterhornChat } from "@app/matterhornChat";

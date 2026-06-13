@@ -1,7 +1,7 @@
 node_modules/
 frontend/dist/
 frontend/node_modules/
-.roomkit-live/
-.roomkit-live-objects/
+.matterhorn-live/
+.matterhorn-live-objects/
 .tmp/
 *.onnx

@@ -1,5 +1,5 @@
-import type { RoomKitEphemeralToken } from "roomkit-sdk/browser/liveRoomConnector";
-import type { CallMediaSettings, CallMediaTrackInfo, ScreenPreviewSnapshot, SfuCallState } from "roomkit-sdk/browser/types";
+import type { MatterhornEphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
+import type { CallMediaSettings, CallMediaTrackInfo, ScreenPreviewSnapshot, SfuCallState } from "matterhorn-sdk/browser/types";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { MediaRoom } from "@entities/chat/model/types";
 
@@ -25,7 +25,7 @@ export type VoiceRoomViewProps = {
   room: MediaRoom;
   sfu: SfuCallState;
   voicePreferences: VoicePreferences;
-  voiceTokens: RoomKitEphemeralToken[];
+  voiceTokens: MatterhornEphemeralToken[];
   mutedVoiceParticipantIds?: Record<string, boolean>;
   onDirectMessage?: (memberId: string) => void;
   onStopWatchingScreenShare?: (participantId: string) => void;

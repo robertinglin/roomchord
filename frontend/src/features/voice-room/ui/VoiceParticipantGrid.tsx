@@ -6,7 +6,7 @@ import { MicIcon, MicOffIcon, ScreenIcon, SpeakerIcon, VideoIcon, VideoOffIcon }
 import { MemberContextMenu, type MemberContextMenuAction } from "@shared/ui/MemberContextMenu";
 import type { VoiceParticipant } from "@features/voice-room/model/types";
 import { audioOn, cameraOn, cameraStream, isVoiceParticipantMuted, mediaLabel, participantGridClass, screenOn } from "@features/voice-room/model/voiceParticipants";
-import type { ScreenPreviewSnapshot } from "roomkit-sdk/browser/types";
+import type { ScreenPreviewSnapshot } from "matterhorn-sdk/browser/types";
 
 export function VoiceParticipantGrid({
   actorId,

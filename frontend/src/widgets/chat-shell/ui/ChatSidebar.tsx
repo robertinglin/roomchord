@@ -5,7 +5,8 @@ import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiSto
 import { ChannelSidebar } from "@features/channel-navigation/ui/ChannelSidebar";
 import { DirectMessages } from "@features/direct-messages/ui/DirectMessages";
 import { UserControls } from "@features/user-controls/ui/UserControls";
-import { CloseIcon } from "@shared/ui/Icons";
+import { CloseIcon, GearIcon } from "@shared/ui/Icons";
+import chordIconUrl from "../../../../../src/chord-icon.svg";
 
 export function ChatSidebar({
   onClose,
@@ -39,22 +40,29 @@ export function ChatSidebar({
         >
           <CloseIcon />
         </button>
-        <div>
+        <div className="room-wordmark">
+          <span className="room-wordmark-icon" style={{ maskImage: `url(${chordIconUrl})`, WebkitMaskImage: `url(${chordIconUrl})` }} />
+        </div>
+        <div className="room-title-lockup">
           <h1>Chord</h1>
-          <p>{view.roomLabel}</p>
+          <p>
+            <span className={`room-status-dot ${live.status}`} />
+            <span className="visually-hidden">{live.status}</span>
+            <span>{view.roomLabel}</span>
+          </p>
         </div>
         <span className="room-sidebar-actions">
-          <span className={`connection-state ${live.status}`}>{live.status}</span>
           {view.actorCanManageAnything ? (
             <button
               className="sidebar-manage-button"
               type="button"
+              aria-label="Manage"
               onClick={() => {
                 actions.openManageDialog("overview");
                 handleNavigate();
               }}
             >
-              Manage
+              <GearIcon />
             </button>
           ) : null}
         </span>

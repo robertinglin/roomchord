@@ -1,5 +1,5 @@
 import React from "react";
-import type { VoicePipelineDiagnosticResult } from "roomkit-sdk/browser/voicePipelineDiagnostics";
+import type { VoicePipelineDiagnosticResult } from "matterhorn-sdk/browser/voicePipelineDiagnostics";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 
 const MIN_POSITIVE_INPUT_GAIN = 0.01;

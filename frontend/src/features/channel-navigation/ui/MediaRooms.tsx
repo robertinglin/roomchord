@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import type { CallMediaSettings } from "roomkit-sdk/browser/types";
-import type { RoomKitEphemeralToken } from "roomkit-sdk/browser/liveRoomConnector";
+import type { CallMediaSettings } from "matterhorn-sdk/browser/types";
+import type { MatterhornEphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
 import { groupedChannelItems, optionalChannelGroup } from "@entities/chat/model/channelGroups";
 import type { ChatState, MediaRoom } from "@entities/chat/model/types";
 import { canEditRoom, canViewRoom } from "@entities/chat/model/roles";
@@ -12,7 +12,7 @@ export type MediaRoomsProps = {
   state: ChatState;
   activeRoomId?: string;
   selectedRoomId?: string;
-  voiceTokens: RoomKitEphemeralToken[];
+  voiceTokens: MatterhornEphemeralToken[];
   canManageRooms: boolean;
   currentUserId?: string;
   currentRoleIds: string[];
@@ -23,11 +23,11 @@ export type MediaRoomsProps = {
   onToggleVoiceParticipantMute?: (participantId: string) => void;
 };
 
-function tokenAvatar(token: RoomKitEphemeralToken) {
+function tokenAvatar(token: MatterhornEphemeralToken) {
   return typeof token.payload?.avatar === "string" ? token.payload.avatar : undefined;
 }
 
-function connectedVoiceMembers(tokens: RoomKitEphemeralToken[], roomId: string) {
+function connectedVoiceMembers(tokens: MatterhornEphemeralToken[], roomId: string) {
   const members: Array<{ avatar?: string; key: string; memberId?: string; name: string; participantId: string }> = [];
   const seen = new Set<string>();
   for (const token of tokens) {

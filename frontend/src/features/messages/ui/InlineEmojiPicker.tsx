@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
-import { createRoomkitEmojiPicker, type RoomkitEmojiPicker } from "roomkit-sdk/browser/emojiPicker";
-import type { RoomkitEmoji } from "roomkit-sdk/browser/emojiData";
+import { createRoomkitEmojiPicker, type RoomkitEmojiPicker } from "matterhorn-sdk/browser/emojiPicker";
+import type { RoomkitEmoji } from "matterhorn-sdk/browser/emojiData";
 
 export function InlineEmojiPicker({ ariaLabel, searchPlaceholder, onSelect }: { ariaLabel: string; searchPlaceholder: string; onSelect: (emoji: string) => void }) {
   const targetRef = useRef<HTMLDivElement>(null);

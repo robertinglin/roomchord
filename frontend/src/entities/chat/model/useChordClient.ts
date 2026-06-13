@@ -1,12 +1,12 @@
 import { useMemo } from "react";
-import { getDirectMessageThreads } from "roomkit-sdk/browser/directMessages";
-import type { RoomKitRoom } from "roomkit-sdk/client";
-import { useRoom } from "roomkit-sdk/react";
+import { getDirectMessageThreads } from "matterhorn-sdk/browser/directMessages";
+import type { MatterhornRoom } from "matterhorn-sdk/client";
+import { useRoom } from "matterhorn-sdk/react";
 import type { Chord } from "../../../../../src/types";
 import type { Actor, ChatEmbed, ChatState } from "@entities/chat/model/types";
 import type { ChatProps } from "@entities/chat/model/types";
 
-type ChordRoom = RoomKitRoom<Chord>;
+type ChordRoom = MatterhornRoom<Chord>;
 
 export type ChordLiveClient = Omit<ChordRoom, "actor" | "can" | "state" | "subscribe"> & {
   readonly actor: Actor;

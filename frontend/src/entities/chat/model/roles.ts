@@ -1,4 +1,4 @@
-import { roomkitDisplayName } from "roomkit-sdk/browser/displayName";
+import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
 import type { Actor, MediaRoom, MemberRoleAssignment, Presence, RoleDefinition, RoleId, RoomMember, RoomRoleAccessLevel } from "@entities/chat/model/types";
 
 export const DEFAULT_ROLES: Record<string, RoleDefinition> = {
@@ -57,7 +57,7 @@ export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMemb
     if (member.revokedAt || member.bannedAt) continue;
     const id = memberIdFromEntry(key, member);
     if (!id) continue;
-    members.set(id, { id, name: roomkitDisplayName({ member, fallbackId: id }), baseRole: member.role });
+    members.set(id, { id, name: matterhornDisplayName({ member, fallbackId: id }), baseRole: member.role });
   }
   for (const [key, item] of Object.entries(presence || {})) {
     const id = memberIdFromEntry(key, item);
@@ -65,13 +65,13 @@ export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMemb
     const current = members.get(id);
     members.set(id, {
       id,
-      name: roomkitDisplayName({ presence: item, fallback: current?.name, fallbackId: id }),
+      name: matterhornDisplayName({ presence: item, fallback: current?.name, fallbackId: id }),
       baseRole: current?.baseRole
     });
   }
   members.set(actor.memberId, {
     id: actor.memberId,
-    name: roomkitDisplayName({ actor, fallback: members.get(actor.memberId)?.name, fallbackId: actor.memberId }),
+    name: matterhornDisplayName({ actor, fallback: members.get(actor.memberId)?.name, fallbackId: actor.memberId }),
     baseRole: actor.role
   });
   return [...members.values()]
