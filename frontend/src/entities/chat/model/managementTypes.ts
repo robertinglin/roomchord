@@ -1,6 +1,6 @@
 import type { RoomRoleAccess } from "@entities/chat/model/types";
 
-export type ManagementTab = "overview" | "channels" | "voice" | "roles" | "members";
+export type ManagementTab = "overview" | "channels" | "voice" | "roles" | "members" | "admin";
 export type RoleInput = { roleId: string; name: string; description?: string; color?: string };
 export type RoleUpdateInput = { name?: string; description?: string; color?: string };
 export type RoomSettings = { name?: string; group?: string | null; allowsVideo?: boolean; locked?: boolean; roleAccess?: RoomRoleAccess };
@@ -10,5 +10,6 @@ export const MANAGEMENT_TABS: Array<{ id: ManagementTab; label: string }> = [
   { id: "channels", label: "Channels" },
   { id: "voice", label: "Voice" },
   { id: "roles", label: "Roles" },
-  { id: "members", label: "Members" }
+  { id: "members", label: "Members" },
+  { id: "admin", label: "Admin" }
 ];

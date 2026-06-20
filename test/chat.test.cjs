@@ -21,6 +21,7 @@ const {
 const { createLiveExampleBackend } = require("../shared/liveBackend.cjs");
 const sdkApp = require("../src/sdk-app.cjs");
 const app = require("../src/sdk-app.cjs").toMatterhornExports();
+const MEDIA_ROOMS_PLUGIN_ID = "gg.matterhorn.examples.plugins.media-rooms";
 
 function primaryAction(type) {
   return app.appPack.composition.actions.find((action) => (action.plugin === "primary" || action.plugin === "$primary") && (!type || action.type === type));
@@ -49,6 +50,13 @@ function samplePayload(type) {
     "guest.update": { name: "Alice", rsvp: "yes" },
     "list.create": { title: "Backlog" },
     "channel.create": { name: "general" },
+    "invite.disable": { inviteId: "invite_1" },
+    "invite.remove": { inviteId: "invite_1" },
+    "join.approve": { requestId: "join_1" },
+    "join.deny": { requestId: "join_1" },
+    "member.ban": { memberId: "lee", reason: "spam" },
+    "member.moderate": { memberId: "lee", chatDisabled: true },
+    "member.unban": { memberId: "lee" },
     "page.create": { title: "Home", body: "Welcome" },
     "poll.create": { title: "Choose", options: ["A", "B"] },
     "category.create": { name: "Venue", limit: 1000 },
@@ -165,7 +173,7 @@ test("Chat schema starts with default text and voice channels", async () => {
     archivedAt: null
   });
 
-  const defaultRoom = state.plugins["gg.matterhorn.examples.plugins.media-rooms"].rooms.general_voice;
+  const defaultRoom = state.plugins[MEDIA_ROOMS_PLUGIN_ID].rooms.general_voice;
   assert.equal(defaultRoom.id, "general_voice");
   assert.equal(defaultRoom.name, "General");
   assert.equal(defaultRoom.group, "General");
@@ -175,6 +183,46 @@ test("Chat schema starts with default text and voice channels", async () => {
   assert.deepEqual(defaultRoom.roleAccess, {});
   assert.deepEqual(defaultRoom.participants, {});
   assert.equal(defaultRoom.createdBy, "system");
+});
+
+test("Chat admin moderation merges member standing without losing sibling flags", async () => {
+  for (const type of ["member.moderate", "member.ban", "member.unban", "invite.disable", "invite.remove", "join.approve", "join.deny"]) {
+    assert.ok(primaryAction(type), `${type} action required`);
+  }
+
+  const rt = await runtime();
+  const mute = await rt.handleOperation(operation({ type: "member.moderate" }, {
+    id: "moderate_lee",
+    seq: 1,
+    createdAt: 1000,
+    payload: { memberId: "lee", chatDisabled: true, nameLocked: true }
+  }));
+  assert.equal(mute.ok, true, mute.reason);
+
+  const ban = await rt.handleOperation(operation({ type: "member.ban" }, {
+    id: "ban_lee",
+    seq: 2,
+    createdAt: 1100,
+    payload: { memberId: "lee", reason: "spam" }
+  }));
+  assert.equal(ban.ok, true, ban.reason);
+
+  const unban = await rt.handleOperation(operation({ type: "member.unban" }, {
+    id: "unban_lee",
+    seq: 3,
+    createdAt: 1200,
+    payload: { memberId: "lee" }
+  }));
+  assert.equal(unban.ok, true, unban.reason);
+
+  const lee = (await rt.getState()).plugins[app.hostPlugin.id].guests.lee;
+  assert.equal(lee.memberId, "lee");
+  assert.equal(lee.nameLocked, true);
+  assert.equal(lee.chatDisabled, false);
+  assert.equal(lee.bannedAt, null);
+  assert.equal(lee.banReason, null);
+  assert.equal(lee.bannedBy, "admin");
+  assert.equal(lee.unbannedBy, "admin");
 });
 
 test("Chat message authors can edit and delete their own messages while admins can only delete others", async () => {
@@ -430,23 +478,23 @@ test("Chat media rooms enforce composite role tags for hidden and read-only room
 
   const create = await rt.handleOperation(operation({ type: "media.room.create" }, {
     id: "create_launch_room",
-    pluginId: "gg.matterhorn.examples.plugins.media-rooms",
+    pluginId: MEDIA_ROOMS_PLUGIN_ID,
     payload: { name: "Launch Leads", group: "Launch", allowsVideo: true, roleAccess: { launch: "readonly", moderator: "editor" } },
     actor: admin
   }));
   assert.equal(create.ok, true, create.reason);
   const roomId = `media_room_${create.acceptedLedgerId}`;
-  let mediaRooms = (await rt.getState()).plugins["gg.matterhorn.examples.plugins.media-rooms"].rooms;
+  let mediaRooms = (await rt.getState()).plugins[MEDIA_ROOMS_PLUGIN_ID].rooms;
   assert.equal(mediaRooms[roomId].group, "Launch");
 
   const leeView = await rt.publicView(lee);
-  assert.equal(leeView.plugins["gg.matterhorn.examples.plugins.media-rooms"].rooms.some((room) => room.id === roomId), true);
+  assert.equal(leeView.plugins[MEDIA_ROOMS_PLUGIN_ID].rooms.some((room) => room.id === roomId), true);
   const samView = await rt.publicView(sam);
-  assert.equal(samView.plugins["gg.matterhorn.examples.plugins.media-rooms"].rooms.some((room) => room.id === roomId), false);
+  assert.equal(samView.plugins[MEDIA_ROOMS_PLUGIN_ID].rooms.some((room) => room.id === roomId), false);
 
   const leeJoinReadonly = await rt.handleOperation(operation({ type: "media.room.join" }, {
     id: "lee_join_readonly_launch_room",
-    pluginId: "gg.matterhorn.examples.plugins.media-rooms",
+    pluginId: MEDIA_ROOMS_PLUGIN_ID,
     payload: { roomId, media: { audio: true, video: false } },
     actor: lee
   }));
@@ -455,7 +503,7 @@ test("Chat media rooms enforce composite role tags for hidden and read-only room
 
   const modJoin = await rt.handleOperation(operation({ type: "media.room.join" }, {
     id: "mod_join_launch_room",
-    pluginId: "gg.matterhorn.examples.plugins.media-rooms",
+    pluginId: MEDIA_ROOMS_PLUGIN_ID,
     payload: { roomId, media: { audio: true, video: false } },
     actor: mod
   }));
@@ -463,17 +511,17 @@ test("Chat media rooms enforce composite role tags for hidden and read-only room
 
   const update = await rt.handleOperation(operation({ type: "media.room.update" }, {
     id: "make_launch_room_editable",
-    pluginId: "gg.matterhorn.examples.plugins.media-rooms",
+    pluginId: MEDIA_ROOMS_PLUGIN_ID,
     payload: { roomId, group: null, roleAccess: { launch: "editor" } },
     actor: admin
   }));
   assert.equal(update.ok, true, update.reason);
-  mediaRooms = (await rt.getState()).plugins["gg.matterhorn.examples.plugins.media-rooms"].rooms;
+  mediaRooms = (await rt.getState()).plugins[MEDIA_ROOMS_PLUGIN_ID].rooms;
   assert.equal(mediaRooms[roomId].group, null);
 
   const leeJoin = await rt.handleOperation(operation({ type: "media.room.join" }, {
     id: "lee_join_editable_launch_room",
-    pluginId: "gg.matterhorn.examples.plugins.media-rooms",
+    pluginId: MEDIA_ROOMS_PLUGIN_ID,
     payload: { roomId, media: { audio: true, video: false } },
     actor: lee
   }));

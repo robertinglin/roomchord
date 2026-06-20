@@ -228,22 +228,22 @@ button {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border-radius: var(--panel-radius);
-  background: var(--accent-soft);
+  border-radius: 4px;
+  background: transparent;
   color: var(--accent);
 }
 
 .room-wordmark-icon {
-  width: 18px;
-  height: 14px;
+  width: 24px;
+  height: 18px;
   display: block;
-  background: currentColor;
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: contain;
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
+  color: var(--accent);
+}
+
+.room-wordmark-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .room-title-lockup {
@@ -323,6 +323,26 @@ button {
   color: var(--quiet);
   background: transparent;
   cursor: pointer;
+}
+
+.room-launch-home {
+  --mtn-home-font: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.room-launch-home::part(toggle) {
+  width: var(--control-size);
+  height: var(--control-size);
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  box-shadow: none;
+}
+
+.room-launch-home::part(toggle):hover,
+.room-launch-home::part(toggle):focus {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .sidebar-manage-button:hover,
@@ -2428,27 +2448,82 @@ button {
   outline: none;
 }
 
-.embed-dialog-shroud {
+.message-embed-fullscreen {
   position: fixed;
   inset: 0;
   z-index: 80;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   padding: var(--space-3);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.message-embed-fullscreen .embed-dialog-shroud {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   background: oklch(0.12 0.006 260 / 0.82);
 }
 
-.embed-dialog {
-  min-width: 0;
+.message-embed-fullscreen .embed-dialog-header {
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: var(--panel-radius) var(--panel-radius) 0 0;
+  background: var(--panel-bg);
+}
+
+.message-embed-fullscreen .embed-frame-shell {
+  position: relative;
+  z-index: 1;
   min-height: 0;
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 var(--panel-radius) var(--panel-radius);
+  background: var(--panel-bg);
+}
+
+.message-embed-fullscreen .embed-frame,
+.message-embed-fullscreen .embed-media {
   width: 100%;
   height: 100%;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: var(--panel-radius);
-  background: var(--panel-bg);
-  box-shadow: var(--shadow);
+  min-height: 0;
+  aspect-ratio: auto;
+  max-height: none;
+}
+
+.message-embed-fullscreen {
+  animation: embed-fullscreen-in 180ms ease-out forwards;
+}
+
+.message-embed-fullscreen.message-embed-fullscreen-exit {
+  animation: embed-fullscreen-out 160ms ease-in forwards;
+}
+
+@keyframes embed-fullscreen-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes embed-fullscreen-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
 }
 
 .embed-dialog-header {
@@ -2461,13 +2536,13 @@ button {
   border-bottom: 1px solid var(--border);
 }
 
-.embed-dialog .embed-meta {
+.embed-dialog-header .embed-meta {
   min-width: 0;
   display: grid;
   gap: var(--space-1);
 }
 
-.embed-dialog .embed-meta strong {
+.embed-dialog-header .embed-meta strong {
   min-width: 0;
   overflow: hidden;
   color: var(--text);
@@ -2475,26 +2550,11 @@ button {
   white-space: nowrap;
 }
 
-.embed-dialog .embed-provider {
+.embed-dialog-header .embed-provider {
   color: var(--quiet);
   font-size: 10px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-}
-
-.embed-dialog-body {
-  min-height: 0;
-  display: grid;
-  background: var(--sidebar-deep);
-}
-
-.embed-dialog-frame {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  display: block;
-  border: 0;
-  background: var(--sidebar-deep);
 }
 
 .edit-form {
@@ -3035,7 +3095,7 @@ button {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .embed-dialog-shroud {
+  .message-embed-fullscreen {
     padding: 8px;
   }
 
@@ -3527,7 +3587,7 @@ button {
 
 .manage-overview-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
@@ -3775,4 +3835,108 @@ button {
 .member-role-picker small {
   color: var(--quiet);
   font-size: 12px;
+}
+
+.admin-control-panel {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.admin-control-group {
+  min-width: 0;
+  display: grid;
+  gap: var(--item-gap);
+  padding: var(--space-3);
+  border: 1px solid oklch(0.55 0.012 250 / 0.12);
+  border-radius: var(--panel-radius);
+  background: var(--sidebar-deep);
+}
+
+.admin-control-heading,
+.admin-control-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--item-gap);
+  align-items: center;
+}
+
+.admin-control-heading h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
+.admin-control-heading small,
+.admin-control-summary small,
+.admin-empty {
+  color: var(--quiet);
+  font-size: 12px;
+}
+
+.admin-control-list {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.admin-control-row {
+  min-height: 44px;
+  padding: var(--item-padding);
+  border-radius: var(--item-radius);
+  background: var(--field-bg);
+}
+
+.admin-control-summary {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.admin-control-summary strong,
+.admin-control-summary small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-control-summary strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.admin-control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.admin-control-actions button {
+  min-height: 30px;
+  padding: 0 9px;
+  border-radius: var(--item-radius);
+  color: var(--muted);
+  background: var(--panel-bg);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.admin-control-actions button:not(:disabled):hover,
+.admin-control-actions button:not(:disabled):focus {
+  color: var(--text);
+  background: var(--panel-hover);
+  outline: none;
+}
+
+.admin-control-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.admin-empty {
+  margin: 0;
+  padding: var(--item-padding);
 }

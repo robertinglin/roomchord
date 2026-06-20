@@ -1,6 +1,8 @@
 node_modules/
 frontend/dist/
 frontend/node_modules/
+frontend/matterhorn-frontend-manifest.json
+frontend/matterhorn-frontend-bundle.zip
 .matterhorn-live/
 .matterhorn-live-objects/
 .tmp/

@@ -5,7 +5,7 @@ import type { ActiveView } from "@entities/chat/model/chatUiStore";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { canEditRoom, canViewRoom, assignedRoleIds } from "@entities/chat/model/roles";
-import { channelThreads, directUnreadCounts, directUnreadCountsUsingNotifications, latestDirectMessageTime, visibleChannelMessages } from "@entities/chat/model/state";
+import { channelThreads, directUnreadCounts, directUnreadCountsUsingNotifications, latestDirectMessageTime, memberChatDisabled, visibleChannelMessages } from "@entities/chat/model/state";
 import type { ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
 import type { ChordLiveClient } from "@entities/chat/model/useChordClient";
 import type { ChannelId, DirectThread, ThreadId } from "@entities/chat/model/types";
@@ -69,7 +69,9 @@ export function useChatViewData(input: ChatViewDataInput) {
   const actorCanManageRooms = live.can("mediaRoomCreate");
   const actorCanCreateChannels = live.can("channelCreate");
   const actorCanManageRoles = live.can("roleCreate");
-  const actorCanManageAnything = actorCanManageRooms || actorCanCreateChannels || actorCanManageRoles;
+  const actorCanManageMembers = live.can("banMember") || live.can("moderateMember") || live.can("disableInvite") || live.can("approveJoinRequest");
+  const actorCanManageAnything = actorCanManageRooms || actorCanCreateChannels || actorCanManageRoles || actorCanManageMembers;
+  const actorChatDisabled = memberChatDisabled(state, live.actor.memberId);
   const actorRoleIds = useMemo(() => assignedRoleIds(live.actor.memberId, live.actor.role, state.memberRoles), [live.actor.memberId, live.actor.role, state.memberRoles]);
   const effectiveVoicePreferences = useMemo(
     () => input.voiceSettingsOpen && !input.voicePreferences.deafened ? { ...input.voicePreferences, deafened: true } : input.voicePreferences,
@@ -121,8 +123,10 @@ export function useChatViewData(input: ChatViewDataInput) {
     activeThread,
     actorCanCreateChannels,
     actorCanManageAnything,
+    actorCanManageMembers,
     actorCanManageRoles,
     actorCanManageRooms,
+    actorChatDisabled,
     actorName,
     actorRoleIds,
     channels,

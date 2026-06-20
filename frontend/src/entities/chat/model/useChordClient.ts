@@ -58,6 +58,9 @@ export function useChordClient(_props: ChatProps = {}): ChordLiveClient {
       get notifications() {
         return room.notifications;
       },
+      get membership() {
+        return room.membership;
+      },
       get ready() {
         return room.status !== "connecting";
       },

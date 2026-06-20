@@ -6,14 +6,20 @@ import { ChannelSidebar } from "@features/channel-navigation/ui/ChannelSidebar";
 import { DirectMessages } from "@features/direct-messages/ui/DirectMessages";
 import { UserControls } from "@features/user-controls/ui/UserControls";
 import { CloseIcon, GearIcon } from "@shared/ui/Icons";
-import chordIconUrl from "../../../../../src/chord-icon.svg";
+import { MtnHome } from "matterhorn-sdk/react";
+import type { ChatProps } from "@entities/chat/model/types";
+import chordIconSvg from "../../../../../src/chord-icon.svg?raw";
 
 export function ChatSidebar({
+  launchHome,
   onClose,
-  onNavigate
+  onNavigate,
+  onOpenLaunchHomeRoom
 }: {
+  launchHome?: ChatProps["launchHome"];
   onClose?: () => void;
   onNavigate?: () => void;
+  onOpenLaunchHomeRoom?: ChatProps["onOpenLaunchHomeRoom"];
 }) {
   const { actions, live, media, view } = useChatRuntime();
   const ui = useChatUiActions();
@@ -41,7 +47,18 @@ export function ChatSidebar({
           <CloseIcon />
         </button>
         <div className="room-wordmark">
-          <span className="room-wordmark-icon" style={{ maskImage: `url(${chordIconUrl})`, WebkitMaskImage: `url(${chordIconUrl})` }} />
+          <MtnHome
+            className="room-launch-home room-wordmark-home"
+            home={launchHome}
+            theme="dark"
+            buttonVariant="plain"
+            onOpenRoom={(detail) => {
+              onOpenLaunchHomeRoom?.(detail);
+              handleNavigate();
+            }}
+          >
+            <span className="room-wordmark-icon" aria-hidden="true" dangerouslySetInnerHTML={{ __html: chordIconSvg }} />
+          </MtnHome>
         </div>
         <div className="room-title-lockup">
           <h1>Chord</h1>

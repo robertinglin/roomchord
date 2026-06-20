@@ -36,6 +36,9 @@ const chat = defineModel({
         archivedAt: null
       }],
       messages: {},
+      guests: {},
+      publicInvites: [],
+      joinRequests: {},
       memberRoles: {}
       // activity: [] and roleDefinitions are seeded by the builder from `roles`.
     }
@@ -52,6 +55,9 @@ const chat = defineModel({
     // cross-partition validator is not yet wired into defineApp, so these
     // declarations describe intent without blocking the build.
     messages: { readClass: "window", integrityClass: "seq" },
+    guests: { readClass: "head", integrityClass: "signature" },
+    publicInvites: { readClass: "head", integrityClass: "signature" },
+    joinRequests: { readClass: "head", integrityClass: "signature" },
     activity: { readClass: "window", integrityClass: "seq" },
     channels: { readClass: "head", integrityClass: "signature" },
     memberRoles: { readClass: "head", integrityClass: "signature" },
@@ -59,7 +65,7 @@ const chat = defineModel({
   }
 });
 
-const { channels, messages, roleDefinitions, memberRoles } = chat.collections;
+const { channels, messages, guests, publicInvites, joinRequests, roleDefinitions, memberRoles } = chat.collections;
 
 /* ----- operations (faithful to the existing model.json) ----- */
 
@@ -142,6 +148,102 @@ const operations = {
     ({ ref, fx, guard }) => ({
       guards: [guard.ownerOrRole(messages, { id: ref.payload("messageId"), ownerField: "authorId", roles: ["moderator"], message: "Only message authors or moderators can delete messages." })],
       effects: [fx.mark(messages, { id: ref.payload("messageId"), set: { body: "", embeds: [], reactions: {}, pinnedAt: null, pinnedBy: null, deletedAt: ref.now(), deletedBy: ref.actor("memberId") }, activity: "marked record" })]
+    })
+  ),
+
+  "member.moderate": action(
+    { authorize: { roles: ["admin"] }, payload: { memberId: p.string({ max: 200 }), nameLocked: p.boolean().optional(), chatDisabled: p.boolean().optional() } },
+    ({ ref, fx }) => ({
+      effects: [fx.upsert(guests, {
+        id: ref.payload("memberId"),
+        set: {
+          memberId: ref.payload("memberId"),
+          nameLocked: ref.payload("nameLocked"),
+          chatDisabled: ref.payload("chatDisabled"),
+          moderatedAt: ref.now(),
+          moderatedBy: ref.actor("memberId")
+        },
+        activity: "moderated member"
+      })]
+    })
+  ),
+
+  "member.ban": action(
+    { authorize: { roles: ["admin"] }, payload: { memberId: p.string({ max: 200 }), reason: p.string({ max: 300 }).nullable().optional() } },
+    ({ ref, fx }) => ({
+      effects: [fx.upsert(guests, {
+        id: ref.payload("memberId"),
+        set: {
+          memberId: ref.payload("memberId"),
+          bannedAt: ref.now(),
+          banReason: ref.payload("reason", null),
+          chatDisabled: true,
+          bannedBy: ref.actor("memberId")
+        },
+        activity: "banned member"
+      })]
+    })
+  ),
+
+  "member.unban": action(
+    { authorize: { roles: ["admin"] }, payload: { memberId: p.string({ max: 200 }) } },
+    ({ ref, fx }) => ({
+      effects: [fx.upsert(guests, {
+        id: ref.payload("memberId"),
+        set: {
+          memberId: ref.payload("memberId"),
+          bannedAt: null,
+          banReason: null,
+          chatDisabled: false,
+          unbannedAt: ref.now(),
+          unbannedBy: ref.actor("memberId")
+        },
+        activity: "unbanned member"
+      })]
+    })
+  ),
+
+  "invite.disable": action(
+    { authorize: { roles: ["admin"] }, payload: { inviteId: p.string({ max: 200 }) } },
+    ({ ref, fx }) => ({
+      effects: [fx.update(publicInvites, {
+        id: ref.payload("inviteId"),
+        set: { status: "disabled", disabledAt: ref.now(), disabledBy: ref.actor("memberId") },
+        activity: "disabled invite"
+      })]
+    })
+  ),
+
+  "invite.remove": action(
+    { authorize: { roles: ["admin"] }, payload: { inviteId: p.string({ max: 200 }) } },
+    ({ ref, fx }) => ({
+      effects: [fx.update(publicInvites, {
+        id: ref.payload("inviteId"),
+        set: { status: "removed", removedAt: ref.now(), removedBy: ref.actor("memberId") },
+        activity: "removed invite"
+      })]
+    })
+  ),
+
+  "join.approve": action(
+    { authorize: { roles: ["admin"] }, payload: { requestId: p.string({ max: 200 }) } },
+    ({ ref, fx }) => ({
+      effects: [fx.update(joinRequests, {
+        id: ref.payload("requestId"),
+        set: { status: "approved", decidedAt: ref.now(), decidedBy: ref.actor("memberId") },
+        activity: "approved join request"
+      })]
+    })
+  ),
+
+  "join.deny": action(
+    { authorize: { roles: ["admin"] }, payload: { requestId: p.string({ max: 200 }) } },
+    ({ ref, fx }) => ({
+      effects: [fx.update(joinRequests, {
+        id: ref.payload("requestId"),
+        set: { status: "denied", decidedAt: ref.now(), decidedBy: ref.actor("memberId") },
+        activity: "denied join request"
+      })]
     })
   ),
 
@@ -283,6 +385,13 @@ const app = defineApp({
   },
   model: chat.withOperations(operations),
   actions: {
+    moderateMember: { plugin: "primary", type: "member.moderate", requiredRole: "admin" },
+    banMember: { plugin: "primary", type: "member.ban", requiredRole: "admin" },
+    unbanMember: { plugin: "primary", type: "member.unban", requiredRole: "admin" },
+    disableInvite: { plugin: "primary", type: "invite.disable", requiredRole: "admin" },
+    removeInvite: { plugin: "primary", type: "invite.remove", requiredRole: "admin" },
+    approveJoinRequest: { plugin: "primary", type: "join.approve", requiredRole: "admin" },
+    denyJoinRequest: { plugin: "primary", type: "join.deny", requiredRole: "admin" },
     directMessageSend: { plugin: "core", type: "dm.message", requiredRole: "member" }
   },
   notifications: { definitions: notifications },

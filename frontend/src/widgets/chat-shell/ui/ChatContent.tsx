@@ -92,7 +92,7 @@ export function ChatContent() {
       currentUserId={live.actor.memberId}
       mode={view.showingDm ? "dm" : "channel"}
       feedKey={view.showingDm ? `dm:${view.currentThreadId || ""}` : `channel:${view.currentChannelId || ""}`}
-      disabled={view.showingDm ? !view.currentThreadId : !view.currentChannelId}
+      disabled={view.actorChatDisabled || (view.showingDm ? !view.currentThreadId : !view.currentChannelId)}
       onSend={(body) => view.showingDm ? actions.sendDirectMessage(body) : actions.sendChannelMessage(body)}
       onReply={view.showingDm ? undefined : actions.replyToMessage}
       onReact={view.showingDm ? undefined : actions.reactToMessage}

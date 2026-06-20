@@ -1,4 +1,4 @@
-import type { ChatEmbed, ChatState, CommentThread, Message, ScopedReaction } from "@entities/chat/model/types";
+import type { ChatEmbed, ChatState, CommentThread, MemberModeration, Message, PublicInvite, JoinRequest, ScopedReaction } from "@entities/chat/model/types";
 
 export const CHAT_DIRECT_PROTOCOL = "nostr.nip17";
 
@@ -6,6 +6,9 @@ export function emptyChatState(): ChatState {
   return {
     channels: [],
     messages: {},
+    guests: {},
+    publicInvites: [],
+    joinRequests: {},
     directThreads: {},
     directMessages: {},
     rooms: [],
@@ -20,6 +23,32 @@ export function emptyChatState(): ChatState {
     roleDefinitions: {},
     memberRoles: {}
   };
+}
+
+function adminState(state: ChatState) {
+  return state as ChatState & {
+    guests?: Record<string, MemberModeration>;
+    publicInvites?: PublicInvite[];
+    joinRequests?: Record<string, JoinRequest>;
+  };
+}
+
+export function memberModerationFor(state: ChatState, memberId?: string): MemberModeration | undefined {
+  if (!memberId) return undefined;
+  return adminState(state).guests?.[memberId];
+}
+
+export function memberChatDisabled(state: ChatState, memberId?: string): boolean {
+  const moderation = memberModerationFor(state, memberId);
+  return Boolean(moderation?.chatDisabled || moderation?.bannedAt);
+}
+
+export function publicInvitesForState(state: ChatState): PublicInvite[] {
+  return adminState(state).publicInvites || [];
+}
+
+export function joinRequestsForState(state: ChatState): JoinRequest[] {
+  return Object.values(adminState(state).joinRequests || {});
 }
 
 function safeThreadPart(value: string) {

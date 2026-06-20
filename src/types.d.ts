@@ -70,6 +70,35 @@ export namespace Chord {
     updatedAt?: number;
   }
   /**
+   * From primary model collection `guests`.
+   */
+  export interface Guest {
+    /**
+     * omit to leave unchanged; null to clear.
+     */
+    bannedAt?: null | number;
+    bannedBy?: string;
+    /**
+     * omit to leave unchanged; null to clear.
+     */
+    banReason?: null | string;
+    chatDisabled?: boolean;
+    memberId?: MemberId;
+    moderatedAt?: number;
+    moderatedBy?: string;
+    nameLocked?: boolean;
+    unbannedAt?: number;
+    unbannedBy?: string;
+  }
+  /**
+   * From primary model collection `joinRequests`.
+   */
+  export interface JoinRequest {
+    decidedAt?: number;
+    decidedBy?: string;
+    status?: string;
+  }
+  /**
    * From primary model collection `memberRoles`.
    */
   export interface MemberRole {
@@ -100,6 +129,16 @@ export namespace Chord {
     replyToId: MessageId | null;
   }
   /**
+   * From primary model collection `publicInvites`.
+   */
+  export interface PublicInvite {
+    disabledAt?: number;
+    disabledBy?: string;
+    removedAt?: number;
+    removedBy?: string;
+    status?: string;
+  }
+  /**
    * From primary model collection `roleDefinitions`.
    */
   export interface RoleDefinition {
@@ -124,10 +163,13 @@ export namespace Chord {
     directMessages: Record<MessageId, DirectMessage>;
     directThreads: Record<ThreadId, DirectThread>;
     embeds: Record<EmbedId, Embed>;
+    guests: Record<string, Guest>;
+    joinRequests: Record<string, JoinRequest>;
     memberRoles: Record<MemberId, MemberRole>;
     members: Record<MemberId, Member>;
     messages: Record<MessageId, Message>;
     presence: Record<MemberId, PresenceMember>;
+    publicInvites: PublicInvite[];
     reactions: Record<string, ScopedReaction>;
     roleDefinitions: Record<RoleId, RoleDefinition>;
     rooms: MediaRoom[];
@@ -157,12 +199,50 @@ export namespace Chord {
     channelRename: { channelId: ChannelId; name?: null | string; topic?: null | string; group?: null | string };
     /**
      * Requires `admin` role.
+     * inviteId: string, <= 200
+     */
+    inviteDisable: { inviteId: string };
+    /**
+     * Requires `admin` role.
+     * inviteId: string, <= 200
+     */
+    inviteRemove: { inviteId: string };
+    /**
+     * Requires `admin` role.
+     * requestId: string, <= 200
+     */
+    joinApprove: { requestId: string };
+    /**
+     * Requires `admin` role.
+     * requestId: string, <= 200
+     */
+    joinDeny: { requestId: string };
+    /**
+     * Requires `admin` role.
+     * memberId: string, <= 200
+     * reason: string, <= 300, nullable, omit to leave unchanged; null to clear
+     */
+    memberBan: { memberId: MemberId; reason?: null | string };
+    /**
+     * Requires `admin` role.
+     * memberId: string, <= 200
+     * nameLocked: boolean
+     * chatDisabled: boolean
+     */
+    memberModerate: { memberId: MemberId; nameLocked?: boolean; chatDisabled?: boolean };
+    /**
+     * Requires `admin` role.
      * memberId: string, <= 120
      * roleId: string, <= 80, nullable, omit to leave unchanged; null to clear
      * roleIds: array
      * displayName: string, <= 120, nullable, omit to leave unchanged; null to clear
      */
     memberRoleAssign: { memberId: MemberId; roleId?: RoleId | null; roleIds?: RoleId[]; displayName?: null | string };
+    /**
+     * Requires `admin` role.
+     * memberId: string, <= 200
+     */
+    memberUnban: { memberId: MemberId };
     /**
      * Requires `member` role.
      * messageId: string, <= 200
@@ -359,6 +439,44 @@ export namespace Chord {
      */
     reactionToggle: { emoji: string } & ScopeRef;
     /**
+     * Requires `admin` role.
+     * memberId: string, <= 200
+     * nameLocked: boolean
+     * chatDisabled: boolean
+     */
+    moderateMember: { memberId: MemberId; nameLocked?: boolean; chatDisabled?: boolean };
+    /**
+     * Requires `admin` role.
+     * memberId: string, <= 200
+     * reason: string, <= 300, nullable, omit to leave unchanged; null to clear
+     */
+    banMember: { memberId: MemberId; reason?: null | string };
+    /**
+     * Requires `admin` role.
+     * memberId: string, <= 200
+     */
+    unbanMember: { memberId: MemberId };
+    /**
+     * Requires `admin` role.
+     * inviteId: string, <= 200
+     */
+    disableInvite: { inviteId: string };
+    /**
+     * Requires `admin` role.
+     * inviteId: string, <= 200
+     */
+    removeInvite: { inviteId: string };
+    /**
+     * Requires `admin` role.
+     * requestId: string, <= 200
+     */
+    approveJoinRequest: { requestId: string };
+    /**
+     * Requires `admin` role.
+     * requestId: string, <= 200
+     */
+    denyJoinRequest: { requestId: string };
+    /**
      * Requires `member` role.
      * userIds: array
      * body: string
@@ -372,7 +490,14 @@ export namespace Chord {
     channelArchive: "channel.archive";
     channelCreate: "channel.create";
     channelRename: "channel.rename";
+    inviteDisable: "invite.disable";
+    inviteRemove: "invite.remove";
+    joinApprove: "join.approve";
+    joinDeny: "join.deny";
+    memberBan: "member.ban";
+    memberModerate: "member.moderate";
     memberRoleAssign: "member.role.assign";
+    memberUnban: "member.unban";
     messageDelete: "message.delete";
     messageEdit: "message.edit";
     messagePin: "message.pin";
@@ -402,6 +527,13 @@ export namespace Chord {
     embedAdd: "embed.add";
     embedRemove: "embed.remove";
     reactionToggle: "reaction.toggle";
+    moderateMember: "member.moderate";
+    banMember: "member.ban";
+    unbanMember: "member.unban";
+    disableInvite: "invite.disable";
+    removeInvite: "invite.remove";
+    approveJoinRequest: "join.approve";
+    denyJoinRequest: "join.deny";
     directMessageSend: "dm.message";
   };
   export interface Queries {

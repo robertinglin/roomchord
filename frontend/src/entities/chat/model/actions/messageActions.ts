@@ -21,6 +21,7 @@ export function messageActions(input: ChatActionHandlersInput) {
   // resolved client-side (member names live here), so we attach the resolved
   // recipient ids as `mentionIds`; the relay still never sees message content.
   async function sendChannelMessageToChannel(channelId: string, body: string) {
+    if (view.actorChatDisabled) return;
     const embeds = messageEmbeds(body);
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
     console.info("[roomchord.notifications] channel message mention resolution", {
@@ -41,6 +42,7 @@ export function messageActions(input: ChatActionHandlersInput) {
   }
 
   async function sendDirectMessageToThread(threadId: string, userIds: string[], body: string) {
+    if (view.actorChatDisabled) return;
     try {
       await dispatch("directMessageSend", { userIds: userIds as MemberId[], body });
     } catch {
@@ -75,6 +77,7 @@ export function messageActions(input: ChatActionHandlersInput) {
 
   async function replyToMessage(replyToId: string, body: string) {
     if (!view.currentChannelId) return;
+    if (view.actorChatDisabled) return;
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
     console.info("[roomchord.notifications] reply mention resolution", {
       channelId: view.currentChannelId,

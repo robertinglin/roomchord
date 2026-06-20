@@ -5,24 +5,24 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  matterhorn-sdk: link:../roomkit/packages/matterhorn-sdk
+  matterhorn-sdk: link:../matterhorn/packages/matterhorn-sdk
 
 importers:
 
   .:
     dependencies:
       '@mh-gg/base':
-        specifier: link:../roomkit/packages/matterhorn-core
-        version: link:../roomkit/packages/matterhorn-core
+        specifier: link:../matterhorn/packages/matterhorn-core
+        version: link:../matterhorn/packages/matterhorn-core
       '@mh-gg/host-runtime':
-        specifier: link:../roomkit/packages/matterhorn-host-runtime
-        version: link:../roomkit/packages/matterhorn-host-runtime
+        specifier: link:../matterhorn/packages/matterhorn-host-runtime
+        version: link:../matterhorn/packages/matterhorn-host-runtime
       '@mh-gg/protocol':
-        specifier: link:../roomkit/packages/matterhorn-protocol
-        version: link:../roomkit/packages/matterhorn-protocol
+        specifier: link:../matterhorn/packages/matterhorn-protocol
+        version: link:../matterhorn/packages/matterhorn-protocol
       matterhorn-sdk:
-        specifier: link:../roomkit/packages/matterhorn-sdk
-        version: link:../roomkit/packages/matterhorn-sdk
+        specifier: link:../matterhorn/packages/matterhorn-sdk
+        version: link:../matterhorn/packages/matterhorn-sdk
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -33,6 +33,9 @@ importers:
         specifier: ^4.5.7
         version: 4.5.7(@types/react@18.3.30)(react@18.3.1)
     devDependencies:
+      '@mh-gg/vite':
+        specifier: link:../matterhorn/packages/matterhorn-vite
+        version: link:../matterhorn/packages/matterhorn-vite
       '@testing-library/jest-dom':
         specifier: ^6.6.3
         version: 6.9.1

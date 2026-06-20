@@ -4,12 +4,14 @@ import type { ManagementTab } from "@entities/chat/model/managementTypes";
 export function ManageOverviewTab({
   channelCount,
   memberCount,
+  pendingAdminCount,
   roleCount,
   roomCount,
   onSelectTab
 }: {
   channelCount: number;
   memberCount: number;
+  pendingAdminCount: number;
   roleCount: number;
   roomCount: number;
   onSelectTab: (tab: ManagementTab) => void;
@@ -31,6 +33,10 @@ export function ManageOverviewTab({
       <button type="button" className="manage-overview-item" onClick={() => onSelectTab("members")}>
         <strong>{memberCount}</strong>
         <span>Members</span>
+      </button>
+      <button type="button" className="manage-overview-item" onClick={() => onSelectTab("admin")}>
+        <strong>{pendingAdminCount}</strong>
+        <span>Admin queue</span>
       </button>
     </div>
   );

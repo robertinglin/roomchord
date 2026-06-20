@@ -51,6 +51,42 @@ export function managementActions(input: ChatActionHandlersInput) {
     });
   }
 
+  async function moderateMember(memberId: string, moderation: { chatDisabled?: boolean; nameLocked?: boolean }) {
+    await dispatch("moderateMember", {
+      memberId: memberId as MemberId,
+      ...moderation
+    });
+  }
+
+  async function banMember(memberId: string, reason?: string) {
+    await dispatch("banMember", {
+      memberId: memberId as MemberId,
+      reason
+    });
+  }
+
+  async function unbanMember(memberId: string) {
+    await dispatch("unbanMember", {
+      memberId: memberId as MemberId
+    });
+  }
+
+  async function disableInvite(inviteId: string) {
+    await dispatch("disableInvite", { inviteId });
+  }
+
+  async function removeInvite(inviteId: string) {
+    await dispatch("removeInvite", { inviteId });
+  }
+
+  async function approveJoinRequest(requestId: string) {
+    await dispatch("approveJoinRequest", { requestId });
+  }
+
+  async function denyJoinRequest(requestId: string) {
+    await dispatch("denyJoinRequest", { requestId });
+  }
+
   function openManageDialog(tab: ManagementTab = "overview", memberId?: string) {
     input.ui.openManageDialog(tab, memberId);
   }
@@ -59,11 +95,18 @@ export function managementActions(input: ChatActionHandlersInput) {
     archiveMediaRoom,
     archiveRole,
     archiveTextChannel,
+    approveJoinRequest,
+    banMember,
     assignMemberRoles,
     createMediaRoom,
     createRole,
     createTextChannel,
+    denyJoinRequest,
+    disableInvite,
+    moderateMember,
     openManageDialog,
+    removeInvite,
+    unbanMember,
     updateMediaRoomSettings,
     updateRole,
     updateTextChannel

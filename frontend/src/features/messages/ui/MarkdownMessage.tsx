@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   parseMarkdown,
   type MarkdownDocument,
@@ -35,12 +35,6 @@ function singleEmojiBody(body: string) {
   const trimmed = body.trim();
   return SINGLE_EMOJI_RE.test(trimmed) ? trimmed : undefined;
 }
-
-type EmbedDialogState = {
-  embed: MarkdownEmbed;
-  title: string;
-  src: string;
-};
 
 function InlineText({
   currentUserId,
@@ -212,72 +206,106 @@ function providerClassName(embed: MarkdownEmbed) {
   return provider ? `message-embed-${provider}` : "";
 }
 
-function EmbedDialog({ embed, title, src, onClose }: { embed: MarkdownEmbed; title: string; src: string; onClose: () => void }) {
+export function EmbedCard({
+  embed,
+  isFullscreen,
+  onCloseFullscreen
+}: {
+  embed: MarkdownEmbed;
+  isFullscreen?: boolean;
+  onCloseFullscreen?: () => void;
+}) {
+  const href = matterhornEmbedExternalUrl(embed);
+  const title = matterhornEmbedTitle(embed);
+  const baseClassName = `message-embed message-embed-inline ${providerClassName(embed)}`;
   const closeRef = useRef<HTMLButtonElement>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = useCallback(() => {
+    if (isClosing || !isFullscreen) return;
+    setIsClosing(true);
+    closeTimeoutRef.current = window.setTimeout(() => {
+      closeTimeoutRef.current = null;
+      setIsClosing(false);
+      onCloseFullscreen?.();
+    }, 160);
+  }, [isClosing, isFullscreen, onCloseFullscreen]);
+
+
 
   useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        window.clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isFullscreen) return undefined;
     if (typeof document === "undefined" || typeof window === "undefined") return undefined;
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") handleClose();
     };
     window.addEventListener("keydown", closeOnEscape);
-    closeRef.current?.focus();
     return () => {
       window.removeEventListener("keydown", closeOnEscape);
       document.body.style.overflow = previousOverflow;
       previousFocus?.focus();
     };
-  }, [onClose]);
+  }, [isFullscreen, handleClose]);
 
-  return (
+  const fullscreenHeader = isFullscreen ? (
+    <header className="embed-dialog-header" key="header">
+      <span className="embed-meta">
+        <strong>{title}</strong>
+        {embed.provider ? <small className="embed-provider">{embed.provider}</small> : null}
+      </span>
+      <span className="embed-actions">
+        <button
+          ref={closeRef}
+          type="button"
+          className="embed-icon-button"
+          onClick={handleClose}
+          aria-label={`Close ${title} fullscreen`}
+          title={`Close ${title} fullscreen`}
+        >
+          <CloseIcon />
+        </button>
+      </span>
+    </header>
+  ) : null;
+
+  const fullscreenShroud = isFullscreen ? (
     <div
+      key="shroud"
       className="embed-dialog-shroud"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) handleClose();
       }}
-    >
-      <section className="embed-dialog" role="dialog" aria-modal="true" aria-label={`Fullscreen ${title}`}>
-        <header className="embed-dialog-header">
-          <span className="embed-meta">
-            <strong>{title}</strong>
-            {embed.provider ? <small className="embed-provider">{embed.provider}</small> : null}
-          </span>
-          <span className="embed-actions">
-            <button ref={closeRef} type="button" className="embed-icon-button" onClick={onClose} aria-label={`Close ${title} fullscreen`}>
-              <CloseIcon />
-            </button>
-          </span>
-        </header>
-        <div className="embed-dialog-body">
-          <iframe
-            className="embed-dialog-frame"
-            title={title}
-            src={src}
-            loading="lazy"
-            allow={MATTERHORN_EMBED_FRAME_ALLOW}
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-            sandbox={MATTERHORN_EMBED_FRAME_SANDBOX}
-          />
-        </div>
-      </section>
-    </div>
-  );
-}
+    />
+  ) : null;
 
-export function EmbedCard({ embed }: { embed: MarkdownEmbed }) {
-  const href = matterhornEmbedExternalUrl(embed);
-  const title = matterhornEmbedTitle(embed);
-  const embedClassName = `message-embed message-embed-inline ${providerClassName(embed)}`;
+  const fullscreenClassName = `${baseClassName}${isFullscreen ? " message-embed-fullscreen" : ""}${isFullscreen && isClosing ? " message-embed-fullscreen-exit" : ""}`;
+
   if (embed.renderMode === "iframe" || embed.renderMode === "file-preview") {
     const src = frameUrl(embed);
     if (src) {
       return (
-        <figure className={embedClassName}>
-          <span className="embed-frame-shell">
+        <figure
+          className={fullscreenClassName}
+          role={isFullscreen ? "dialog" : undefined}
+          aria-modal={isFullscreen ? "true" : undefined}
+          aria-label={isFullscreen ? `Fullscreen ${title}` : undefined}
+        >
+          {fullscreenShroud}
+          {fullscreenHeader}
+          <span className="embed-frame-shell" key="shell">
             <iframe
               className="embed-frame"
               title={title}
@@ -297,7 +325,7 @@ export function EmbedCard({ embed }: { embed: MarkdownEmbed }) {
     const src = matterhornEmbedSourceUrl(embed);
     if (src) {
       return (
-        <figure className={`${embedClassName} message-embed-image`}>
+        <figure className={`${baseClassName} message-embed-image`}>
           <span className="embed-frame-shell">
             <img className="embed-media" src={src} alt={title} loading="lazy" />
           </span>
@@ -309,7 +337,7 @@ export function EmbedCard({ embed }: { embed: MarkdownEmbed }) {
     const src = matterhornEmbedSourceUrl(embed);
     if (src) {
       return (
-        <figure className={`${embedClassName} message-embed-video`}>
+        <figure className={`${baseClassName} message-embed-video`}>
           <span className="embed-frame-shell">
             <video className="embed-media" src={src} controls preload="metadata" aria-label={title} />
           </span>
@@ -321,7 +349,7 @@ export function EmbedCard({ embed }: { embed: MarkdownEmbed }) {
     const src = matterhornEmbedSourceUrl(embed);
     if (src) {
       return (
-        <figure className={`${embedClassName} message-embed-audio`}>
+        <figure className={`${baseClassName} message-embed-audio`}>
           <span className="embed-frame-shell">
             <audio className="embed-audio" src={src} controls preload="metadata" aria-label={title} />
           </span>
@@ -368,12 +396,13 @@ export function MarkdownMessage({
   const largeEmoji = useMemo(() => singleEmojiBody(displayBody), [displayBody]);
   const parsed = useMemo(() => parseBody(body), [body]);
   const cards = richEmbeds(parsed.embeds);
-  const [dialog, setDialog] = useState<EmbedDialogState | null>(null);
-  const openFullscreen = (embed: MarkdownEmbed) => {
+  const [fullscreenUrl, setFullscreenUrl] = useState<string | null>(null);
+  const openFullscreen = useCallback((embed: MarkdownEmbed) => {
     const src = frameUrl(embed);
     if (!src) return;
-    setDialog({ embed, title: matterhornEmbedTitle(embed), src });
-  };
+    setFullscreenUrl(embed.url || null);
+  }, []);
+  const closeFullscreen = useCallback(() => setFullscreenUrl(null), []);
   if (largeEmoji) {
     return (
       <div className="message-markdown">
@@ -395,11 +424,15 @@ export function MarkdownMessage({
       {cards.length > 0 ? (
         <div className="embed-stack">
           {cards.map((embed, index) => (
-            <EmbedCard embed={embed} key={embed.url || index} />
+            <EmbedCard
+              embed={embed}
+              key={embed.url || index}
+              isFullscreen={fullscreenUrl !== null && fullscreenUrl === embed.url}
+              onCloseFullscreen={closeFullscreen}
+            />
           ))}
         </div>
       ) : null}
-      {dialog ? <EmbedDialog embed={dialog.embed} title={dialog.title} src={dialog.src} onClose={() => setDialog(null)} /> : null}
     </>
   );
 }

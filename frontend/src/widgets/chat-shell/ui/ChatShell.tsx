@@ -4,14 +4,20 @@ import { ChatManageDialog } from "@widgets/chat-shell/ui/ChatManageDialog";
 import { ChatPresenceRail } from "@widgets/chat-shell/ui/ChatPresenceRail";
 import { ChatSidebar } from "@widgets/chat-shell/ui/ChatSidebar";
 import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
+import type { ChatProps } from "@entities/chat/model/types";
 
-export function ChatShell() {
+export function ChatShell({ launchHome, onOpenLaunchHomeRoom }: Pick<ChatProps, "launchHome" | "onOpenLaunchHomeRoom">) {
   const sidebarOpen = useChatUiStore((value) => value.sidebarOpen);
   const ui = useChatUiActions();
 
   return (
     <main className={`chat-shell${sidebarOpen ? " mobile-sidebar-open" : ""}`}>
-      <ChatSidebar onClose={() => ui.closeSidebar()} onNavigate={() => ui.closeSidebar()} />
+      <ChatSidebar
+        launchHome={launchHome}
+        onClose={() => ui.closeSidebar()}
+        onNavigate={() => ui.closeSidebar()}
+        onOpenLaunchHomeRoom={onOpenLaunchHomeRoom}
+      />
       <div className="chat-sidebar-shroud" role="presentation" onClick={() => ui.closeSidebar()} />
       <ChatContent />
       <ChatManageDialog />

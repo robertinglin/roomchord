@@ -25,6 +25,8 @@ export function ChatApp(props: ChatProps) {
   }
 
   const roomName = live.envelope.room?.id || live.envelope.room?.name || "matterhorn-chord";
+  const launchHome = props.launchHome || props.home;
+  const openLaunchHomeRoom = props.onOpenLaunchHomeRoom || props.openRoom;
   const storageKeys: ChatStorageKeys = {
     closedDirectThreads: closedDirectThreadsStorageKey(roomName, live.actor.memberId),
     readAtByThread: directReadStorageKey(roomName, live.actor.memberId),
@@ -40,7 +42,7 @@ export function ChatApp(props: ChatProps) {
       storageKeys={storageKeys}
     >
       <ChatRuntimeProvider live={live} roomName={roomName}>
-        <ChatShell />
+        <ChatShell launchHome={launchHome} onOpenLaunchHomeRoom={openLaunchHomeRoom} />
       </ChatRuntimeProvider>
     </ChatUiStoreProvider>
   );

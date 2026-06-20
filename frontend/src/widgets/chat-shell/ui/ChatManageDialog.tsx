@@ -13,6 +13,7 @@ export function ChatManageDialog() {
       actor={live.actor}
       state={live.state}
       canCreateChannels={view.actorCanCreateChannels}
+      canManageMembers={view.actorCanManageMembers}
       canManageRooms={view.actorCanManageRooms}
       canManageRoles={view.actorCanManageRoles}
       initialTab={manageDialog.tab}
@@ -28,6 +29,13 @@ export function ChatManageDialog() {
       onUpdateRole={actions.updateRole}
       onArchiveRole={actions.archiveRole}
       onAssignMemberRoles={actions.assignMemberRoles}
+      onApproveJoinRequest={actions.approveJoinRequest}
+      onBanMember={actions.banMember}
+      onDenyJoinRequest={actions.denyJoinRequest}
+      onDisableInvite={actions.disableInvite}
+      onModerateMember={actions.moderateMember}
+      onRemoveInvite={actions.removeInvite}
+      onUnbanMember={actions.unbanMember}
     />
   );
 }

@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { matterhorn } from "@mh-gg/vite";
 import path from "node:path";
 
 export default defineConfig({
@@ -8,7 +9,7 @@ export default defineConfig({
   define: {
     "process.env.NODE_ENV": JSON.stringify("production")
   },
-  plugins: [react()],
+  plugins: [react(), matterhorn()],
   resolve: {
     alias: {
       "@app": path.resolve(__dirname, "src", "app"),
@@ -29,5 +30,5 @@ export default defineConfig({
       output: { inlineDynamicImports: true }
     }
   },
-  server: { host: "127.0.0.1", port: 42732, strictPort: true, allowedHosts: ["launch.matterhorn.gg", "launch.roomkit.app", "localhost", "127.0.0.1"] }
+  server: { host: "127.0.0.1", port: 42732, strictPort: true, allowedHosts: ["launch.matterhorn.gg", "launch.matterhorn.app", "localhost", "127.0.0.1"] }
 });

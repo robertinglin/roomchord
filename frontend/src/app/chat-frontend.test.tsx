@@ -20,6 +20,9 @@ import type { ChatState } from "@entities/chat/model/types";
 const state: ChatState = {
   channels: [{ id: "general", name: "general", topic: "Room coordination" }],
   messages: { m1: { id: "m1", channelId: "general", authorName: "Mina", authorId: "mina", body: "Welcome to the live chat app", reactions: {}, pinnedAt: null, deletedAt: null, createdAt: 1 } },
+  guests: {},
+  publicInvites: [],
+  joinRequests: {},
   directThreads: { dm_alice__lee: { id: "dm_alice__lee", protocol: "nostr.nip17", userIds: ["alice", "lee"] } },
   directMessages: { dm_msg_1: { id: "dm_msg_1", protocol: "nostr.nip17", threadId: "dm_alice__lee", body: "Private hello", authorName: "Lee", authorId: "lee", reactions: {}, createdAt: 2 } },
   rooms: [{ id: "media1", name: "Launch Room", allowsVideo: true, participants: {} }],
@@ -36,7 +39,9 @@ const state: ChatState = {
   commentThreads: {},
   comments: {},
   embeds: {},
-  reactions: {}
+  reactions: {},
+  roleDefinitions: {},
+  memberRoles: {}
 };
 
 class FakeMediaStreamTrack {
@@ -93,8 +98,15 @@ const testAppMetadata = {
   composition: {
     actions: [
       { name: "channelCreate", type: "channel.create", authorize: { roles: ["admin"] } },
+      { name: "approveJoinRequest", type: "join.approve", authorize: { roles: ["admin"] } },
+      { name: "banMember", type: "member.ban", authorize: { roles: ["admin"] } },
+      { name: "denyJoinRequest", type: "join.deny", authorize: { roles: ["admin"] } },
+      { name: "disableInvite", type: "invite.disable", authorize: { roles: ["admin"] } },
       { name: "mediaRoomCreate", type: "media.room.create", authorize: { roles: ["moderator"] } },
       { name: "messagePin", type: "message.pin", authorize: { roles: ["moderator"] } },
+      { name: "moderateMember", type: "member.moderate", authorize: { roles: ["admin"] } },
+      { name: "removeInvite", type: "invite.remove", authorize: { roles: ["admin"] } },
+      { name: "unbanMember", type: "member.unban", authorize: { roles: ["admin"] } },
       { name: "roleCreate", type: "role.create", authorize: { roles: ["admin"] } }
     ]
   }
@@ -304,9 +316,10 @@ describe("ChatApp", () => {
   });
 
   it("renders a real backend-connected team chat surface", async () => {
-    renderChat();
+    const { container } = renderChat();
     expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Chord/ })).toBeInTheDocument();
+    expect(container.querySelector("mtn-home")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Channels" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Text Channels" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Voice Channels" })).not.toBeInTheDocument();
@@ -318,6 +331,38 @@ describe("ChatApp", () => {
     expect(within(dmSection).getByRole("button", { name: "Lee, 1 unread DM" })).toBeInTheDocument();
     expect(within(dmSection).getByLabelText("Lee avatar")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Online - 2" })).toBeInTheDocument();
+  });
+
+  it("opens launch home rooms from SDK mount options without exposing room data in callbacks", async () => {
+    const openRoom = vi.fn();
+    installTestMatterhornScope();
+    const { container } = render(
+      <ChatApp
+        envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }}
+        home={{
+          apps: [{
+            id: "gg.matterhorn.chord",
+            name: "Chord",
+            rooms: [{ id: "ops", name: "Ops Room", notificationCount: 7 }]
+          }]
+        }}
+        openRoom={openRoom}
+      />
+    );
+
+    expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
+    const launchHome = container.querySelector("mtn-home");
+    const shadow = launchHome?.shadowRoot;
+    if (!shadow) throw new Error("Expected mtn-home shadow root");
+    expect(launchHome?.innerHTML).toContain("0 0 1100 836");
+
+    fireEvent.click(shadow.querySelector("button") as HTMLButtonElement);
+    expect(shadow.textContent).toContain("Chord");
+    expect(shadow.textContent).toContain("Ops Room");
+    expect(shadow.textContent).toContain("7");
+
+    fireEvent.click(shadow.querySelector("[role='menuitem']") as HTMLButtonElement);
+    expect(openRoom).toHaveBeenCalledWith({ appId: "gg.matterhorn.chord", roomId: "ops" });
   });
 
   it("uses the installed Matterhorn app scope", async () => {
@@ -450,13 +495,13 @@ describe("ChatApp", () => {
     expect(within(youtubeDialog).getByTitle("YouTube video")).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
     expect(within(youtubeDialog).queryByRole("link", { name: "Open YouTube video" })).not.toBeInTheDocument();
     await user.click(within(youtubeDialog).getByRole("button", { name: "Close YouTube video fullscreen" }));
-    expect(screen.queryByRole("dialog", { name: "Fullscreen YouTube video" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Fullscreen YouTube video" })).not.toBeInTheDocument());
 
     await user.click(driveButton);
     const driveDialog = screen.getByRole("dialog", { name: "Fullscreen Google Drive file" });
     expect(within(driveDialog).getByTitle("Google Drive file")).toHaveAttribute("src", "https://drive.google.com/file/d/abc123/preview");
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByRole("dialog", { name: "Fullscreen Google Drive file" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Fullscreen Google Drive file" })).not.toBeInTheDocument());
   });
 
   it("renders direct media URLs with native inline controls", () => {
@@ -629,6 +674,82 @@ describe("ChatApp", () => {
 
     await waitFor(() => expect(sendOperation).toHaveBeenCalledTimes(3));
     expect(sent.map((op) => op.schemaAction)).toEqual(["channelCreate", "messageSend", "presenceUpdate"]);
+  });
+
+  it("drives the admin control panel through member, invite, and join actions", async () => {
+    const user = userEvent.setup();
+    const sent: any[] = [];
+    const adminState = {
+      ...state,
+      guests: {
+        banned: { memberId: "banned", bannedAt: 2, chatDisabled: true }
+      },
+      members: {
+        ...state.members,
+        banned: { id: "banned", memberId: "banned", displayName: "Banned User", role: "member" }
+      },
+      publicInvites: [
+        { id: "invite_active", status: "active" },
+        { id: "invite_disabled", status: "disabled" }
+      ],
+      joinRequests: {
+        join_pending: { id: "join_pending", inviteId: "invite_active", profile: { name: "Pending User" }, status: "pending" }
+      }
+    } as ChatState;
+    renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: adminState, operation }; }), adminState);
+
+    await user.click(await screen.findByRole("button", { name: "Manage" }));
+    const manageDialog = await screen.findByRole("dialog", { name: "Manage" });
+    await user.click(within(manageDialog).getByRole("button", { name: "Admin" }));
+
+    const leeRow = within(manageDialog).getAllByTestId("admin-member-row").find((row) => within(row).queryByText("Lee"));
+    const bannedRow = within(manageDialog).getAllByTestId("admin-member-row").find((row) => within(row).queryByText("Banned User"));
+    if (!leeRow || !bannedRow) throw new Error("Expected admin member rows");
+
+    await user.click(within(leeRow).getByRole("button", { name: "Mute chat" }));
+    await user.click(within(leeRow).getByRole("button", { name: "Lock profile" }));
+    await user.click(within(leeRow).getByRole("button", { name: "Ban" }));
+    await user.click(within(bannedRow).getByRole("button", { name: "Unban" }));
+    await user.click(within(manageDialog).getByRole("button", { name: "Disable" }));
+    await user.click(within(manageDialog).getByRole("button", { name: "Remove" }));
+    await user.click(within(manageDialog).getByRole("button", { name: "Approve" }));
+    await user.click(within(manageDialog).getByRole("button", { name: "Deny" }));
+
+    await waitFor(() => expect(sent).toHaveLength(8));
+    expect(sent.map((op) => op.schemaAction)).toEqual([
+      "moderateMember",
+      "moderateMember",
+      "banMember",
+      "unbanMember",
+      "disableInvite",
+      "removeInvite",
+      "approveJoinRequest",
+      "denyJoinRequest"
+    ]);
+    expect(sent[0]).toMatchObject({ payload: { memberId: "lee", chatDisabled: true } });
+    expect(sent[1]).toMatchObject({ payload: { memberId: "lee", nameLocked: true } });
+    expect(sent[2]).toMatchObject({ payload: { memberId: "lee" } });
+    expect(sent[3]).toMatchObject({ payload: { memberId: "banned" } });
+    expect(sent[4]).toMatchObject({ payload: { inviteId: "invite_active" } });
+    expect(sent[5]).toMatchObject({ payload: { inviteId: "invite_disabled" } });
+    expect(sent[6]).toMatchObject({ payload: { requestId: "join_pending" } });
+    expect(sent[7]).toMatchObject({ payload: { requestId: "join_pending" } });
+  });
+
+  it("disables channel sending for an actor muted through admin controls", async () => {
+    const sent: any[] = [];
+    const mutedState = {
+      ...state,
+      guests: {
+        alice: { memberId: "alice", chatDisabled: true }
+      }
+    } as ChatState;
+    renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: mutedState, operation }; }), mutedState);
+
+    expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    expect(sent).toHaveLength(0);
   });
 
   it("submits channel messages with Enter and keeps Shift+Enter as a newline", async () => {

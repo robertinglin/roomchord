@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { Actor, Channel, ChatState, MediaRoom } from "@entities/chat/model/types";
 import { activeRoles, memberOptions } from "@entities/chat/model/roles";
+import { joinRequestsForState } from "@entities/chat/model/state";
 import { CloseIcon } from "@shared/ui/Icons";
 import { ManageChannelsTab } from "@features/management/ui/manage/ManageChannelsTab";
+import { ManageAdminTab } from "@features/management/ui/manage/ManageAdminTab";
 import { ManageMembersTab } from "@features/management/ui/manage/ManageMembersTab";
 import { ManageOverviewTab } from "@features/management/ui/manage/ManageOverviewTab";
 import { ManageRolesTab } from "@features/management/ui/manage/ManageRolesTab";
@@ -17,6 +19,7 @@ type Props = {
   canCreateChannels: boolean;
   canManageRooms: boolean;
   canManageRoles: boolean;
+  canManageMembers: boolean;
   initialTab?: ManagementTab;
   initialMemberId?: string;
   onClose: () => void;
@@ -30,6 +33,13 @@ type Props = {
   onUpdateRole: (roleId: string, input: RoleUpdateInput) => void;
   onArchiveRole: (roleId: string) => void;
   onAssignMemberRoles: (memberId: string, roleIds: string[], displayName?: string) => void;
+  onApproveJoinRequest: (requestId: string) => void;
+  onBanMember: (memberId: string) => void;
+  onDenyJoinRequest: (requestId: string) => void;
+  onDisableInvite: (inviteId: string) => void;
+  onModerateMember: (memberId: string, input: { chatDisabled?: boolean; nameLocked?: boolean }) => void;
+  onRemoveInvite: (inviteId: string) => void;
+  onUnbanMember: (memberId: string) => void;
 };
 
 function activeChannels(channels: Channel[]) {
@@ -46,6 +56,7 @@ export function ManageOverviewDialog({
   canCreateChannels,
   canManageRooms,
   canManageRoles,
+  canManageMembers,
   initialTab,
   initialMemberId,
   onClose,
@@ -58,12 +69,20 @@ export function ManageOverviewDialog({
   onCreateRole,
   onUpdateRole,
   onArchiveRole,
-  onAssignMemberRoles
+  onAssignMemberRoles,
+  onApproveJoinRequest,
+  onBanMember,
+  onDenyJoinRequest,
+  onDisableInvite,
+  onModerateMember,
+  onRemoveInvite,
+  onUnbanMember
 }: Props) {
   const roles = useMemo(() => activeRoles(state.roleDefinitions), [state.roleDefinitions]);
   const channels = useMemo(() => activeChannels(state.channels || []), [state.channels]);
   const rooms = useMemo(() => activeRooms(state.rooms || []), [state.rooms]);
   const members = useMemo(() => memberOptions(actor, state.members || {}, state.presence || {}, state.memberRoles), [actor, state.memberRoles, state.members, state.presence]);
+  const pendingAdminCount = useMemo(() => joinRequestsForState(state).filter((request) => request.status === "pending").length, [state]);
   const [tab, setTab] = useState<ManagementTab>(initialTab || "overview");
 
   useEffect(() => {
@@ -102,6 +121,7 @@ export function ManageOverviewDialog({
               memberCount={members.length}
               roleCount={roles.length}
               roomCount={rooms.length}
+              pendingAdminCount={pendingAdminCount}
               onSelectTab={setTab}
             />
           ) : null}
@@ -141,6 +161,20 @@ export function ManageOverviewDialog({
               roleDefinitions={state.roleDefinitions}
               roles={roles}
               onAssignMemberRoles={onAssignMemberRoles}
+            />
+          ) : null}
+          {tab === "admin" ? (
+            <ManageAdminTab
+              actor={actor}
+              canManageMembers={canManageMembers}
+              state={state}
+              onApproveJoinRequest={onApproveJoinRequest}
+              onBanMember={onBanMember}
+              onDenyJoinRequest={onDenyJoinRequest}
+              onDisableInvite={onDisableInvite}
+              onModerateMember={onModerateMember}
+              onRemoveInvite={onRemoveInvite}
+              onUnbanMember={onUnbanMember}
             />
           ) : null}
         </div>

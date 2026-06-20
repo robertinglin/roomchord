@@ -1,4 +1,5 @@
 import type { Chord } from "../../../../../src/types";
+import type { MtnHomeData, MtnHomeOpenRoomDetail } from "matterhorn-sdk/browser";
 
 export type AvatarSource = { avatar?: string; avatarUrl?: string; profileImageUrl?: string };
 export type Actor = Chord.Actor & AvatarSource;
@@ -44,10 +45,38 @@ export type ThreadComment = Chord.Comment;
 export type ScopedReaction = Chord.ScopedReaction;
 export type RoleDefinition = Chord.RoleDefinition;
 export type MemberRoleAssignment = Chord.MemberRole;
+export type MemberModeration = {
+  memberId?: string;
+  nameLocked?: boolean | null;
+  chatDisabled?: boolean | null;
+  bannedAt?: number | null;
+  banReason?: string | null;
+};
+export type PublicInvite = {
+  id: string;
+  status?: string;
+  disabledAt?: number | null;
+  removedAt?: number | null;
+};
+export type JoinRequest = {
+  id: string;
+  inviteId?: string;
+  profileId?: string;
+  profile?: { name?: string; avatar?: string };
+  status?: string;
+  decidedAt?: number | null;
+};
 
 export type ChatState = Chord.State;
 
-export type ChatProps = { envelope?: Chord.LaunchEnvelope; initialState?: Chord.LaunchEnvelope["initialState"] };
+export type ChatProps = {
+  envelope?: Chord.LaunchEnvelope;
+  initialState?: Chord.LaunchEnvelope["initialState"];
+  home?: MtnHomeData;
+  launchHome?: MtnHomeData;
+  openRoom?: (detail: MtnHomeOpenRoomDetail) => void;
+  onOpenLaunchHomeRoom?: (detail: MtnHomeOpenRoomDetail) => void;
+};
 export type ChatActionName = Chord.ActionName;
 export type ChatActionPayload<K extends ChatActionName> = Chord.Actions[K];
 export type ChatDispatchResult = unknown;

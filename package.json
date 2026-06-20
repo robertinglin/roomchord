@@ -16,7 +16,7 @@
     "test": "node --test test/*.test.cjs",
     "coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=80 --test-coverage-branches=70 --test-coverage-include=src/**/*.cjs test/*.test.cjs",
     "dev:frontend": "vite --config frontend/vite.config.ts --host 127.0.0.1 --port 42732 --strictPort",
-    "build:frontend": "tsc --project frontend/tsconfig.json && vite build --config frontend/vite.config.ts",
+    "build:frontend": "node shared/frontendCommand.cjs build .",
     "serve:frontend": "vite preview --config frontend/vite.config.ts",
     "check:frontend": "tsc --project frontend/tsconfig.json",
     "check:fsd": "dependency-cruise --config .dependency-cruiser.cjs --validate --output-type err frontend/src",
@@ -28,12 +28,12 @@
     "start:backend": "node shared/liveBackend.cjs --app . --port 43732"
   },
   "dependencies": {
-    "@mh-gg/base": "link:../roomkit/packages/matterhorn-core",
-    "@mh-gg/host-runtime": "link:../roomkit/packages/matterhorn-host-runtime",
-    "@mh-gg/protocol": "link:../roomkit/packages/matterhorn-protocol",
+    "@mh-gg/base": "link:../matterhorn/packages/matterhorn-core",
+    "@mh-gg/host-runtime": "link:../matterhorn/packages/matterhorn-host-runtime",
+    "@mh-gg/protocol": "link:../matterhorn/packages/matterhorn-protocol",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "matterhorn-sdk": "link:../roomkit/packages/matterhorn-sdk",
+    "matterhorn-sdk": "link:../matterhorn/packages/matterhorn-sdk",
     "zustand": "^4.5.7"
   },
   "engines": {
@@ -46,6 +46,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.6.1",
+    "@mh-gg/vite": "link:../matterhorn/packages/matterhorn-vite",
     "@types/react": "^18.3.29",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^5.0.0",
