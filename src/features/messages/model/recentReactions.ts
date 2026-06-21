@@ -1,4 +1,4 @@
-const RECENT_REACTIONS_KEY = "matterhorn:chord:recent-reactions:v1";
+const RECENT_REACTIONS_KEY = "matterhorn:mosh:recent-reactions:v1";
 const DEFAULT_RECENT_REACTIONS = ["👍", "😂", "❤️"];
 
 function uniqueRecent(items: string[]) {

@@ -112,14 +112,15 @@ export function MessageRow({
   const canReact = Boolean(onReact);
   const showMore = !isDeleted;
   const replyMessage = message.replyToId ? messagesById.get(message.replyToId) : undefined;
-  const avatar = <Avatar name={name} avatar={messageAvatar(message, memberAvatarsById)} />;
+  const avatar = <Avatar className="msg-av" name={name} avatar={messageAvatar(message, memberAvatarsById)} />;
+  const authoredByCurrentUser = Boolean(currentUserId && message.authorId === currentUserId);
   const mentionedCurrentUser = Boolean(
     currentUserId &&
     !isDeleted &&
     parseMentionedMemberIds(message.body, memberNamesById).includes(currentUserId)
   );
   const rowClassName =
-    `message-row${message.pinnedAt ? " pinned" : ""}${isDeleted ? " deleted" : ""}${mentionedCurrentUser ? " mentioned" : ""}`;
+    `msg${message.pinnedAt ? " pinned" : ""}${isDeleted ? " deleted" : ""}${mentionedCurrentUser ? " mentioned" : ""}`;
 
   function closeMenus() {
     setReactionPickerOpen(false);
@@ -248,16 +249,16 @@ export function MessageRow({
           {avatar}
         </MemberContextMenu>
       ) : avatar}
-      <div className="message-content">
-        <div className="message-meta">
-          <strong>{name}</strong>
-          {message.createdAt ? <time dateTime={new Date(message.createdAt).toISOString()}>{formatMessageTime(message.createdAt)}</time> : null}
-          {message.pinnedAt ? <span className="pin-label">Pinned</span> : null}
+      <div className="msg-content">
+        <div className="msg-head">
+          <span className={`msg-name${authoredByCurrentUser ? " you" : ""}`}>{name}</span>
+          {message.pinnedAt ? <span className="msg-role">Pinned</span> : authoredByCurrentUser ? <span className="msg-role">You</span> : null}
+          {message.createdAt ? <time className="msg-time" dateTime={new Date(message.createdAt).toISOString()}>{formatMessageTime(message.createdAt)}</time> : null}
           <a className="message-permalink" href={messageHref(message.id)} aria-label={`Link to message from ${name}`} title="Message link" onClick={() => focusMessage(message.id)}>#</a>
         </div>
         {message.replyToId ? <ReplyPreview message={replyMessage} memberNamesById={memberNamesById} onFollow={focusMessage} /> : null}
         {isDeleted ? (
-          <p className="message-tombstone">Message deleted</p>
+          <p className="msg-body message-tombstone">Message deleted</p>
         ) : !pinnedCopy && editing?.id === message.id ? (
           <form className="edit-form" onSubmit={submitEdit}>
             <input
@@ -277,9 +278,9 @@ export function MessageRow({
           />
         )}
         {!isDeleted && canReact && reactions.length > 0 ? (
-          <div className="message-reactions">
+          <div className="reactions">
             {reactions.map(([emoji, members]) => (
-              <button key={emoji} type="button" onClick={() => reactWith(message.id, emoji)}>{emoji} {members.length}</button>
+              <button className={`react${currentUserId && members.some((memberId) => String(memberId) === currentUserId) ? " mine" : ""}`} key={emoji} type="button" onClick={() => reactWith(message.id, emoji)}>{emoji} {members.length}</button>
             ))}
           </div>
         ) : null}
@@ -317,7 +318,7 @@ export function MessageRow({
         ) : null}
       </div>
       {!isDeleted ? (
-        <div className="message-actions" aria-label={`Actions for ${name}`}>
+        <div className="msg-actions" aria-label={`Actions for ${name}`}>
           {canReact ? recentReactions.map((emoji) => (
             <button className="message-action-emoji" key={emoji} type="button" aria-label={`React with ${emoji}`} onClick={() => reactWith(message.id, emoji)}>
               {emoji}
@@ -325,17 +326,17 @@ export function MessageRow({
           )) : null}
           {canReact ? (
             <button className="message-action-icon" type="button" aria-label={`Choose reaction for message from ${name}`} title="Choose reaction" onClick={() => { closeMenus(); setReactionPickerOpen((open) => !open); }}>
-              <SmileIcon />
+              <SmileIcon className="ico" />
             </button>
           ) : null}
           {onReply ? (
             <button className="message-action-icon" type="button" aria-label={`Reply to message from ${name}`} title="Reply" onClick={() => { closeMenus(); onReply(message); }}>
-              <ReplyIcon />
+              <ReplyIcon className="ico" />
             </button>
           ) : null}
           {onForward ? (
             <button className="message-action-icon" type="button" aria-label={`Forward message from ${name}`} title="Forward" onClick={() => { closeMenus(); setForwardMenuOpen((open) => !open); }}>
-              <ForwardIcon />
+              <ForwardIcon className="ico" />
             </button>
           ) : null}
           {showMore ? (
@@ -351,7 +352,7 @@ export function MessageRow({
                   if (!open) setMessageMenuPosition({ anchored: true });
                 }}
               >
-                <MoreIcon />
+                <MoreIcon className="ico" />
               </button>
               {messageMenuPosition ? (
                 <>

@@ -36,13 +36,13 @@ export function VoiceControlPanel({
   return (
     <section className={`voice-panel${sfuActive ? " connected" : " joined"}`} aria-label={label}>
       <div className="voice-panel-header">
-        <SpeakerIcon className="ui-icon voice-status-icon" />
+        <SpeakerIcon className="ico voice-status-icon" />
         <span>
           <strong>{voiceTitle}</strong>
           <small>{roomName}</small>
         </span>
         <button className="voice-leave-button" type="button" aria-label="Leave voice room" onClick={onLeave}>
-          <PhoneIcon />
+          <PhoneIcon className="ico" />
         </button>
       </div>
 
@@ -54,7 +54,7 @@ export function VoiceControlPanel({
           disabled={!canUseVideo}
           onClick={onToggleVideo}
         >
-          {videoOn ? <VideoIcon /> : <VideoOffIcon />}
+          {videoOn ? <VideoIcon className="ico" /> : <VideoOffIcon className="ico" />}
           <span>{videoOn ? "Video on" : "Video off"}</span>
         </button>
         {showScreenShare ? (
@@ -64,7 +64,7 @@ export function VoiceControlPanel({
             aria-label={shareActive ? "Stop screen share" : "Share screen"}
             onClick={onToggleScreenShare}
           >
-            <ScreenIcon />
+            <ScreenIcon className="ico" />
             <span>{shareActive ? "Stop share" : "Share"}</span>
           </button>
         ) : null}
@@ -75,7 +75,7 @@ export function VoiceControlPanel({
             aria-label="Flip camera"
             onClick={onToggleCameraSwap}
           >
-            <CameraSwapIcon />
+            <CameraSwapIcon className="ico" />
             <span>Flip</span>
           </button>
         ) : null}

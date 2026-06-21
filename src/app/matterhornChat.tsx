@@ -6,7 +6,7 @@ import { ChatApp } from "@pages/chat/ui/ChatPage";
 import type { ChatProps } from "@entities/chat/model/types";
 
 function ensureChatStyles() {
-  const id = "matterhorn-chord-styles";
+  const id = "matterhorn-mosh-styles";
   if (document.getElementById(id)) return;
   const style = document.createElement("style");
   style.id = id;
@@ -35,5 +35,7 @@ export function mountMatterhornApp(target: HTMLElement, options: ChatProps = {})
   return mountMatterhornChat(target, options);
 }
 
-const autoMountTarget = typeof document !== "undefined" ? document.getElementById("matterhorn-chord-root") : null;
+const autoMountTarget = typeof document !== "undefined"
+  ? document.getElementById("matterhorn-mosh-root")
+  : null;
 if (autoMountTarget) mountMatterhornApp(autoMountTarget);

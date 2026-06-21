@@ -8,7 +8,7 @@ const {
   currentAppPackHash,
   operationFromDraft
 } = require("../shared/liveBackend.cjs");
-const sdkApp = require("../chord.cjs");
+const sdkApp = require("../mosh.cjs");
 const app = sdkApp.toMatterhornExports();
 
 function primaryAction(type) {
@@ -79,7 +79,7 @@ test("Chat generated TypeScript contract stays flattened across SDK export helpe
 });
 
 test("Chat emit writes flattened TypeScript contract artifacts", () => {
-  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "matterhorn-chord-emit-"));
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "matterhorn-mosh-emit-"));
   const bundleOut = sdkApp.emit({ outDir });
   const emittedBundle = JSON.parse(fs.readFileSync(bundleOut.bundlePath, "utf8"));
 
@@ -182,7 +182,7 @@ test("Chat live backend replays persisted operations and refreshes stale app has
     payload: { channelId: "general", body: "Persisted message", embeds: [] }
   }, 1, 1000);
   operation.appPackHash = "sha256-old-chat-schema";
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "matterhorn-chord-schema-"));
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "matterhorn-mosh-schema-"));
   const dataFile = path.join(dataDir, "chat.json");
   fs.writeFileSync(dataFile, JSON.stringify({ version: 1, operations: [operation] }, null, 2));
 
@@ -221,8 +221,8 @@ test("Chat SDK client uses app scope for role gates and dispatch errors", async 
   };
   resetMatterhornForTests();
   installMatterhornAppScope({
-    appId: "gg.matterhorn.chord",
-    appName: "Chord",
+    appId: "gg.matterhorn.mosh",
+    appName: "Mosh",
     metadata: { composition: app.compositionSchema },
     host: {
       mode: "injected",

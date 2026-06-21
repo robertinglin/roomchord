@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import styleX from "@stylexjs/rollup-plugin";
 import { matterhorn } from "matterhorn-sdk/vite";
 import path from "node:path";
 
@@ -9,7 +10,7 @@ export default defineConfig({
   define: {
     "process.env.NODE_ENV": JSON.stringify("production")
   },
-  plugins: [react(), matterhorn()],
+  plugins: [react(), styleX({ fileName: "stylex.css" }), matterhorn()],
   resolve: {
     alias: {
       "@app": path.resolve(__dirname, "src", "app"),
@@ -24,7 +25,7 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    lib: { entry: path.resolve(__dirname, "src", "index.tsx"), formats: ["es"], fileName: () => "matterhorn-chord.js" },
+    lib: { entry: path.resolve(__dirname, "src", "index.tsx"), formats: ["es"], fileName: () => "matterhorn-mosh.js" },
     minify: false,
     rollupOptions: {
       output: { inlineDynamicImports: true }

@@ -1,6 +1,6 @@
 import type { CallMediaSettings } from "matterhorn-sdk/browser/types";
 
-const VOICE_RECONNECT_STORAGE_PREFIX = "matterhorn:chord:voice-reconnect:";
+const VOICE_RECONNECT_STORAGE_PREFIX = "matterhorn:mosh:voice-reconnect:";
 export const VOICE_RECONNECT_WINDOW_MS = 120_000;
 
 export type RecentVoiceJoin = {

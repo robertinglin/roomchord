@@ -1,4 +1,4 @@
-// matterhorn-chord/src/sdk-app.cjs
+// matterhorn-mosh/src/sdk-app.cjs
 //
 // Chat primary backend authored through the declarative schema builder.
 // This is the source of truth; running this file emits the full Matterhorn app
@@ -635,7 +635,7 @@ const operations = {
  */
 const notifications = {
   messageMention: {
-    kind: "chord.message.mention",
+    kind: "mosh.message.mention",
     on: { action: "messageSend" },
     audience: { userIds: "$payload.mentionIds", excludeActor: true },
     scope: { type: "channel", id: "$payload.channelId" },
@@ -655,7 +655,7 @@ const notifications = {
     delivery: { collapse: "scope" },
   },
   replyMention: {
-    kind: "chord.reply.mention",
+    kind: "mosh.reply.mention",
     on: { action: "messageReply" },
     audience: { userIds: "$payload.mentionIds", excludeActor: true },
     scope: { type: "channel", id: "$payload.channelId" },
@@ -675,7 +675,7 @@ const notifications = {
     delivery: { collapse: "scope" },
   },
   directMessage: {
-    kind: "chord.directMessage",
+    kind: "mosh.directMessage",
     on: { action: "directMessageSend" },
     audience: { userIds: "$payload.userIds", excludeActor: true },
     // No thread id is in the payload, so group per sender: every recipient
@@ -704,21 +704,21 @@ const notifications = {
 /* ----- compose with shared plugins + views + routes ----- */
 
 const app = defineApp({
-  id: "gg.matterhorn.chord",
+  id: "gg.matterhorn.mosh",
   name: "Chord",
   version: "1.0.0",
-  pluginId: "gg.matterhorn.chord.plugin",
-  slug: "matterhorn-chord",
-  packageName: "matterhorn-chord",
+  pluginId: "gg.matterhorn.mosh.plugin",
+  slug: "matterhorn-mosh",
+  packageName: "matterhorn-mosh",
   packageRoot,
-  exportPrefix: "chord",
+  exportPrefix: "mosh",
   constantPrefix: "CHORD",
   frontend: {
     backgroundColor: "oklch(0.205 0.008 260)",
     icon: "icon.svg",
     port: 42732,
     devEntry: "src/index.tsx",
-    builtEntry: "matterhorn-chord.js",
+    builtEntry: "mosh.js",
     dist: "dist",
     dev: {
       command: process.execPath,
@@ -743,7 +743,7 @@ const app = defineApp({
     frontendProjection: "chat",
   },
   example: {
-    id: "matterhorn-chord",
+    id: "matterhorn-mosh",
     title: "Chord Matterhorn example",
   },
   model: chat.withOperations(operations),
@@ -817,12 +817,12 @@ const app = defineApp({
     {
       path: "/",
       component: "ChatRoomPage",
-      requires: ["gg.matterhorn.chord.plugin"],
+      requires: ["gg.matterhorn.mosh.plugin"],
     },
     {
       path: "/dms",
       component: "DirectMessagesPage",
-      requires: ["gg.matterhorn.chord.plugin"],
+      requires: ["gg.matterhorn.mosh.plugin"],
     },
     {
       path: "/rooms",

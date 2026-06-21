@@ -24,7 +24,7 @@ export function messageActions(input: ChatActionHandlersInput) {
     if (view.actorChatDisabled) return;
     const embeds = messageEmbeds(body);
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
-    console.info("[roomchord.notifications] channel message mention resolution", {
+    console.info("[mosh.notifications] channel message mention resolution", {
       channelId,
       mentionIds,
       memberNamesById: view.memberNamesById
@@ -79,7 +79,7 @@ export function messageActions(input: ChatActionHandlersInput) {
     if (!view.currentChannelId) return;
     if (view.actorChatDisabled) return;
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
-    console.info("[roomchord.notifications] reply mention resolution", {
+    console.info("[mosh.notifications] reply mention resolution", {
       channelId: view.currentChannelId,
       replyToId,
       mentionIds,

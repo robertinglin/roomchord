@@ -97,6 +97,7 @@ export function MessageComposer({
 }) {
   const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
   const [hasContent, setHasContent] = useState(false);
+  const [contentLength, setContentLength] = useState(0);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -137,6 +138,7 @@ export function MessageComposer({
       editor.innerHTML = "";
     }
     setHasContent(hasMentions || text.trim().length > 0);
+    setContentLength(Array.from(editor.childNodes).map(serialize).join("").trim().length);
     const hit = queryAtCaret(editor);
     setMentionQuery(hit ? hit.query : null);
   }
@@ -189,6 +191,7 @@ export function MessageComposer({
     onSend(body);
     editor.innerHTML = "";
     setHasContent(false);
+    setContentLength(0);
     setMentionQuery(null);
   }
 
@@ -236,7 +239,7 @@ export function MessageComposer({
   }
 
   return (
-    <footer className="composer-wrap">
+    <footer className="composer">
       {replyTo ? (
         <div className="replying-bar">
           <span>
@@ -246,21 +249,24 @@ export function MessageComposer({
           <button type="button" onClick={onCancelReply}>Cancel</button>
         </div>
       ) : null}
-      <div className="message-composer">
-        <div className="composer-input-shell" onClick={() => editorRef.current?.focus()}>
-          <div
-            ref={editorRef}
-            className="composer-editable"
-            contentEditable={!disabled}
-            role="textbox"
-            aria-multiline="true"
-            aria-label={`Message ${title}`}
-            data-placeholder={`Message ${title}`}
-            onInput={refreshContentState}
-            onKeyDown={onKeyDown}
-            onPaste={onPaste}
-          />
+      <div className="comp-box">
+        <div className="comp-top">
+          <button className="comp-tool accent" type="button" aria-label="Insert link" title="Insert link" disabled={disabled} onClick={insertLink}>
+            <LinkIcon className="ico" />
+          </button>
         </div>
+        <div
+          ref={editorRef}
+          className="comp-input"
+          contentEditable={!disabled}
+          role="textbox"
+          aria-multiline="true"
+          aria-label={`Message ${title}`}
+          data-placeholder={`Message ${title}`}
+          onInput={refreshContentState}
+          onKeyDown={onKeyDown}
+          onPaste={onPaste}
+        />
         {mentionMenuOpen ? (
           <div className="mention-menu" role="listbox" aria-label="Mention suggestions">
             {mentionOptions.map((member, index) => (
@@ -278,24 +284,25 @@ export function MessageComposer({
             ))}
           </div>
         ) : null}
-        <span className="composer-inline-tools">
-          <button className="composer-tool-button" type="button" aria-label="Insert link" title="Insert link" disabled={disabled} onClick={insertLink}>
-            <LinkIcon />
+        <div className="comp-bot">
+          <span className="left">
+            <button className="comp-tool" type="button" aria-label="Add emoji" title="Add emoji" disabled={disabled} onClick={() => setComposerEmojiOpen((open) => !open)}>
+              <SmileIcon className="ico" />
+            </button>
+          </span>
+          <span className="comp-len" aria-live="polite">{contentLength} / 2000</span>
+          <button
+            className="send-btn etch composer-send-button"
+            type="button"
+            aria-label={mode === "dm" ? "Send DM" : "Send message"}
+            title={mode === "dm" ? "Send DM" : "Send message"}
+            disabled={disabled || !hasContent}
+            onClick={submitMessage}
+          >
+            <SendArrowIcon className="ico" />
+            <span>Send</span>
           </button>
-          <button className="composer-tool-button" type="button" aria-label="Add emoji" title="Add emoji" disabled={disabled} onClick={() => setComposerEmojiOpen((open) => !open)}>
-            <SmileIcon />
-          </button>
-        </span>
-        <button
-          className="composer-send-button"
-          type="button"
-          aria-label={mode === "dm" ? "Send DM" : "Send message"}
-          title={mode === "dm" ? "Send DM" : "Send message"}
-          disabled={disabled || !hasContent}
-          onClick={submitMessage}
-        >
-          <SendArrowIcon />
-        </button>
+        </div>
       </div>
       {composerEmojiOpen ? (
         <InlineEmojiPicker

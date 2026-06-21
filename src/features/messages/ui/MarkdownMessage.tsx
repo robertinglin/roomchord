@@ -59,7 +59,7 @@ function InlineText({
             onDirectMessage={onDirectMessage}
             key={index}
           >
-            <span className="message-mention" data-member-id={segment.memberId}>{segment.text}</span>
+            <span className="message-mention mention" data-member-id={segment.memberId}>{segment.text}</span>
           </MemberContextMenu>
         );
       })}
@@ -117,7 +117,7 @@ function Inline({
                 aria-label={`View ${title} fullscreen`}
                 title={`View ${title} fullscreen`}
               >
-                <MaximizeIcon />
+                <MaximizeIcon className="ico" />
               </button>
             ) : null}
             <a href={token.url} target="_blank" rel="noreferrer">
@@ -184,7 +184,7 @@ function MarkdownNodes({
             return null;
           default:
             return (
-              <p key={index} className="message-body">
+              <p key={index} className="msg-body message-body">
                 <Inline tokens={node.children} {...inlineProps} />
               </p>
             );
@@ -275,7 +275,7 @@ export function EmbedCard({
           aria-label={`Close ${title} fullscreen`}
           title={`Close ${title} fullscreen`}
         >
-          <CloseIcon />
+          <CloseIcon className="ico" />
         </button>
       </span>
     </header>
@@ -406,7 +406,7 @@ export function MarkdownMessage({
   if (largeEmoji) {
     return (
       <div className="message-markdown">
-        <p className="message-body message-body-emoji">{largeEmoji}</p>
+        <p className="msg-body message-body message-body-emoji">{largeEmoji}</p>
       </div>
     );
   }

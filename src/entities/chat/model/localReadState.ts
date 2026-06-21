@@ -1,4 +1,4 @@
-const DIRECT_READ_STORAGE_PREFIX = "matterhorn:chord:direct-read:";
+const DIRECT_READ_STORAGE_PREFIX = "matterhorn:mosh:direct-read:";
 const DIRECT_READ_STORAGE_VERSION = 1;
 
 type StoredDirectReadState = {

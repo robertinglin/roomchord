@@ -1,4 +1,4 @@
-# Chord
+# Mosh
 
 Discord-style collaboration room with text channels, threaded replies, reactions, pins, edits/deletes, moderator controls, core Matterhorn direct messages, presence, camera-capable media rooms, and screen-share state.
 
@@ -12,7 +12,7 @@ This example has three runtime areas:
 
 - `channel.create`, `channel.rename`, `channel.archive`
 - `message.send`, `message.reply`, `message.edit`, `message.react`, `message.pin`, `message.delete`
-- direct messages are sent through the Matterhorn host bridge, not Chord app reducer operations
+- direct messages are sent through the Matterhorn host bridge, not Mosh app reducer operations
 - `media.room.create`, `media.room.join`, `media.room.leave`, `media.room.update`, `media.room.moderate`
 - `screenshare.start`, `screenshare.stop`
 - `presence.update`
@@ -22,6 +22,7 @@ This example has three runtime areas:
 ```bash
 pnpm install
 pnpm run dev
+pnpm run build:frontend:watch
 pnpm run test
 node -e 'require(".").createDemo().then((demo) => console.log(demo.summary))'
 ```
@@ -31,7 +32,7 @@ Local development uses 4xxxx ports: the frontend runs on `http://localhost:42732
 Launch uses standard ports through `https://launch.matterhorn.gg/`. Do not append the local frontend or backend ports to that URL.
 
 ```bash
-pnpm exec matterhorn . test-chord --serve dev
+pnpm exec matterhorn . test-mosh --serve dev
 ```
 
 This app links the local `matterhorn-sdk` from `../matterhorn/packages/matterhorn-sdk` during development. Matterhorn APIs are imported through `matterhorn-sdk` only.

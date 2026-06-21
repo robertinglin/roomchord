@@ -4,7 +4,7 @@ type IconProps = { className?: string };
 
 function IconShell({ children, className }: React.PropsWithChildren<IconProps>) {
   return (
-    <svg className={className || "ui-icon"} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <svg className={className || "ui-icon ico"} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       {children}
     </svg>
   );
@@ -124,6 +124,33 @@ export function LinkIcon(props: IconProps) {
       <path d="M9.25 14.75 14.75 9.25" />
       <path d="M10.5 7.25 11.75 6a4 4 0 0 1 5.65 5.65l-1.25 1.25" />
       <path d="M13.5 16.75 12.25 18a4 4 0 0 1-5.65-5.65l1.25-1.25" />
+    </IconShell>
+  );
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <IconShell {...props}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m16 16 4 4" />
+    </IconShell>
+  );
+}
+
+export function BellIcon(props: IconProps) {
+  return (
+    <IconShell {...props}>
+      <path d="M18 8.5a6 6 0 1 0-12 0c0 6.5-2.5 8.5-2.5 8.5h17S18 15 18 8.5Z" />
+      <path d="M13.8 20.5a2 2 0 0 1-3.6 0" />
+    </IconShell>
+  );
+}
+
+export function PinIcon(props: IconProps) {
+  return (
+    <IconShell {...props}>
+      <path d="M12 17v4" />
+      <path d="M8.5 10.5V4.5h7v6l3 3.5h-13l3-3.5Z" />
     </IconShell>
   );
 }

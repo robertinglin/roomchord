@@ -17,6 +17,7 @@ export type MediaRoomsProps = {
   currentUserId?: string;
   currentRoleIds: string[];
   mutedVoiceParticipantIds?: Record<string, boolean>;
+  searchQuery?: string;
   onCreate?: (input: { name: string; group?: string }) => void | Promise<void>;
   onDirectMessage?: (memberId: string) => void;
   onJoin: (room: MediaRoom, media: CallMediaSettings) => void;
@@ -55,6 +56,7 @@ export function MediaRooms({
   currentUserId,
   currentRoleIds,
   mutedVoiceParticipantIds = {},
+  searchQuery = "",
   onCreate,
   onDirectMessage,
   onJoin,
@@ -63,7 +65,12 @@ export function MediaRooms({
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [creatingGroupKey, setCreatingGroupKey] = useState<string | undefined>();
   const [newRoomName, setNewRoomName] = useState("");
-  const rooms: MediaRoom[] = (state.rooms || []).filter((room) => !room.archivedAt && canViewRoom(room, currentRoleIds, canManageRooms));
+  const query = searchQuery.trim().toLowerCase();
+  const rooms: MediaRoom[] = (state.rooms || []).filter((room) => {
+    if (room.archivedAt || !canViewRoom(room, currentRoleIds, canManageRooms)) return false;
+    if (!query) return true;
+    return [room.name, room.group].filter(Boolean).some((value) => value!.toLowerCase().includes(query));
+  });
   const grouped = groupedChannelItems(rooms, "General");
   const groups = grouped.length || !canManageRooms ? grouped : [{ key: "general", label: "General", items: [] }];
   const canCreateRooms = canManageRooms && Boolean(onCreate);
@@ -97,27 +104,27 @@ export function MediaRooms({
   }
 
   return (
-    <div className="channel-group-list voice-channel-groups">
-      {groups.length === 0 ? <p className="sidebar-empty">No voice channels</p> : null}
+    <div>
+      {groups.length === 0 ? <p className="sidebar-empty">{query ? "No matching voice rooms" : "No voice channels"}</p> : null}
       {groups.map((group) => {
         const collapsed = Boolean(collapsedGroups[group.key]);
         const creating = creatingGroupKey === group.key;
         return (
-          <div className="channel-group voice-channel-group" key={group.key}>
-            <div className={`channel-group-heading${canCreateRooms ? " has-add" : ""}`}>
-              <button className="channel-group-toggle" type="button" aria-expanded={!collapsed} onClick={() => toggleGroup(group.key)}>
+          <div className="group" key={group.key}>
+            <div className="grp-head">
+              <button className="grp-toggle" type="button" aria-expanded={!collapsed} onClick={() => toggleGroup(group.key)}>
+                <ChevronRightIcon className={`ico chev${collapsed ? "" : " open"}`} />
                 <span>{group.label}</span>
-                <ChevronRightIcon className={`ui-icon channel-group-chevron${collapsed ? "" : " open"}`} />
               </button>
               {canCreateRooms ? (
                 <button
-                  className="sidebar-icon-button channel-group-add"
+                  className="grp-add"
                   type="button"
                   aria-label={creating ? `Cancel new voice channel in ${group.label}` : `Add voice channel to ${group.label}`}
                   aria-expanded={creating}
                   onClick={() => toggleCreateGroup(group.key)}
                 >
-                  <PlusIcon className={`ui-icon${creating ? " open" : ""}`} />
+                  <PlusIcon className="ico" />
                 </button>
               ) : null}
             </div>
@@ -133,24 +140,23 @@ export function MediaRooms({
               </form>
             ) : null}
             {!collapsed ? (
-              <div className="media-room-list channel-group-items">
+              <div>
                 {group.items.map((room) => {
                   const active = activeRoomId === room.id;
                   const selected = selectedRoomId === room.id || active;
                   const joinable = canEditRoom(room, currentRoleIds, canManageRooms);
                   const members = connectedVoiceMembers(voiceTokens, room.id);
                   return (
-                    <article className={`media-room${selected ? " selected" : ""}${active ? " active" : ""}`} key={room.id}>
-                      <button className="media-room-join" type="button" aria-label={joinable ? `Join ${room.name}` : `${room.name} is read only`} disabled={!joinable} onClick={() => onJoin(room, { audio: true, video: false })}>
-                        <SpeakerIcon className={`ui-icon voice-room-icon${active ? " active" : ""}`} />
-                        <span className="media-room-title">
-                          <strong>{room.name}</strong>
-                        </span>
+                    <article key={room.id}>
+                      <button className={`chan${selected ? " active" : ""}`} type="button" aria-label={joinable ? `Join ${room.name}` : `${room.name} is read only`} disabled={!joinable} onClick={() => onJoin(room, { audio: true, video: false })}>
+                        <SpeakerIcon className={`ico ch-ic${active ? " active" : ""}`} />
+                        <span className="ch-name">{room.name}</span>
+                        {members.length ? <span className="voice-count">{members.length}</span> : null}
                       </button>
                       {members.length ? (
-                        <ul className="voice-member-list" aria-label={`Connected users in ${room.name}`}>
+                        <ul className="voice-members" aria-label={`Connected users in ${room.name}`}>
                           {members.map((member) => (
-                            <li className="voice-member-item" key={member.key}>
+                            <li className="vm" key={member.key}>
                               <MemberContextMenu
                                 additionalActions={voiceMemberActions(member)}
                                 currentUserId={currentUserId}
@@ -158,9 +164,9 @@ export function MediaRooms({
                                 memberName={member.name}
                                 onDirectMessage={onDirectMessage}
                               >
-                                <Avatar name={member.name} avatar={member.avatar} small />
+                                <Avatar className="vm-av" name={member.name} avatar={member.avatar} small />
                               </MemberContextMenu>
-                              <span>{member.name}</span>
+                              <span className="vm-name">{member.name}</span>
                             </li>
                           ))}
                         </ul>

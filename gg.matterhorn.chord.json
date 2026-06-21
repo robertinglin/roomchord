@@ -1,12 +1,12 @@
 {
   "kind": "matterhorn.app-bundle",
   "schemaVersion": 1,
-  "id": "gg.matterhorn.chord",
+  "id": "gg.matterhorn.mosh",
   "name": "Chord",
   "version": "1.0.0",
   "appPack": {
     "kind": "matterhorn.app-pack",
-    "id": "gg.matterhorn.chord",
+    "id": "gg.matterhorn.mosh",
     "name": "Chord",
     "version": "1.0.0",
     "publisher": {
@@ -16,14 +16,14 @@
     },
     "matterhornVersion": ">=0.1 <0.2",
     "hostPack": {
-      "url": "workspace:matterhorn-chord#hostPack",
+      "url": "workspace:matterhorn-mosh#hostPack",
       "integrity": "sha256-f2974c4b6d527391b5e930b2f34d807a1ce4ed1778b47f3e49f372a7477f70c5"
     },
     "playerPacks": [
       {
-        "id": "gg.matterhorn.chord.player",
+        "id": "gg.matterhorn.mosh.player",
         "name": "Chord Player",
-        "url": "workspace:matterhorn-chord#playerPack",
+        "url": "workspace:matterhorn-mosh#playerPack",
         "integrity": "sha256-1302c862f783eb00d1c557554cfec01733686f175415ba319f2372188c476249",
         "recommendedFor": {
           "devices": [
@@ -48,12 +48,12 @@
       "kind": "matterhorn.app-composition.schema",
       "schemaVersion": 1,
       "app": {
-        "id": "gg.matterhorn.chord",
+        "id": "gg.matterhorn.mosh",
         "version": "1.0.0",
         "name": "Chord"
       },
       "primaryPlugin": {
-        "id": "gg.matterhorn.chord.plugin",
+        "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
         "model": {
           "kind": "matterhorn.primary-model.schema",
@@ -1723,14 +1723,14 @@
           "path": "/",
           "component": "ChatRoomPage",
           "requiredPlugins": [
-            "gg.matterhorn.chord.plugin"
+            "gg.matterhorn.mosh.plugin"
           ]
         },
         {
           "path": "/dms",
           "component": "DirectMessagesPage",
           "requiredPlugins": [
-            "gg.matterhorn.chord.plugin"
+            "gg.matterhorn.mosh.plugin"
           ]
         },
         {
@@ -1746,7 +1746,7 @@
         "schemaVersion": 1,
         "definitions": {
           "messageMention": {
-            "kind": "chord.message.mention",
+            "kind": "mosh.message.mention",
             "on": {
               "action": "messageSend"
             },
@@ -1784,7 +1784,7 @@
             }
           },
           "replyMention": {
-            "kind": "chord.reply.mention",
+            "kind": "mosh.reply.mention",
             "on": {
               "action": "messageReply"
             },
@@ -1822,7 +1822,7 @@
             }
           },
           "directMessage": {
-            "kind": "chord.directMessage",
+            "kind": "mosh.directMessage",
             "on": {
               "action": "directMessageSend"
             },
@@ -1885,12 +1885,12 @@
   },
   "hostPack": {
     "kind": "matterhorn.host-pack",
-    "id": "gg.matterhorn.chord.host",
-    "appPackId": "gg.matterhorn.chord",
+    "id": "gg.matterhorn.mosh.host",
+    "appPackId": "gg.matterhorn.mosh",
     "version": "1.0.0",
     "plugins": [
       {
-        "id": "gg.matterhorn.chord.plugin",
+        "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
         "source": "schema:matterhorn.primary-model",
         "integrity": "sha256-230c9c033b5e6fa4375c82d28b1c51da233483ec5022617c1bcc842336f6dd2a"
@@ -1952,7 +1952,7 @@
     "composition": {
       "schemaHash": "sha256-e5b5c14cd9b03ca73c42c5f753dcfd1f7658fa8cd905c3b5dc2bb2759c8ec334",
       "primaryPlugin": {
-        "id": "gg.matterhorn.chord.plugin",
+        "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
         "model": {
           "kind": "matterhorn.primary-model.schema",
@@ -3622,7 +3622,7 @@
         "schemaVersion": 1,
         "definitions": {
           "messageMention": {
-            "kind": "chord.message.mention",
+            "kind": "mosh.message.mention",
             "on": {
               "action": "messageSend"
             },
@@ -3660,7 +3660,7 @@
             }
           },
           "replyMention": {
-            "kind": "chord.reply.mention",
+            "kind": "mosh.reply.mention",
             "on": {
               "action": "messageReply"
             },
@@ -3698,7 +3698,7 @@
             }
           },
           "directMessage": {
-            "kind": "chord.directMessage",
+            "kind": "mosh.directMessage",
             "on": {
               "action": "directMessageSend"
             },
@@ -3750,18 +3750,18 @@
   "hostPlugins": [
     {
       "kind": "matterhorn.schema-model-host-plugin",
-      "id": "gg.matterhorn.chord.plugin",
+      "id": "gg.matterhorn.mosh.plugin",
       "version": "1.0.0",
       "composition": {
         "kind": "matterhorn.app-composition.schema",
         "schemaVersion": 1,
         "app": {
-          "id": "gg.matterhorn.chord",
+          "id": "gg.matterhorn.mosh",
           "version": "1.0.0",
           "name": "Chord"
         },
         "primaryPlugin": {
-          "id": "gg.matterhorn.chord.plugin",
+          "id": "gg.matterhorn.mosh.plugin",
           "version": "1.0.0",
           "model": {
             "kind": "matterhorn.primary-model.schema",
@@ -5431,14 +5431,14 @@
             "path": "/",
             "component": "ChatRoomPage",
             "requiredPlugins": [
-              "gg.matterhorn.chord.plugin"
+              "gg.matterhorn.mosh.plugin"
             ]
           },
           {
             "path": "/dms",
             "component": "DirectMessagesPage",
             "requiredPlugins": [
-              "gg.matterhorn.chord.plugin"
+              "gg.matterhorn.mosh.plugin"
             ]
           },
           {
@@ -5454,7 +5454,7 @@
           "schemaVersion": 1,
           "definitions": {
             "messageMention": {
-              "kind": "chord.message.mention",
+              "kind": "mosh.message.mention",
               "on": {
                 "action": "messageSend"
               },
@@ -5492,7 +5492,7 @@
               }
             },
             "replyMention": {
-              "kind": "chord.reply.mention",
+              "kind": "mosh.reply.mention",
               "on": {
                 "action": "messageReply"
               },
@@ -5530,7 +5530,7 @@
               }
             },
             "directMessage": {
-              "kind": "chord.directMessage",
+              "kind": "mosh.directMessage",
               "on": {
                 "action": "directMessageSend"
               },
@@ -5624,7 +5624,7 @@
   "playerPacks": [
     {
       "kind": "matterhorn.player-pack",
-      "id": "gg.matterhorn.chord.player",
+      "id": "gg.matterhorn.mosh.player",
       "name": "Chord Player",
       "version": "1.0.0",
       "publisher": {
@@ -5633,16 +5633,16 @@
         "publicKey": "rk_pub_schema_builder"
       },
       "entrypoints": {
-        "default": "https://apps.matterhorn.gg/matterhorn-chord/player/1.0.0/",
-        "admin": "https://apps.matterhorn.gg/matterhorn-chord/admin/1.0.0/"
+        "default": "https://apps.matterhorn.gg/matterhorn-mosh/player/1.0.0/",
+        "admin": "https://apps.matterhorn.gg/matterhorn-mosh/admin/1.0.0/"
       },
       "supports": [
         {
-          "appPackId": "gg.matterhorn.chord",
+          "appPackId": "gg.matterhorn.mosh",
           "appPackRange": "^1.0.0",
           "appProtocolHash": "sha256-a388060825f56169b45c459155dde1531d51084134f2229ddfbde54bce7f08c4",
           "pluginIds": [
-            "gg.matterhorn.chord.plugin",
+            "gg.matterhorn.mosh.plugin",
             "gg.matterhorn.examples.plugins.comments",
             "gg.matterhorn.examples.plugins.embeds",
             "gg.matterhorn.examples.plugins.media-rooms",
@@ -5691,8 +5691,8 @@
   },
   "frontend": {
     "kind": "matterhorn-player-bundle",
-    "appId": "gg.matterhorn.chord",
-    "root": "C:\\workspace\\roomchord",
+    "appId": "gg.matterhorn.mosh",
+    "root": "C:\\workspace\\roommosh",
     "defaultPort": 42732,
     "locations": [
       {
@@ -5706,17 +5706,17 @@
       "path": "icon.svg"
     },
     "bundle": {
-      "mountPath": "/matterhorn/apps/gg.matterhorn.chord/",
+      "mountPath": "/matterhorn/apps/gg.matterhorn.mosh/",
       "defaultPort": 42732,
       "devEntry": "src/index.tsx",
-      "builtEntry": "matterhorn-chord.js",
+      "builtEntry": "matterhorn-mosh.js",
       "healthPath": "src/index.tsx",
       "dev": {
         "command": "C:\\nvm4w\\nodejs\\node.exe",
         "args": [
-          "C:\\workspace\\roomchord\\shared\\frontendCommand.cjs",
+          "C:\\workspace\\roommosh\\shared\\frontendCommand.cjs",
           "dev",
-          "C:\\workspace\\roomchord",
+          "C:\\workspace\\roommosh",
           "--",
           "--host",
           "127.0.0.1",
@@ -5728,9 +5728,9 @@
       "build": {
         "command": "C:\\nvm4w\\nodejs\\node.exe",
         "args": [
-          "C:\\workspace\\roomchord\\shared\\frontendCommand.cjs",
+          "C:\\workspace\\roommosh\\shared\\frontendCommand.cjs",
           "build",
-          "C:\\workspace\\roomchord"
+          "C:\\workspace\\roommosh"
         ]
       },
       "dist": "dist"
@@ -5743,12 +5743,12 @@
     "kind": "matterhorn.app-composition.schema",
     "schemaVersion": 1,
     "app": {
-      "id": "gg.matterhorn.chord",
+      "id": "gg.matterhorn.mosh",
       "version": "1.0.0",
       "name": "Chord"
     },
     "primaryPlugin": {
-      "id": "gg.matterhorn.chord.plugin",
+      "id": "gg.matterhorn.mosh.plugin",
       "version": "1.0.0",
       "model": {
         "kind": "matterhorn.primary-model.schema",
@@ -7418,14 +7418,14 @@
         "path": "/",
         "component": "ChatRoomPage",
         "requiredPlugins": [
-          "gg.matterhorn.chord.plugin"
+          "gg.matterhorn.mosh.plugin"
         ]
       },
       {
         "path": "/dms",
         "component": "DirectMessagesPage",
         "requiredPlugins": [
-          "gg.matterhorn.chord.plugin"
+          "gg.matterhorn.mosh.plugin"
         ]
       },
       {
@@ -7441,7 +7441,7 @@
       "schemaVersion": 1,
       "definitions": {
         "messageMention": {
-          "kind": "chord.message.mention",
+          "kind": "mosh.message.mention",
           "on": {
             "action": "messageSend"
           },
@@ -7479,7 +7479,7 @@
           }
         },
         "replyMention": {
-          "kind": "chord.reply.mention",
+          "kind": "mosh.reply.mention",
           "on": {
             "action": "messageReply"
           },
@@ -7517,7 +7517,7 @@
           }
         },
         "directMessage": {
-          "kind": "chord.directMessage",
+          "kind": "mosh.directMessage",
           "on": {
             "action": "directMessageSend"
           },
@@ -7563,12 +7563,12 @@
       "kind": "matterhorn.app-composition.schema",
       "schemaVersion": 1,
       "app": {
-        "id": "gg.matterhorn.chord",
+        "id": "gg.matterhorn.mosh",
         "version": "1.0.0",
         "name": "Chord"
       },
       "primaryPlugin": {
-        "id": "gg.matterhorn.chord.plugin",
+        "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
         "model": {
           "kind": "matterhorn.primary-model.schema",
@@ -9238,14 +9238,14 @@
           "path": "/",
           "component": "ChatRoomPage",
           "requiredPlugins": [
-            "gg.matterhorn.chord.plugin"
+            "gg.matterhorn.mosh.plugin"
           ]
         },
         {
           "path": "/dms",
           "component": "DirectMessagesPage",
           "requiredPlugins": [
-            "gg.matterhorn.chord.plugin"
+            "gg.matterhorn.mosh.plugin"
           ]
         },
         {
@@ -9261,7 +9261,7 @@
         "schemaVersion": 1,
         "definitions": {
           "messageMention": {
-            "kind": "chord.message.mention",
+            "kind": "mosh.message.mention",
             "on": {
               "action": "messageSend"
             },
@@ -9299,7 +9299,7 @@
             }
           },
           "replyMention": {
-            "kind": "chord.reply.mention",
+            "kind": "mosh.reply.mention",
             "on": {
               "action": "messageReply"
             },
@@ -9337,7 +9337,7 @@
             }
           },
           "directMessage": {
-            "kind": "chord.directMessage",
+            "kind": "mosh.directMessage",
             "on": {
               "action": "directMessageSend"
             },

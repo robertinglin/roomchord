@@ -26,7 +26,7 @@ function loadTestingApi() {
 
 function loadMatterhornExampleApp(appRoot = process.cwd()) {
   const resolved = path.resolve(appRoot);
-  const entry = path.join(resolved, "../chord.cjs");
+  const entry = path.join(resolved, "../mosh.cjs");
   if (!fs.existsSync(entry)) throw new Error(`Matterhorn example app entry not found: ${entry}`);
   return { appRoot: resolved, app: require(entry).toMatterhornExports() };
 }

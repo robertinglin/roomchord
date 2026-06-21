@@ -17,14 +17,14 @@ export function ChatApp(props: ChatProps) {
   if (!live.ready) {
     return (
       <ChatLoading
-        roomName={live.envelope.room?.name || live.envelope.room?.id || "matterhorn-chord"}
+        roomName={live.envelope.room?.name || live.envelope.room?.id || "mosh"}
         message={live.message}
         status={live.status}
       />
     );
   }
 
-  const roomName = live.envelope.room?.id || live.envelope.room?.name || "matterhorn-chord";
+  const roomName = live.envelope.room?.id || live.envelope.room?.name || "mosh";
   const launchHome = props.launchHome || props.home;
   const openLaunchHomeRoom = props.onOpenLaunchHomeRoom || props.openRoom;
   const storageKeys: ChatStorageKeys = {

@@ -114,9 +114,19 @@ export function PresencePanel({
   const activeRooms = rooms
     .filter((room) => !room.archivedAt && voiceTokens.some((token) => token.scope === room.id))
     .map((room) => ({ room, count: voiceTokens.filter((token) => token.scope === room.id).length }));
+  void embeds;
+  void threads;
 
   function isActiveMember(member: MemberRow) {
     return member.status !== "offline";
+  }
+
+  function statusClass(status: string) {
+    const normalized = status.toLowerCase();
+    if (normalized === "offline") return "off";
+    if (normalized === "away" || normalized === "idle") return "idle";
+    if (normalized === "busy" || normalized === "dnd" || normalized === "focus") return "dnd";
+    return "on";
   }
 
   function memberActions(member: MemberRow): MemberContextMenuAction[] {
@@ -139,17 +149,19 @@ export function PresencePanel({
           onDirectMessage={onDirectMessage}
         >
           <button
-            className={`member-row member-action${selectedMemberId === member.id ? " selected" : ""}`}
+            className={`member member-action${selectedMemberId === member.id ? " selected" : ""}`}
             type="button"
             disabled={!member.canMessage && !canManageRoles}
             aria-label={member.self ? `${member.name} (you)` : `${member.name}, ${member.status}`}
             onClick={() => setSelectedMemberId((current) => current === member.id ? undefined : member.id)}
           >
-            <span className={`status-dot ${member.status}`} />
-            <Avatar name={member.name} avatar={member.avatar} small />
-            <span>
-              <strong>{member.self ? `${member.name} (you)` : member.name}</strong>
-              <small>{member.activity || member.role || member.status}</small>
+            <span className={`m-av ${statusClass(member.status) === "off" ? "off" : ""}`}>
+              <Avatar name={member.name} avatar={member.avatar} small />
+              <span className={`m-stat ${statusClass(member.status)}`} aria-hidden="true" />
+            </span>
+            <span className="m-info">
+              <span className={`m-name${statusClass(member.status) === "off" ? " off" : ""}`}>{member.self ? `${member.name} (you)` : member.name}</span>
+              <span className="m-sub">{member.activity || member.role || member.status}</span>
             </span>
           </button>
         </MemberContextMenu>
@@ -169,26 +181,26 @@ export function PresencePanel({
   const offlineMembers = members.filter((member) => !isActiveMember(member));
 
   return (
-    <aside className="member-rail" aria-label="Room details">
-      <section className="rail-section">
-        <h2>Online - {activeMembers.length}</h2>
-        <div className="member-list">
+    <aside className="rail" aria-label="Room details">
+      <section className="rail-group">
+        <div className="rail-grp-head" role="heading" aria-level={2}>Online - <b>{activeMembers.length}</b></div>
+        <div>
           {activeMembers.length === 0 ? <p className="rail-empty">No one online</p> : activeMembers.map(renderMember)}
         </div>
       </section>
 
       {offlineMembers.length > 0 ? (
-        <section className="rail-section">
-          <h2>Offline - {offlineMembers.length}</h2>
-          <div className="member-list">
+        <section className="rail-group">
+          <div className="rail-grp-head" role="heading" aria-level={2}>Offline - <b>{offlineMembers.length}</b></div>
+          <div>
             {offlineMembers.map(renderMember)}
           </div>
         </section>
       ) : null}
 
-      <section className="rail-section">
-        <h2>Live now</h2>
-        <div className="rail-list">
+      <section className="rail-group">
+        <div className="rail-grp-head" role="heading" aria-level={2}>Live now - <b>{activeRooms.length + screenShares.length}</b></div>
+        <div>
           {activeRooms.length === 0 && screenShares.length === 0 ? <p className="rail-empty">Nothing live</p> : null}
           {activeRooms.map(({ room, count }) => (
             <div className="rail-item" key={room.id}>
@@ -201,32 +213,6 @@ export function PresencePanel({
               <strong>{share.title || "Screen share"}</strong>
               <span>{share.presenterName || share.ownerName || share.presenterId || share.ownerId || "Presenter"}</span>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rail-section">
-        <h2>Threads</h2>
-        <div className="rail-list">
-          {threads.length === 0 ? <p className="rail-empty">No threads</p> : null}
-          {threads.slice(0, 5).map((thread) => (
-            <div className="rail-item" key={thread.id}>
-              <strong>{thread.title || "Thread"}</strong>
-              <span>{thread.resolved ? "Resolved" : "Open"}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rail-section">
-        <h2>Links</h2>
-        <div className="rail-list">
-          {embeds.length === 0 ? <p className="rail-empty">No links</p> : null}
-          {embeds.slice(0, 5).map((embed) => (
-            <a className="rail-item link-item" href={embed.url} target="_blank" rel="noreferrer" key={embed.id}>
-              <strong>{embed.title || embed.provider || "Link"}</strong>
-              {embed.url ? <span>{embed.url}</span> : null}
-            </a>
           ))}
         </div>
       </section>

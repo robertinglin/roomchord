@@ -173,7 +173,7 @@ export function UserControls({
   }
 
   return (
-    <footer className="self-panel" aria-label="User controls">
+    <footer className="user-controls" aria-label="User controls">
       {statusMenuOpen ? (
         <>
           <span className="context-menu-shroud" role="presentation" onMouseDown={() => setStatusMenuOpen(false)} />

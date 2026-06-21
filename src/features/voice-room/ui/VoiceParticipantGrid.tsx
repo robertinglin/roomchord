@@ -2,7 +2,7 @@ import React from "react";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import { Avatar } from "@shared/ui/Avatar";
 import { VideoStream } from "@shared/ui/CallMedia";
-import { MicIcon, MicOffIcon, ScreenIcon, SpeakerIcon, VideoIcon, VideoOffIcon } from "@shared/ui/Icons";
+import { MicIcon, MicOffIcon, ScreenIcon, VideoIcon, VideoOffIcon } from "@shared/ui/Icons";
 import { MemberContextMenu, type MemberContextMenuAction } from "@shared/ui/MemberContextMenu";
 import type { VoiceParticipant } from "@features/voice-room/model/types";
 import { audioOn, cameraOn, cameraStream, isVoiceParticipantMuted, mediaLabel, participantGridClass, screenOn } from "@features/voice-room/model/voiceParticipants";
@@ -42,11 +42,11 @@ export function VoiceParticipantGrid({
   const totalTilesCount = participants.length + (inlinedShares?.length || 0);
 
   return (
-    <div className={`voice-video-grid ${participantGridClass(totalTilesCount)}`} aria-label={`${roomName} participants`}>
+    <div className={`vs-grid voice-video-grid ${participantGridClass(totalTilesCount)}`} aria-label={`${roomName} participants`}>
       {totalTilesCount === 0 ? (
-        <div className="empty-thread">
-          <strong>No one is in this room</strong>
-          <span>No active voice participants.</span>
+        <div className="empty-inline show">
+          <h3>No one is in this room</h3>
+          <p>No active voice participants.</p>
         </div>
       ) : null}
       {participants.map((participant) => {
@@ -54,7 +54,7 @@ export function VoiceParticipantGrid({
         const participantCameraStream = cameraStream(participant);
         const hasVideo = Boolean(participantCameraStream);
         return (
-          <article className={`voice-video-tile${hasVideo ? " has-video" : ""}`} aria-label={`${participant.name} participant`} key={participant.id}>
+          <article className={`tile voice-video-tile${audioOn(participant) ? " speaking" : ""}${hasVideo ? " has-video" : ""}`} aria-label={`${participant.name} participant`} key={participant.id}>
             <MemberContextMenu
               additionalActions={voiceParticipantActions(participant)}
               currentUserId={actorId}
@@ -66,17 +66,17 @@ export function VoiceParticipantGrid({
                 <VideoStream label={label} muted={participant.isLocal || voicePreferences.deafened} stream={participantCameraStream} />
               ) : (
                 <div className="voice-video-placeholder">
-                  <Avatar name={participant.name} avatar={participant.avatar} />
+                  <Avatar className="tile-av" name={participant.name} avatar={participant.avatar} />
                 </div>
               )}
             </MemberContextMenu>
-            <span className="voice-video-overlay">
-              <SpeakerIcon className="ui-icon voice-video-speaker" />
+            <span className="tile-info voice-video-overlay">
+              <Avatar name={participant.name} avatar={participant.avatar} small />
               <span className="voice-video-name">{participant.name}</span>
-              <span className="voice-video-media" aria-label={mediaLabel(participant)}>
-                {audioOn(participant) ? <MicIcon /> : <MicOffIcon />}
-                {cameraOn(participant) ? <VideoIcon /> : <VideoOffIcon />}
-                {screenOn(participant) ? <ScreenIcon /> : null}
+              <span className="tile-ic voice-video-media" aria-label={mediaLabel(participant)}>
+                {audioOn(participant) ? <MicIcon className="ico" /> : <MicOffIcon className="ico" />}
+                {cameraOn(participant) ? <VideoIcon className="ico" /> : <VideoOffIcon className="ico" />}
+                {screenOn(participant) ? <ScreenIcon className="ico" /> : null}
               </span>
             </span>
           </article>

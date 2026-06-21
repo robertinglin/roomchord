@@ -72,13 +72,13 @@ describe("MessageFeed scrolling", () => {
     Object.defineProperty(window.HTMLElement.prototype, "clientHeight", {
       configurable: true,
       get() {
-        return this.classList.contains("message-list") ? 200 : 0;
+        return this.classList.contains("msgs") ? 200 : 0;
       }
     });
     Object.defineProperty(window.HTMLElement.prototype, "scrollHeight", {
       configurable: true,
       get() {
-        return this.classList.contains("message-list") ? 1000 : 0;
+        return this.classList.contains("msgs") ? 1000 : 0;
       }
     });
   });

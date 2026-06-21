@@ -3,7 +3,7 @@ import { RemoteAudioSink } from "@features/voice-room/ui/RemoteAudioSink";
 import { VoiceParticipantGrid } from "@features/voice-room/ui/VoiceParticipantGrid";
 import { VoiceScreenShares, type ActiveScreenShare } from "@features/voice-room/ui/VoiceScreenShares";
 import type { VoiceRoomViewProps } from "@features/voice-room/model/types";
-import { MenuIcon } from "@shared/ui/Icons";
+import { MenuIcon, SpeakerIcon } from "@shared/ui/Icons";
 import { audioOn, isVoiceParticipantMuted, roomParticipants, screenOn, screenShareStream, streamHasTrack } from "@features/voice-room/model/voiceParticipants";
 import { VoiceControlPanel } from "@shared/ui/VoiceControlPanel";
 
@@ -46,24 +46,24 @@ export function VoiceRoomView(props: VoiceRoomViewProps) {
   }
 
   return (
-    <section className="chat-main voice-room-main" aria-labelledby="active-room-heading">
+    <section className="chat voice-stage show" aria-labelledby="active-room-heading">
       <RemoteAudioSink muted={props.voicePreferences.deafened} streams={remoteAudioStreams} />
-      <header className="chat-main-header">
+      <header className="vs-head">
         {props.showSidebarMenu ? (
           <button
             type="button"
-            className="chat-mobile-nav-toggle"
+            className="h-btn mobile-toggle"
             aria-label="Open navigation"
             onClick={props.onOpenMenu || (() => undefined)}
           >
-            <MenuIcon />
+            <MenuIcon className="ico" />
           </button>
         ) : null}
-        <div>
-          <h1 id="active-room-heading">{props.room.name}</h1>
-          <p>{participants.length} {participants.length === 1 ? "participant" : "participants"} · {props.room.allowsVideo === false ? "Audio only" : "Camera allowed"}</p>
-        </div>
-        <span className={`voice-room-status ${status}`}>{status}</span>
+        <SpeakerIcon className="ico vs-ic" />
+        <h2 id="active-room-heading">{props.room.name}</h2>
+        <span className="vs-sub">
+          {participants.length} {participants.length === 1 ? "connected" : "connected"} · {props.room.allowsVideo === false ? "audio only" : "camera allowed"} · {status}
+        </span>
       </header>
 
       <div className="voice-room-body">
@@ -87,7 +87,7 @@ export function VoiceRoomView(props: VoiceRoomViewProps) {
         </div>
       </div>
       {props.joinedRoomId === props.room.id ? (
-        <div className="voice-room-controls">
+        <div className="vs-ctrls">
           <VoiceControlPanel
             canSwapCamera={Boolean(props.voiceControlCanSwapCamera)}
             canUseVideo={Boolean(props.voiceControlCanUseVideo)}

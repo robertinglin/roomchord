@@ -1,7 +1,7 @@
 {
-  "name": "matterhorn-chord",
+  "name": "mosh",
   "version": "0.1.0",
-  "description": "Chord Matterhorn chat app with channels, private messages, presence, camera-capable rooms, and screen-share state.",
+  "description": "Mosh Matterhorn chat app with channels, private messages, presence, camera-capable rooms, and screen-share state.",
   "type": "commonjs",
   "main": "src/sdk-app.cjs",
   "exports": {
@@ -15,22 +15,24 @@
   "scripts": {
     "test": "node --test test/*.test.cjs",
     "coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=80 --test-coverage-branches=70 --test-coverage-include=src/**/*.cjs test/*.test.cjs",
-    "dev:frontend": "vite --config src/vite.config.ts --host 127.0.0.1 --port 42732 --strictPort",
+    "dev:frontend": "vite --config vite.config.ts --host 127.0.0.1 --port 42732 --strictPort",
     "build:frontend": "node shared/frontendCommand.cjs build .",
-    "serve:frontend": "vite preview --config src/vite.config.ts",
-    "check:frontend": "tsc --project src/tsconfig.json",
-    "check:fsd": "dependency-cruise --config .dependency-cruiser.cjs --validate --output-type err src/src",
+    "build:frontend:watch": "node shared/frontendCommand.cjs watch .",
+    "serve:frontend": "vite preview --config vite.config.ts",
+    "check:frontend": "tsc --project tsconfig.json",
+    "check:fsd": "dependency-cruise --config .dependency-cruiser.cjs --validate --output-type err src",
     "build": "pnpm run build:frontend",
     "check": "pnpm run check:frontend && pnpm run check:fsd",
-    "test:frontend": "vitest run --config src/vitest.config.ts",
+    "test:frontend": "vitest run --config vitest.config.ts src/app/chat-frontend.test.tsx src/features/messages/ui/MessageFeed.test.tsx",
     "dev:backend": "node shared/liveBackend.cjs --app . --port 43732",
     "dev": "node shared/runLiveExample.cjs .",
     "start:backend": "node shared/liveBackend.cjs --app . --port 43732"
   },
   "dependencies": {
+    "@stylexjs/stylex": "^0.19.0",
+    "matterhorn-sdk": "link:../matterhorn/packages/matterhorn-sdk",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "matterhorn-sdk": "link:../matterhorn/packages/matterhorn-sdk",
     "zustand": "^5.0.14"
   },
   "engines": {
@@ -40,6 +42,8 @@
     "app": "./src/sdk-app.cjs"
   },
   "devDependencies": {
+    "@stylexjs/babel-plugin": "^0.19.0",
+    "@stylexjs/rollup-plugin": "^0.19.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

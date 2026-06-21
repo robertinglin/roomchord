@@ -114,8 +114,8 @@ export function useChatViewData(input: ChatViewDataInput) {
     state
   }), [channels, currentChannelId, currentThreadId, input.activeView, live.actor.memberId, memberNamesById, state]);
   const actorName = matterhornDisplayName({ actor: live.actor, fallbackId: live.actor.memberId });
-  const roomLabel = live.envelope.room?.name || live.envelope.room?.id || "matterhorn-chord";
-  const roomName = live.envelope.room?.id || live.envelope.room?.name || "matterhorn-chord";
+  const roomLabel = live.envelope.room?.name || live.envelope.room?.id || "mosh";
+  const roomName = live.envelope.room?.id || live.envelope.room?.name || "mosh";
 
   return {
     activeChannel,

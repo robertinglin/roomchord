@@ -120,8 +120,8 @@ function installTestMatterhornScope(
 ) {
   resetMatterhornForTests();
   installMatterhornAppScope({
-    appId: "gg.matterhorn.chord",
-    appName: "Chord",
+    appId: "gg.matterhorn.mosh",
+    appName: "Mosh",
     metadata: testAppMetadata,
     host: {
       mode: "injected",
@@ -318,7 +318,7 @@ describe("ChatApp", () => {
   it("renders a real backend-connected team chat surface", async () => {
     const { container } = renderChat();
     expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Chord/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Mosh/ })).toBeInTheDocument();
     expect(container.querySelector("mtn-home")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Channels" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Text Channels" })).not.toBeInTheDocument();
@@ -341,8 +341,8 @@ describe("ChatApp", () => {
         envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }}
         home={{
           apps: [{
-            id: "gg.matterhorn.chord",
-            name: "Chord",
+            id: "gg.matterhorn.mosh",
+            name: "Mosh",
             rooms: [{ id: "ops", name: "Ops Room", notificationCount: 7 }]
           }]
         }}
@@ -354,15 +354,15 @@ describe("ChatApp", () => {
     const launchHome = container.querySelector("mtn-home");
     const shadow = launchHome?.shadowRoot;
     if (!shadow) throw new Error("Expected mtn-home shadow root");
-    expect(launchHome?.innerHTML).toContain("0 0 1100 836");
+    expect(launchHome?.innerHTML).toContain("0 0 24 18");
 
     fireEvent.click(shadow.querySelector("button") as HTMLButtonElement);
-    expect(shadow.textContent).toContain("Chord");
+    expect(shadow.textContent).toContain("Mosh");
     expect(shadow.textContent).toContain("Ops Room");
     expect(shadow.textContent).toContain("7");
 
     fireEvent.click(shadow.querySelector("[role='menuitem']") as HTMLButtonElement);
-    expect(openRoom).toHaveBeenCalledWith({ appId: "gg.matterhorn.chord", roomId: "ops" });
+    expect(openRoom).toHaveBeenCalledWith({ appId: "gg.matterhorn.mosh", roomId: "ops" });
   });
 
   it("uses the installed Matterhorn app scope", async () => {
@@ -645,8 +645,8 @@ describe("ChatApp", () => {
 
     try {
       expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: /Chord/ })).toBeInTheDocument();
-      expect(document.getElementById("matterhorn-chord-styles")?.textContent).toContain(".chat-shell");
+      expect(screen.getByRole("heading", { name: /Mosh/ })).toBeInTheDocument();
+      expect(document.getElementById("matterhorn-mosh-styles")?.textContent).toContain(".shell");
     } finally {
       await act(async () => unmount());
       target.remove();
@@ -769,7 +769,7 @@ describe("ChatApp", () => {
       const composer = await screen.findByLabelText("Message # general");
       const sendButton = screen.getByRole("button", { name: "Send message" });
       expect(sendButton).toHaveClass("composer-send-button");
-      expect(sendButton.textContent).toBe("");
+      expect(sendButton.textContent).toBe("Send");
       expect(screen.getByRole("button", { name: "Add emoji" })).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Insert link" }));
@@ -875,7 +875,7 @@ describe("ChatApp", () => {
     const body = document.querySelector(".message-body");
     if (!body) throw new Error("Expected rendered message body");
     expect(body).toHaveTextContent("Ping @Alice, @Lee, and @Guest 650");
-    expect(body.closest(".message-row")).toHaveClass("mentioned");
+    expect(body.closest(".msg")).toHaveClass("mentioned");
     expect(screen.queryByText("Ping @[alice], @[lee], and @[guest_650]")).not.toBeInTheDocument();
 
     const leeMention = document.querySelector(".message-mention[data-member-id='lee']");
@@ -1779,7 +1779,7 @@ describe("ChatApp", () => {
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: pinnedState, operation }; }), pinnedState);
 
     expect(await screen.findAllByText("Pinned update")).toHaveLength(2);
-    const rows = Array.from(document.querySelectorAll<HTMLElement>(".message-list .message-row"));
+    const rows = Array.from(document.querySelectorAll<HTMLElement>(".msgs .msg"));
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveTextContent("Pinned update");
     expect(rows[0]).toHaveClass("pinned");
@@ -1815,7 +1815,7 @@ describe("ChatApp", () => {
 
   it("renders reply previews as hard links to the source message", async () => {
     const user = userEvent.setup();
-    window.location.hash = "#/room/matterhorn-chord-6?secret=invite-secret";
+    window.location.hash = "#/room/matterhorn-mosh-6?secret=invite-secret";
     try {
       renderChat(undefined, {
         ...state,
@@ -1837,11 +1837,11 @@ describe("ChatApp", () => {
       });
 
       const preview = await screen.findByRole("link", { name: "Replying to Mina: Welcome to the live chat app" });
-      expect(preview).toHaveAttribute("href", "#/room/matterhorn-chord-6?messageId=m1");
-      expect(screen.getByRole("link", { name: "Link to message from Mina" })).toHaveAttribute("href", "#/room/matterhorn-chord-6?messageId=m1");
+      expect(preview).toHaveAttribute("href", "#/room/matterhorn-mosh-6?messageId=m1");
+      expect(screen.getByRole("link", { name: "Link to message from Mina" })).toHaveAttribute("href", "#/room/matterhorn-mosh-6?messageId=m1");
 
       await user.click(preview);
-      expect(window.location.hash).toBe("#/room/matterhorn-chord-6?messageId=m1");
+      expect(window.location.hash).toBe("#/room/matterhorn-mosh-6?messageId=m1");
       expect(document.getElementById("message-m1")).toBeInTheDocument();
     } finally {
       window.location.hash = "";
@@ -1849,7 +1849,7 @@ describe("ChatApp", () => {
   });
 
   it("opens a channel message from its hard link hash", async () => {
-    window.location.hash = "#/room/matterhorn-chord-6?messageId=r1";
+    window.location.hash = "#/room/matterhorn-mosh-6?messageId=r1";
     try {
       renderChat(undefined, {
         ...state,
@@ -1874,7 +1874,7 @@ describe("ChatApp", () => {
       });
 
       expect(await screen.findByText("Random update")).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: "# random" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "random" })).toBeInTheDocument();
     } finally {
       window.location.hash = "";
     }
@@ -1904,17 +1904,17 @@ describe("ChatApp", () => {
       }
     };
     const sent: any[] = [];
-    window.location.hash = "#/room/matterhorn-chord-6?messageId=r1";
+    window.location.hash = "#/room/matterhorn-mosh-6?messageId=r1";
     try {
       renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: linkedState, operation }; }), linkedState);
 
       expect(await screen.findByText("Random update")).toBeInTheDocument();
       await user.click(screen.getByRole("button", { name: "#general" }));
-      expect(screen.getByRole("heading", { name: "# general" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "general" })).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "React with 😂" }));
       await waitFor(() => expect(sent.some((op) => op.schemaAction === "messageReact")).toBe(true));
-      expect(screen.getByRole("heading", { name: "# general" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "general" })).toBeInTheDocument();
     } finally {
       window.location.hash = "";
     }
@@ -1930,7 +1930,7 @@ describe("ChatApp", () => {
     await user.click(await screen.findByRole("button", { name: "grinning face" }));
 
     await waitFor(() => expect(sent.some((op) => op.schemaAction === "messageReact" && op.payload.emoji === "😀")).toBe(true));
-    expect(JSON.parse(window.localStorage.getItem("matterhorn:chord:recent-reactions:v1") || "[]").slice(0, 3)).toEqual(["😀", "👍", "😂"]);
+    expect(JSON.parse(window.localStorage.getItem("matterhorn:mosh:recent-reactions:v1") || "[]").slice(0, 3)).toEqual(["😀", "👍", "😂"]);
     expect(screen.getByRole("button", { name: "React with 😀" })).toBeInTheDocument();
   });
 
@@ -1942,7 +1942,7 @@ describe("ChatApp", () => {
     await user.click(await screen.findByRole("button", { name: "React with 😂" }));
 
     await waitFor(() => expect(sent.some((op) => op.schemaAction === "messageReact" && op.payload.emoji === "😂")).toBe(true));
-    expect(JSON.parse(window.localStorage.getItem("matterhorn:chord:recent-reactions:v1") || "[]")).toEqual(["👍", "😂", "❤️"]);
+    expect(JSON.parse(window.localStorage.getItem("matterhorn:mosh:recent-reactions:v1") || "[]")).toEqual(["👍", "😂", "❤️"]);
   });
 
   it("forwards messages to other channels and direct messages", async () => {
@@ -2485,7 +2485,7 @@ describe("ChatApp", () => {
     fireEvent.contextMenu(await memberRailAvatar("Lee", "Lee, online"), { clientX: 80, clientY: 90 });
     await user.click(await screen.findByRole("menuitem", { name: "Send DM" }));
     await user.type(screen.getByLabelText("Message Lee"), "Private update");
-    const composer = screen.getByLabelText("Message Lee").closest(".message-composer");
+    const composer = screen.getByLabelText("Message Lee").closest(".comp-box");
     if (!composer) throw new Error("Expected direct-message composer");
     await user.click(within(composer).getByRole("button", { name: "Send DM" }));
 

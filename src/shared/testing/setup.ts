@@ -68,7 +68,7 @@ afterEach(() => {
   cleanup();
   window.localStorage.clear();
   removeStorage("matterhorn:notification-read-state");
-  document.getElementById("matterhorn-chord-styles")?.remove();
+  document.getElementById("matterhorn-mosh-styles")?.remove();
   document.getElementById("matterhorn-emoji-picker-styles")?.remove();
   window.location.hash = "";
 });

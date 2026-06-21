@@ -25,48 +25,51 @@ export function SelfAccountRow({
   onToggleStatusMenu: () => void;
 }) {
   return (
-    <div className="self-account-row">
+    <div className="user-foot">
       <button
-        className="self-identity"
+        className="uf-profile"
         type="button"
         aria-haspopup="menu"
         aria-expanded={statusMenuOpen}
         aria-label="Open status menu"
         onClick={onToggleStatusMenu}
       >
-        <Avatar name={actorName} avatar={actorAvatar} />
-        <span>
-          <strong>{actorName}</strong>
-          <small>{actorRole}</small>
+        <span className="uf-av">
+          <Avatar name={actorName} avatar={actorAvatar} />
+          <span className="uf-stat" aria-hidden="true" />
+        </span>
+        <span className="uf-info">
+          <span className="uf-name">{actorName}</span>
+          <span className="uf-sub">{actorRole}</span>
         </span>
       </button>
-      <div className="self-audio-controls" aria-label="Local voice preferences">
+      <div className="uf-btns" aria-label="Local voice preferences">
         <button
-          className={`self-icon-button${voicePreferences.muted ? " active" : ""}`}
+          className={`uf-btn etch${voicePreferences.muted ? " active" : ""}`}
           type="button"
           aria-label={voicePreferences.muted ? "Unmute mic" : "Mute mic"}
           title={voicePreferences.muted ? "Unmute mic" : "Mute mic"}
           onClick={onToggleMute}
         >
-          {voicePreferences.muted || voicePreferences.deafened ? <MicOffIcon /> : <MicIcon />}
+          {voicePreferences.muted || voicePreferences.deafened ? <MicOffIcon className="ico" /> : <MicIcon className="ico" />}
         </button>
         <button
-          className={`self-icon-button${voicePreferences.deafened ? " active" : ""}`}
+          className={`uf-btn etch${voicePreferences.deafened ? " active" : ""}`}
           type="button"
           aria-label={voicePreferences.deafened ? "Undeafen" : "Deafen"}
           title={voicePreferences.deafened ? "Undeafen" : "Deafen"}
           onClick={onToggleDeafen}
         >
-          {voicePreferences.deafened ? <HeadphonesOffIcon /> : <HeadphonesIcon />}
+          {voicePreferences.deafened ? <HeadphonesOffIcon className="ico" /> : <HeadphonesIcon className="ico" />}
         </button>
         <button
-          className="self-icon-button"
+          className="uf-btn etch"
           type="button"
           aria-label="Open voice settings"
           title="Voice settings"
           onClick={onOpenVoiceSettings}
         >
-          <GearIcon />
+          <GearIcon className="ico" />
         </button>
       </div>
     </div>
