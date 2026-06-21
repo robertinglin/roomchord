@@ -6,7 +6,7 @@ This example has three runtime areas:
 
 1. `src/index.cjs` exports the app pack, host plugin, player pack, player actions, replayable demo scenario, and summary helpers.
 2. `src/preview.mjs` exports browser-safe fixture data and preview summaries.
-3. `frontend/` is a package-owned Vite player preview that can run without a relay or E2E environment.
+3. `src/` is a package-owned Vite player preview that can run without a relay or E2E environment.
 
 ## Notable operations
 
@@ -38,7 +38,7 @@ This app links the local `matterhorn-sdk` from `../matterhorn/packages/matterhor
 
 ## Frontend Architecture
 
-`frontend/src` uses Feature-Sliced Design:
+`src/src` uses Feature-Sliced Design:
 
 - `app` for bootstrapping, global styles, and app-level types.
 - `pages` for route-level chat composition.

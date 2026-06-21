@@ -8,33 +8,30 @@
     ".": "./src/sdk-app.cjs",
     "./sdk-app": "./src/sdk-app.cjs",
     "./types": {
-      "types": "./src/types.d.ts",
-      "default": "./src/types.d.ts"
+      "types": "./types.d.ts",
+      "default": "./types.d.ts"
     }
   },
   "scripts": {
     "test": "node --test test/*.test.cjs",
     "coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=80 --test-coverage-branches=70 --test-coverage-include=src/**/*.cjs test/*.test.cjs",
-    "dev:frontend": "vite --config frontend/vite.config.ts --host 127.0.0.1 --port 42732 --strictPort",
+    "dev:frontend": "vite --config src/vite.config.ts --host 127.0.0.1 --port 42732 --strictPort",
     "build:frontend": "node shared/frontendCommand.cjs build .",
-    "serve:frontend": "vite preview --config frontend/vite.config.ts",
-    "check:frontend": "tsc --project frontend/tsconfig.json",
-    "check:fsd": "dependency-cruise --config .dependency-cruiser.cjs --validate --output-type err frontend/src",
+    "serve:frontend": "vite preview --config src/vite.config.ts",
+    "check:frontend": "tsc --project src/tsconfig.json",
+    "check:fsd": "dependency-cruise --config .dependency-cruiser.cjs --validate --output-type err src/src",
     "build": "pnpm run build:frontend",
     "check": "pnpm run check:frontend && pnpm run check:fsd",
-    "test:frontend": "vitest run --config frontend/vitest.config.ts",
+    "test:frontend": "vitest run --config src/vitest.config.ts",
     "dev:backend": "node shared/liveBackend.cjs --app . --port 43732",
     "dev": "node shared/runLiveExample.cjs .",
     "start:backend": "node shared/liveBackend.cjs --app . --port 43732"
   },
   "dependencies": {
-    "@mh-gg/base": "link:../matterhorn/packages/matterhorn-core",
-    "@mh-gg/host-runtime": "link:../matterhorn/packages/matterhorn-host-runtime",
-    "@mh-gg/protocol": "link:../matterhorn/packages/matterhorn-protocol",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "matterhorn-sdk": "link:../matterhorn/packages/matterhorn-sdk",
-    "zustand": "^4.5.7"
+    "zustand": "^5.0.14"
   },
   "engines": {
     "node": ">=22.12"
@@ -43,18 +40,17 @@
     "app": "./src/sdk-app.cjs"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@mh-gg/vite": "link:../matterhorn/packages/matterhorn-vite",
-    "@types/react": "^18.3.29",
-    "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react": "^5.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
     "dependency-cruiser": "^17.4.3",
     "jsdom": "^29.1.1",
-    "typescript": "^5.6.3",
-    "vite": "^6.0.0",
-    "vitest": "^4.1.7"
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
   },
-  "packageManager": "pnpm@11.1.2"
+  "packageManager": "pnpm@11.8.0"
 }

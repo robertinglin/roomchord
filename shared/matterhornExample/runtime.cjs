@@ -1,33 +1,72 @@
-const { manifestHash } = require("@mh-gg/base");
-const { HostPluginRuntime, createMemoryOperationLog, createMemoryRoomStore } = require("@mh-gg/host-runtime");
-const { ensureOperationIdentity } = require("@mh-gg/protocol");
 const { createExampleActor } = require("./identity.cjs");
 
-function createExampleRuntime({ appPack, hostPlugin, hostPlugins, roomId = "example_room", actorVerifier, now = () => 1000, capabilities = ["room.state", "room.roles"] } = {}) {
+let testingApiPromise;
+
+function clone(value) {
+  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+}
+
+function loadTestingApi() {
+  testingApiPromise = testingApiPromise || import("matterhorn-sdk/testing");
+  return testingApiPromise;
+}
+
+function currentAppPackHash(appPack) {
+  return appPack?.composition?.schemaHash || appPack?.compatibility?.appProtocolHash || `${appPack?.id || "app"}@${appPack?.version || "0"}`;
+}
+
+function actionForType(appPack, type) {
+  const matches = (appPack?.composition?.actions || []).filter((action) => action.type === type);
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+function operationAction(appPack, operation) {
+  const actionName = operation.action || operation.schemaAction;
+  if (actionName) return actionName;
+  const action = actionForType(appPack, operation.type);
+  if (!action) throw new Error(`Operation ${operation.type || "unknown"} is not declared by a unique application action`);
+  return action.name;
+}
+
+function createExampleRuntime({ appPack, hostPlugin, hostPlugins, roomId = "example_room", now = () => 1000 } = {}) {
   if (!appPack) throw new Error("appPack is required");
   const runtimePlugins = hostPlugins || (hostPlugin ? [hostPlugin] : []);
   if (!runtimePlugins.length) throw new Error("hostPlugin or hostPlugins is required");
-  return new HostPluginRuntime({
-    room: {
-      id: roomId,
-      appPack: {
-        id: appPack.id,
-        version: appPack.version,
-        hash: manifestHash(appPack),
-        protocolHash: appPack.compatibility.appProtocolHash
+
+  const operationIds = [];
+  const roomPromise = loadTestingApi().then(({ createTestRoom }) => createTestRoom(
+    { toJSON: () => ({ appPack }) },
+    { now, operationId: () => operationIds.shift() || `test_${Date.now()}` }
+  ));
+
+  async function room() {
+    return roomPromise;
+  }
+
+  return {
+    async start() {
+      await room();
+    },
+    async handleOperation(operation) {
+      const action = operationAction(appPack, operation);
+      operationIds.push(operation.id || operation.clientOperationId || `op_${operation.seq || Date.now()}`);
+      try {
+        await (await room()).as(operation.actor || createExampleActor()).dispatch(action, operation.input || operation.payload || {});
+        return { ok: true, acceptedLedgerId: operation.id || operation.clientOperationId };
+      } catch (error) {
+        return { ok: false, reason: error?.message || String(error) };
       }
     },
-    plugins: runtimePlugins,
-    store: createMemoryRoomStore(),
-    operationLog: createMemoryOperationLog(),
-    capabilities,
-    now,
-    authenticateActor: async (auth, actor) => {
-      if (typeof actorVerifier === "function") return actorVerifier(auth, actor);
-      if (!auth || auth.signature !== "sig") throw new Error("Bad example signature");
-      return actor;
+    async getState() {
+      return {
+        room: { id: roomId, appPack: { id: appPack.id, version: appPack.version, hash: currentAppPackHash(appPack) } },
+        plugins: { [runtimePlugins[0].id]: (await room()).state }
+      };
+    },
+    async publicView() {
+      return this.getState();
     }
-  });
+  };
 }
 
 function createExampleOperationFactory({ appPack, hostPlugin, hostPlugins, roomId = "example_room", actor, startSeq = 1, startTime = 1000 } = {}) {
@@ -39,21 +78,24 @@ function createExampleOperationFactory({ appPack, hostPlugin, hostPlugins, roomI
     seq += 1;
     const opSeq = overrides.seq ?? seq;
     const opActor = overrides.actor || actor || createExampleActor({ role: "admin", memberId: "admin", displayName: "Admin" });
-    const operation = {
+    const action = actionForType(appPack, type);
+    return {
+      id: overrides.id || `demo_${opSeq}`,
       clientOperationId: overrides.id || `demo_${opSeq}`,
       roomId: overrides.roomId || roomId,
       appPackId: appPack.id,
-      appPackHash: manifestHash(appPack),
+      appPackHash: currentAppPackHash(appPack),
+      action: action?.name,
+      schemaAction: action?.name,
       pluginId: overrides.pluginId || defaultPlugin.id,
       type,
       actor: opActor,
       seq: opSeq,
       createdAt: overrides.createdAt ?? (startTime + opSeq),
       payload,
-      hlc: overrides.hlc,
+      input: payload,
       auth: overrides.auth || { credentialId: `cred_${opActor.memberId}`, signature: "sig" }
     };
-    return ensureOperationIdentity(operation, { now: operation.createdAt, nodeId: opActor.deviceId || opActor.memberId || "example" });
   };
 }
 

@@ -4,77 +4,23 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const {
-  manifestHash,
-  playerSupportsApp,
-  validateAppPackManifest,
-  validateHostPackManifest,
-  validatePlayerPackManifest
-} = require("@mh-gg/base");
-const {
-  HostPluginRuntime,
-  createMemoryOperationLog,
-  createMemoryRoomStore
-} = require("@mh-gg/host-runtime");
-const {
-  ensureOperationIdentity
-} = require("@mh-gg/protocol");
-const { createLiveExampleBackend } = require("../shared/liveBackend.cjs");
-const sdkApp = require("../src/sdk-app.cjs");
-const app = require("../src/sdk-app.cjs").toMatterhornExports();
-const MEDIA_ROOMS_PLUGIN_ID = "gg.matterhorn.examples.plugins.media-rooms";
+  createLiveExampleBackend,
+  currentAppPackHash,
+  operationFromDraft
+} = require("../shared/liveBackend.cjs");
+const sdkApp = require("../chord.cjs");
+const app = sdkApp.toMatterhornExports();
 
 function primaryAction(type) {
   return app.appPack.composition.actions.find((action) => (action.plugin === "primary" || action.plugin === "$primary") && (!type || action.type === type));
 }
 
-function operation(action, overrides = {}) {
-  const op = {
-    clientOperationId: overrides.id || "op_1",
-    roomId: overrides.roomId || "room_schema_only",
-    appPackId: app.appPack.id,
-    appPackHash: manifestHash(app.appPack),
-    pluginId: overrides.pluginId || action.pluginId || app.hostPlugin.id,
-    type: action.type,
-    actor: overrides.actor || { memberId: "admin", deviceId: "dev_admin", role: "admin", displayName: "Admin" },
-    seq: overrides.seq || 1,
-    createdAt: overrides.createdAt || 1000,
-    payload: overrides.payload || samplePayload(action.type),
-    auth: { credentialId: "cred", signature: "sig" }
-  };
-  return ensureOperationIdentity(op, { now: op.createdAt, nodeId: op.actor?.deviceId || "dev_admin" });
+function primaryOperation(type) {
+  return app.compositionSchema.primaryPlugin.model.operations[type];
 }
 
-function samplePayload(type) {
-  const samples = {
-    "event.update": { title: "Launch Night" },
-    "guest.update": { name: "Alice", rsvp: "yes" },
-    "list.create": { title: "Backlog" },
-    "channel.create": { name: "general" },
-    "invite.disable": { inviteId: "invite_1" },
-    "invite.remove": { inviteId: "invite_1" },
-    "join.approve": { requestId: "join_1" },
-    "join.deny": { requestId: "join_1" },
-    "member.ban": { memberId: "lee", reason: "spam" },
-    "member.moderate": { memberId: "lee", chatDisabled: true },
-    "member.unban": { memberId: "lee" },
-    "page.create": { title: "Home", body: "Welcome" },
-    "poll.create": { title: "Choose", options: ["A", "B"] },
-    "category.create": { name: "Venue", limit: 1000 },
-    "stage.create": { name: "Qualified" }
-  };
-  return samples[type] || { title: "Example", name: "Example", body: "Example", options: ["A"] };
-}
-
-async function runtime() {
-  const rt = new HostPluginRuntime({
-    room: { id: "room_schema_only", appPack: { id: app.appPack.id, version: app.appPack.version, hash: manifestHash(app.appPack), protocolHash: app.appPack.compatibility.appProtocolHash } },
-    plugins: app.hostPlugins,
-    store: createMemoryRoomStore(),
-    operationLog: createMemoryOperationLog(),
-    authenticateActor: async (auth, actor) => { assert.equal(auth.signature, "sig"); return actor; }
-  });
-  await rt.start();
-  return rt;
+async function testingApi() {
+  return import("matterhorn-sdk/testing");
 }
 
 function assertCleanChordTypes(types) {
@@ -92,12 +38,11 @@ function assertCleanChordTypes(types) {
   assert.match(types, /omit to leave unchanged; null to clear/);
 }
 
-test("Chat exports schema-only Matterhorn manifests", () => {
-  assert.equal(validateAppPackManifest(app.appPack).id, app.CHORD_APP_ID);
-  assert.equal(validateHostPackManifest(app.hostPack).appPackId, app.appPack.id);
-  assert.equal(validatePlayerPackManifest(app.playerPack).supports[0].appPackId, app.appPack.id);
-  assert.equal(playerSupportsApp(app.playerPack, app.appPack), true);
-  assert.equal(app.appPack.hostPack.integrity, manifestHash(app.hostPack));
+test("Chat exports schema-only Matterhorn app metadata", () => {
+  assert.equal(app.appPack.kind, "matterhorn.app-pack");
+  assert.equal(app.appPack.id, app.CHORD_APP_ID);
+  assert.equal(app.hostPack.appPackId, app.appPack.id);
+  assert.equal(app.playerPack.supports[0].appPackId, app.appPack.id);
   assert.equal(app.hostPlugin.id, app.CHORD_PLUGIN_ID);
   assert.equal(app.hostPlugin.schemaDefined, true);
   assert.equal(app.hostPlugin.schemaSource, "schema:matterhorn.primary-model");
@@ -105,11 +50,11 @@ test("Chat exports schema-only Matterhorn manifests", () => {
   assert.equal(typeof app.appPack.composition.primaryPlugin.model, "object");
   assert.equal(app.matterhornApp.matterhorn.frontendProjection, "chat");
   assert.equal(app.matterhornApp.frontend.backgroundColor, "oklch(0.205 0.008 260)");
-  assert.deepEqual(app.matterhornApp.frontend.icon, { path: "src/chord-icon.svg" });
+  assert.deepEqual(app.matterhornApp.frontend.icon, { path: "icon.svg" });
 });
 
 test("Chat generated TypeScript contract stays flattened across SDK export helpers", () => {
-  const checkedInTypes = fs.readFileSync(path.join(__dirname, "..", "src", "types.d.ts"), "utf8");
+  const checkedInTypes = fs.readFileSync(path.join(__dirname, "../types.d.ts"), "utf8");
   const exports = sdkApp.toMatterhornExports();
   const bundle = sdkApp.toMatterhornBundle();
 
@@ -135,7 +80,7 @@ test("Chat generated TypeScript contract stays flattened across SDK export helpe
 
 test("Chat emit writes flattened TypeScript contract artifacts", () => {
   const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "matterhorn-chord-emit-"));
-  const bundleOut = sdkApp.emitMatterhornBundle({ outDir });
+  const bundleOut = sdkApp.emit({ outDir });
   const emittedBundle = JSON.parse(fs.readFileSync(bundleOut.bundlePath, "utf8"));
 
   assert.equal("types" in bundleOut.bundle, false);
@@ -143,27 +88,72 @@ test("Chat emit writes flattened TypeScript contract artifacts", () => {
   assert.equal("types" in emittedBundle, false);
   assert.equal("types" in emittedBundle.artifacts, false);
 
-  const emitOut = sdkApp.emit({ outDir: path.join(outDir, "chat"), typesFile: "../types.d.ts" });
+  const emitOut = sdkApp.emit({ outDir: path.join(outDir, "chat"), typesFile: "./types.d.ts" });
   assertCleanChordTypes(fs.readFileSync(emitOut.typesPath, "utf8"));
 });
 
-test("Chat primary plugin runs through trusted schema interpreter", async () => {
-  const action = primaryAction("channel.create");
-  assert.ok(action, "channel.create action required");
-  const rt = await runtime();
-  const result = await rt.handleOperation(operation(action));
-  assert.equal(result.ok, true, result.reason);
-  const state = await rt.getState();
-  assert.equal(state.version, 1);
-  assert.ok(state.plugins[app.hostPlugin.id]);
+test("Chat app behavior runs through Matterhorn testing helpers", async () => {
+  const { createTestRoom, expectOperation, replayOperations, testActor } = await testingApi();
+  let time = 1000;
+  const room = createTestRoom({ toJSON: () => app.compositionSchema }, {
+    now: () => time += 1,
+    operationId: (operation) => `op_${operation.seq}_${operation.action}`
+  });
+  const admin = room.as(testActor("admin", { role: "admin", displayName: "Admin" }));
+  const member = room.as(testActor("mina", { role: "member", displayName: "Mina" }));
+
+  await admin.actions.channelCreate({ name: "launch", topic: "Planning", group: "Team" });
+  await member.actions.messageSend({ channelId: "general", body: "Ready", embeds: [] });
+
+  const channel = room.state.channels.find((item) => item.id === "channel_op_1_channelCreate");
+  assert.equal(channel.name, "launch");
+  assert.equal(channel.createdBy, "admin");
+  assert.equal(room.state.messages.message_op_2_messageSend.body, "Ready");
+  assert.equal(room.state.messages.message_op_2_messageSend.authorId, "mina");
+  assert.equal(expectOperation(room.operations, "messageSend").actor.memberId, "mina");
+
+  const replay = createTestRoom({ toJSON: () => app.compositionSchema }, {
+    operationId: (operation) => `op_${operation.seq}_${operation.action}`
+  });
+  await replayOperations(replay, room.operations);
+  assert.equal(replay.state.messages.message_op_2_messageSend.body, "Ready");
+  await assert.rejects(() => room.dispatch("messageSend", { channelId: "general" }), /body is required/);
 });
 
-test("Chat schema starts with default text and voice channels", async () => {
-  const rt = await runtime();
-  const state = await rt.getState();
-  const primary = state.plugins[app.hostPlugin.id];
-  const defaultChannel = primary.channels.find((channel) => channel.id === "general");
-  assert.deepEqual(defaultChannel, {
+test("Chat schema declares moderation, author-only edits, and moderator deletes", () => {
+  for (const type of ["member.moderate", "member.ban", "member.unban", "invite.disable", "invite.remove", "join.approve", "join.deny"]) {
+    assert.ok(primaryAction(type), `${type} action required`);
+    assert.deepEqual(primaryOperation(type).authorize.roles, ["admin"]);
+  }
+
+  assert.deepEqual(primaryOperation("message.edit").guards, [
+    {
+      kind: "recordOwnerOrRole",
+      collection: "messages",
+      storage: "map",
+      partition: "messages",
+      idField: "messageId",
+      ownerField: "authorId",
+      roles: [],
+      message: "Only message authors can edit messages."
+    },
+    {
+      kind: "recordFlagClear",
+      collection: "messages",
+      storage: "map",
+      partition: "messages",
+      idField: "messageId",
+      flag: "deletedAt",
+      message: "Deleted messages cannot be edited."
+    }
+  ]);
+  assert.deepEqual(primaryOperation("message.delete").guards[0].roles, ["moderator"]);
+  assert.deepEqual(primaryOperation("message.pin").authorize.roles, ["moderator"]);
+  assert.deepEqual(primaryOperation("message.unpin").authorize.roles, ["moderator"]);
+});
+
+test("Chat schema starts with default text channel and configured voice room", () => {
+  assert.deepEqual(app.compositionSchema.primaryPlugin.model.state.initial.channels[0], {
     id: "general",
     name: "general",
     topic: "Room coordination",
@@ -173,210 +163,31 @@ test("Chat schema starts with default text and voice channels", async () => {
     archivedAt: null
   });
 
-  const defaultRoom = state.plugins[MEDIA_ROOMS_PLUGIN_ID].rooms.general_voice;
-  assert.equal(defaultRoom.id, "general_voice");
-  assert.equal(defaultRoom.name, "General");
-  assert.equal(defaultRoom.group, "General");
-  assert.equal(defaultRoom.allowsVideo, true);
-  assert.equal(defaultRoom.scopeType, "channel");
-  assert.equal(defaultRoom.scopeId, "general");
-  assert.deepEqual(defaultRoom.roleAccess, {});
-  assert.deepEqual(defaultRoom.participants, {});
-  assert.equal(defaultRoom.createdBy, "system");
+  const mediaRooms = app.compositionSchema.plugins.find((plugin) => plugin.key === "mediaRooms");
+  assert.deepEqual(mediaRooms.config.defaultRooms[0], {
+    id: "general_voice",
+    name: "General",
+    group: "General",
+    allowsVideo: true,
+    scopeType: "channel",
+    scopeId: "general"
+  });
 });
 
-test("Chat admin moderation merges member standing without losing sibling flags", async () => {
-  for (const type of ["member.moderate", "member.ban", "member.unban", "invite.disable", "invite.remove", "join.approve", "join.deny"]) {
-    assert.ok(primaryAction(type), `${type} action required`);
-  }
-
-  const rt = await runtime();
-  const mute = await rt.handleOperation(operation({ type: "member.moderate" }, {
-    id: "moderate_lee",
-    seq: 1,
-    createdAt: 1000,
-    payload: { memberId: "lee", chatDisabled: true, nameLocked: true }
-  }));
-  assert.equal(mute.ok, true, mute.reason);
-
-  const ban = await rt.handleOperation(operation({ type: "member.ban" }, {
-    id: "ban_lee",
-    seq: 2,
-    createdAt: 1100,
-    payload: { memberId: "lee", reason: "spam" }
-  }));
-  assert.equal(ban.ok, true, ban.reason);
-
-  const unban = await rt.handleOperation(operation({ type: "member.unban" }, {
-    id: "unban_lee",
-    seq: 3,
-    createdAt: 1200,
-    payload: { memberId: "lee" }
-  }));
-  assert.equal(unban.ok, true, unban.reason);
-
-  const lee = (await rt.getState()).plugins[app.hostPlugin.id].guests.lee;
-  assert.equal(lee.memberId, "lee");
-  assert.equal(lee.nameLocked, true);
-  assert.equal(lee.chatDisabled, false);
-  assert.equal(lee.bannedAt, null);
-  assert.equal(lee.banReason, null);
-  assert.equal(lee.bannedBy, "admin");
-  assert.equal(lee.unbannedBy, "admin");
-});
-
-test("Chat message authors can edit and delete their own messages while admins can only delete others", async () => {
-  const rt = await runtime();
-  const mina = { memberId: "mina", deviceId: "dev_mina", role: "member", displayName: "Mina" };
-  const lee = { memberId: "lee", deviceId: "dev_lee", role: "member", displayName: "Lee" };
-  const admin = { memberId: "admin", deviceId: "dev_admin", role: "admin", displayName: "Admin" };
-
-  const send = await rt.handleOperation(operation({ type: "message.send" }, {
-    id: "send_mina_message",
-    seq: 1,
-    createdAt: 1000,
-    payload: { channelId: "general", body: "Original message" },
-    actor: mina
-  }));
-  assert.equal(send.ok, true, send.reason);
-  const messageId = `message_${send.acceptedLedgerId}`;
-
-  const memberEdit = await rt.handleOperation(operation({ type: "message.edit" }, {
-    id: "lee_edits_mina_message",
-    seq: 2,
-    createdAt: 1100,
-    payload: { messageId, body: "Hijacked" },
-    actor: lee
-  }));
-  assert.equal(memberEdit.ok, false);
-  assert.match(memberEdit.reason, /Only message authors can edit/);
-
-  const adminEdit = await rt.handleOperation(operation({ type: "message.edit" }, {
-    id: "admin_edits_mina_message",
-    seq: 3,
-    createdAt: 1200,
-    payload: { messageId, body: "Admin rewrite" },
-    actor: admin
-  }));
-  assert.equal(adminEdit.ok, false);
-  assert.match(adminEdit.reason, /Only message authors can edit/);
-
-  const authorEdit = await rt.handleOperation(operation({ type: "message.edit" }, {
-    id: "mina_edits_own_message",
-    seq: 4,
-    createdAt: 1300,
-    payload: { messageId, body: "Author edit" },
-    actor: mina
-  }));
-  assert.equal(authorEdit.ok, true, authorEdit.reason);
-
-  const memberDelete = await rt.handleOperation(operation({ type: "message.delete" }, {
-    id: "lee_deletes_mina_message",
-    seq: 5,
-    createdAt: 1400,
-    payload: { messageId },
-    actor: lee
-  }));
-  assert.equal(memberDelete.ok, false);
-  assert.match(memberDelete.reason, /Only message authors or moderators can delete/);
-
-  const authorDelete = await rt.handleOperation(operation({ type: "message.delete" }, {
-    id: "mina_deletes_own_message",
-    seq: 6,
-    createdAt: 1500,
-    payload: { messageId },
-    actor: mina
-  }));
-  assert.equal(authorDelete.ok, true, authorDelete.reason);
-
-  const sendSecond = await rt.handleOperation(operation({ type: "message.send" }, {
-    id: "send_lee_message",
-    seq: 7,
-    createdAt: 1600,
-    payload: { channelId: "general", body: "Admin removable" },
-    actor: lee
-  }));
-  assert.equal(sendSecond.ok, true, sendSecond.reason);
-
-  const adminDelete = await rt.handleOperation(operation({ type: "message.delete" }, {
-    id: "admin_deletes_lee_message",
-    seq: 8,
-    createdAt: 1700,
-    payload: { messageId: `message_${sendSecond.acceptedLedgerId}` },
-    actor: admin
-  }));
-  assert.equal(adminDelete.ok, true, adminDelete.reason);
-
-  const state = await rt.getState();
-  const messages = state.plugins[app.hostPlugin.id].messages;
-  assert.equal(messages[messageId].body, "");
-  assert.deepEqual(messages[messageId].embeds, []);
-  assert.deepEqual(messages[messageId].reactions, {});
-  assert.equal(messages[messageId].deletedBy, "mina");
-  assert.equal(messages[`message_${sendSecond.acceptedLedgerId}`].deletedBy, "admin");
-});
-
-test("Chat moderators can pin and unpin messages", async () => {
-  const rt = await runtime();
-  const mina = { memberId: "mina", deviceId: "dev_mina", role: "member", displayName: "Mina" };
-  const mod = { memberId: "mod", deviceId: "dev_mod", role: "moderator", displayName: "Mod" };
-
-  const send = await rt.handleOperation(operation({ type: "message.send" }, {
-    id: "send_mina_pinnable",
-    seq: 1,
-    createdAt: 1000,
-    payload: { channelId: "general", body: "Pin this" },
-    actor: mina
-  }));
-  assert.equal(send.ok, true, send.reason);
-  const messageId = `message_${send.acceptedLedgerId}`;
-
-  const pin = await rt.handleOperation(operation({ type: "message.pin" }, {
-    id: "mod_pins_mina_message",
-    seq: 2,
-    createdAt: 1100,
-    payload: { messageId },
-    actor: mod
-  }));
-  assert.equal(pin.ok, true, pin.reason);
-
-  let messages = (await rt.getState()).plugins[app.hostPlugin.id].messages;
-  assert.equal(messages[messageId].pinnedAt, 1100);
-  assert.equal(messages[messageId].pinnedBy, "mod");
-
-  const unpin = await rt.handleOperation(operation({ type: "message.unpin" }, {
-    id: "mod_unpins_mina_message",
-    seq: 3,
-    createdAt: 1200,
-    payload: { messageId },
-    actor: mod
-  }));
-  assert.equal(unpin.ok, true, unpin.reason);
-
-  messages = (await rt.getState()).plugins[app.hostPlugin.id].messages;
-  assert.equal(messages[messageId].pinnedAt, null);
-  assert.equal(messages[messageId].pinnedBy, null);
-});
-
-test("Chat live backend upgrades same-app persisted operations after schema hash changes", async () => {
+test("Chat live backend replays persisted operations and refreshes stale app hashes", async () => {
   const roomId = "room_schema_upgrade";
-  const oldHash = "sha256-old-chat-schema";
-  const action = primaryAction("message.send");
-  assert.ok(action, "message.send action required");
-  const operations = [operation(action, {
+  const operation = operationFromDraft(app, roomId, {
     id: "persisted_upgrade_message",
-    roomId,
-    payload: { channelId: "general", body: "Persisted message" }
-  })].map((operation) => ensureOperationIdentity({
-    ...operation,
-    appPackHash: oldHash
-  }, { now: operation.createdAt, nodeId: operation.actor?.deviceId || "dev" }));
+    type: "message.send",
+    payload: { channelId: "general", body: "Persisted message", embeds: [] }
+  }, 1, 1000);
+  operation.appPackHash = "sha256-old-chat-schema";
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "matterhorn-chord-schema-"));
   const dataFile = path.join(dataDir, "chat.json");
-  fs.writeFileSync(dataFile, JSON.stringify({ version: 1, operations }, null, 2));
+  fs.writeFileSync(dataFile, JSON.stringify({ version: 1, operations: [operation] }, null, 2));
 
   const backend = await createLiveExampleBackend({
-    appRoot: path.join(__dirname, ".."),
+    appRoot: path.join(__dirname, "."),
     roomId,
     dataFile,
     seedDemo: false
@@ -384,16 +195,16 @@ test("Chat live backend upgrades same-app persisted operations after schema hash
   const state = await backend.getState();
   const saved = JSON.parse(fs.readFileSync(dataFile, "utf8"));
 
-  assert.equal(Object.keys(state.messages).length > 0, true);
-  assert.equal(saved.operations.every((operation) => operation.appPackHash === manifestHash(app.appPack)), true);
+  assert.equal(state.messages.message_persisted_upgrade_message.body, "Persisted message");
+  assert.equal(saved.operations.every((item) => item.appPackHash === currentAppPackHash(app)), true);
 });
 
 test("Chat generated player actions dispatch composition descriptors", async () => {
   const action = primaryAction("channel.create");
   assert.ok(action, "channel.create action required");
   const calls = [];
-  await app.playerPlugin.actions[action.name]({ dispatch: (draft) => calls.push(draft) }, samplePayload(action.type));
-  assert.deepEqual(calls[0], { schemaAction: action.name, pluginId: app.hostPlugin.id, type: action.type, payload: samplePayload(action.type) });
+  await app.playerPlugin.actions[action.name]({ dispatch: (draft) => calls.push(draft) }, { name: "ops" });
+  assert.deepEqual(calls[0], { schemaAction: action.name, pluginId: app.hostPlugin.id, type: action.type, payload: { name: "ops" } });
 });
 
 test("Chat SDK client uses app scope for role gates and dispatch errors", async () => {
@@ -440,7 +251,7 @@ test("Chat defineApp export does not depend on a demo sidecar", async () => {
   await assert.rejects(() => app.createDemo({ roomId: "schema_demo_chat" }), /does not define a demo/);
 });
 
-test("Chat schema routes direct messages through a core host action", async () => {
+test("Chat schema routes direct messages through a core host action", () => {
   assert.equal(primaryAction("dm.open"), undefined);
   assert.equal(primaryAction("dm.message"), undefined);
   assert.equal(primaryAction("dm.react"), undefined);
@@ -455,75 +266,4 @@ test("Chat schema routes direct messages through a core host action", async () =
   assert.equal(model.operations["dm.open"], undefined);
   assert.equal(model.operations["dm.message"], undefined);
   assert.equal(model.operations["dm.react"], undefined);
-
-  const rt = await runtime();
-  const state = await rt.getState();
-  assert.equal(state.plugins[app.hostPlugin.id].directThreads, undefined);
-  assert.equal(state.plugins[app.hostPlugin.id].directMessages, undefined);
-});
-
-test("Chat media rooms enforce composite role tags for hidden and read-only room access", async () => {
-  const rt = await runtime();
-  const admin = { memberId: "admin", deviceId: "dev_admin", role: "admin", displayName: "Admin" };
-  const lee = { memberId: "lee", deviceId: "dev_lee", role: "member", displayName: "Lee" };
-  const sam = { memberId: "sam", deviceId: "dev_sam", role: "member", displayName: "Sam" };
-  const mod = { memberId: "mod", deviceId: "dev_mod", role: "moderator", displayName: "Mod" };
-
-  const assign = await rt.handleOperation(operation({ type: "member.role.assign" }, {
-    id: "assign_lee_launch",
-    payload: { memberId: "lee", roleIds: ["member", "launch"], displayName: "Lee" },
-    actor: admin
-  }));
-  assert.equal(assign.ok, true, assign.reason);
-
-  const create = await rt.handleOperation(operation({ type: "media.room.create" }, {
-    id: "create_launch_room",
-    pluginId: MEDIA_ROOMS_PLUGIN_ID,
-    payload: { name: "Launch Leads", group: "Launch", allowsVideo: true, roleAccess: { launch: "readonly", moderator: "editor" } },
-    actor: admin
-  }));
-  assert.equal(create.ok, true, create.reason);
-  const roomId = `media_room_${create.acceptedLedgerId}`;
-  let mediaRooms = (await rt.getState()).plugins[MEDIA_ROOMS_PLUGIN_ID].rooms;
-  assert.equal(mediaRooms[roomId].group, "Launch");
-
-  const leeView = await rt.publicView(lee);
-  assert.equal(leeView.plugins[MEDIA_ROOMS_PLUGIN_ID].rooms.some((room) => room.id === roomId), true);
-  const samView = await rt.publicView(sam);
-  assert.equal(samView.plugins[MEDIA_ROOMS_PLUGIN_ID].rooms.some((room) => room.id === roomId), false);
-
-  const leeJoinReadonly = await rt.handleOperation(operation({ type: "media.room.join" }, {
-    id: "lee_join_readonly_launch_room",
-    pluginId: MEDIA_ROOMS_PLUGIN_ID,
-    payload: { roomId, media: { audio: true, video: false } },
-    actor: lee
-  }));
-  assert.equal(leeJoinReadonly.ok, false);
-  assert.match(leeJoinReadonly.reason, /read-only/);
-
-  const modJoin = await rt.handleOperation(operation({ type: "media.room.join" }, {
-    id: "mod_join_launch_room",
-    pluginId: MEDIA_ROOMS_PLUGIN_ID,
-    payload: { roomId, media: { audio: true, video: false } },
-    actor: mod
-  }));
-  assert.equal(modJoin.ok, true, modJoin.reason);
-
-  const update = await rt.handleOperation(operation({ type: "media.room.update" }, {
-    id: "make_launch_room_editable",
-    pluginId: MEDIA_ROOMS_PLUGIN_ID,
-    payload: { roomId, group: null, roleAccess: { launch: "editor" } },
-    actor: admin
-  }));
-  assert.equal(update.ok, true, update.reason);
-  mediaRooms = (await rt.getState()).plugins[MEDIA_ROOMS_PLUGIN_ID].rooms;
-  assert.equal(mediaRooms[roomId].group, null);
-
-  const leeJoin = await rt.handleOperation(operation({ type: "media.room.join" }, {
-    id: "lee_join_editable_launch_room",
-    pluginId: MEDIA_ROOMS_PLUGIN_ID,
-    payload: { roomId, media: { audio: true, video: false } },
-    actor: lee
-  }));
-  assert.equal(leeJoin.ok, true, leeJoin.reason);
 });

@@ -63,7 +63,7 @@ async function main(argv = process.argv.slice(2)) {
     process.exit(1);
   }
   const appRoot = path.resolve(rootArg);
-  const frontendRoot = path.join(appRoot, 'frontend');
+  const frontendRoot = path.join(appRoot);
   if (!fs.existsSync(frontendRoot)) throw new Error(`Frontend directory not found: ${frontendRoot}`);
 
   const roots = [frontendRoot, appRoot, repoRoot()];
