@@ -28,8 +28,9 @@ const styles = stylex.create({
 });
 
 export function SearchInput({ className, style, ...rest }: React.InputHTMLAttributes<HTMLInputElement>) {
+  const wrap = stylex.props(styles.wrap);
   return (
-    <div {...stylex.props(styles.wrap)} className={className} style={style}>
+    <div {...wrap} className={[wrap.className, className].filter(Boolean).join(" ")} style={style}>
       <span {...stylex.props(styles.glyph)}>
         <SearchGlyph size={14} />
       </span>

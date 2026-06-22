@@ -16,28 +16,51 @@ const styles = stylex.create({
     overflow: "hidden",
     color: tokens.fg,
     backgroundColor: tokens.bg,
+    "@media (min-width: 600px) and (max-width: 1024px)": {
+      gridTemplateColumns: "175px minmax(0, 1fr)",
+    },
+    "@media (max-width: 599px)": {
+      gridTemplateColumns: "minmax(0, 1fr)",
+    },
   },
-  mobileSidebarOpen: {
-    // The sidebar itself is transformed; the shell does not change on desktop.
-  },
+  // Mobile sidebar backdrop — covers the viewport behind the open drawer.
   backdrop: {
     display: "none",
+  },
+  backdropShow: {
+    "@media (max-width: 599px)": {
+      display: "block",
+      position: "fixed",
+      inset: 0,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      zIndex: 35,
+    },
   },
 });
 
 export function ChatShell({ launchHome, onOpenLaunchHomeRoom }: Pick<ChatProps, "launchHome" | "onOpenLaunchHomeRoom">) {
   const sidebarOpen = useChatUiStore((value) => value.sidebarOpen);
   const ui = useChatUiActions();
+  const shell = stylex.props(styles.shell);
+  const backdrop = stylex.props(styles.backdrop, sidebarOpen && styles.backdropShow);
 
   return (
-    <main {...stylex.props(styles.shell, sidebarOpen && styles.mobileSidebarOpen)}>
+    <main
+      className={`shell${sidebarOpen ? " mobile-sidebar-open" : ""} ${shell.className}`}
+      style={shell.style}
+    >
       <ChatSidebar
         launchHome={launchHome}
         onClose={() => ui.closeSidebar()}
         onNavigate={() => ui.closeSidebar()}
         onOpenLaunchHomeRoom={onOpenLaunchHomeRoom}
       />
-      <div className="sb-backdrop" role="presentation" onClick={() => ui.closeSidebar()} />
+      <div
+        className={`sb-backdrop ${backdrop.className}`}
+        style={backdrop.style}
+        role="presentation"
+        onClick={() => ui.closeSidebar()}
+      />
       <ChatContent />
       <ChatPresenceRail />
       <ChatManageDialog />

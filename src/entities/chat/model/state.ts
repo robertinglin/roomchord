@@ -1,7 +1,5 @@
 import type { ChatEmbed, ChatState, CommentThread, MemberModeration, Message, PublicInvite, JoinRequest, ScopedReaction } from "@entities/chat/model/types";
 
-export const CHAT_DIRECT_PROTOCOL = "nostr.nip17";
-
 export function emptyChatState(): ChatState {
   return {
     channels: [],
@@ -64,12 +62,12 @@ export function directThreadIdForUsers(userIds: string[]): string {
   return `dm_${users.map(safeThreadPart).join("__")}`;
 }
 
-export function isCoreDirectThread(thread: { protocol?: string }) {
-  return thread.protocol === CHAT_DIRECT_PROTOCOL;
+export function isCoreDirectThread(_thread: { protocol?: string }) {
+  return true;
 }
 
-export function isCoreDirectMessage(message: { protocol?: string }) {
-  return message.protocol === CHAT_DIRECT_PROTOCOL;
+export function isCoreDirectMessage(_message: { protocol?: string }) {
+  return true;
 }
 
 export function channelMessages(state: ChatState, channelId?: string): Message[] {
@@ -91,44 +89,6 @@ export function directMessages(state: ChatState, threadId?: string): Message[] {
   return Object.values(state.directMessages || {})
     .filter((message) => message.threadId === threadId && isCoreDirectMessage(message) && !message.deletedAt)
     .sort((left, right) => (left.createdAt || 0) - (right.createdAt || 0));
-}
-
-export function directUnreadCounts(state: ChatState, currentUserId: string | undefined, readAtByThread: Record<string, number>): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const message of Object.values(state.directMessages || {})) {
-    if (!isCoreDirectMessage(message)) continue;
-    if (!message.threadId || message.deletedAt) continue;
-    if (currentUserId && message.authorId === currentUserId) continue;
-    const createdAt = Number(message.createdAt || 0);
-    if (createdAt <= Number(readAtByThread[message.threadId] || 0)) continue;
-    counts[message.threadId] = (counts[message.threadId] || 0) + 1;
-  }
-  return counts;
-}
-
-export type NotificationReadCursorLike = { createdAt: number; operationId: string };
-
-export function directUnreadCountsUsingNotifications(
-  state: ChatState,
-  currentUserId: string | undefined,
-  notifications: { getReadCursor(scopeKey: string): NotificationReadCursorLike | undefined }
-): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const message of Object.values(state.directMessages || {})) {
-    if (!isCoreDirectMessage(message)) continue;
-    if (!message.threadId || message.deletedAt) continue;
-    if (currentUserId && message.authorId === currentUserId) continue;
-
-    const cursor = message.authorId ? notifications.getReadCursor(message.authorId) : undefined;
-    if (cursor) {
-      const createdAt = Number(message.createdAt || 0);
-      if (createdAt < cursor.createdAt) continue;
-      if (createdAt === cursor.createdAt && String(message.id) <= cursor.operationId) continue;
-    }
-
-    counts[message.threadId] = (counts[message.threadId] || 0) + 1;
-  }
-  return counts;
 }
 
 export function latestDirectMessageTime(state: ChatState, threadId?: string): number {

@@ -5,12 +5,14 @@ import type { MediaRoom } from "@entities/chat/model/types";
 
 export type VoiceParticipant = {
   avatar: string;
+  deafened?: boolean;
   id: string;
   isLocal?: boolean;
   memberId?: string;
   media?: CallMediaSettings;
   mediaTracks?: CallMediaTrackInfo[];
   name: string;
+  muted?: boolean;
   screenPreview?: ScreenPreviewSnapshot;
   screenStream?: MediaStream;
   stream?: MediaStream;

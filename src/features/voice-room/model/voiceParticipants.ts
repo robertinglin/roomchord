@@ -27,6 +27,16 @@ function tokenAvatar(token: MatterhornEphemeralToken) {
   return typeof token.payload?.avatar === "string" ? token.payload.avatar : undefined;
 }
 
+function tokenVoiceStatus(token: MatterhornEphemeralToken) {
+  const status = token.payload?.voiceStatus;
+  if (!status || typeof status !== "object") return {};
+  const value = status as { deafened?: unknown; muted?: unknown };
+  return {
+    deafened: value.deafened === true,
+    muted: value.muted === true
+  };
+}
+
 function initialFor(name: string) {
   return name.trim().slice(0, 1).toUpperCase() || "M";
 }
@@ -39,16 +49,18 @@ function streamFromTracks(tracks: MediaStreamTrack[]) {
   return tracks.length ? new MediaStream(tracks) : undefined;
 }
 
-export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId, localMedia, room, sfu, voiceTokens }: VoiceRoomViewProps): VoiceParticipant[] {
+export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId, localMedia, room, sfu, voicePreferences, voiceTokens }: VoiceRoomViewProps): VoiceParticipant[] {
   const participants = new Map<string, VoiceParticipant>();
   if (joinedRoomId === room.id) {
     participants.set(actorId, {
       avatar: actorAvatar || initialFor(actorName),
+      deafened: voicePreferences.deafened,
       id: actorId,
       isLocal: true,
       memberId: actorId,
       media: sfu.mediaRoomId === room.id ? sfu.media : localMedia,
       mediaTracks: sfu.mediaRoomId === room.id ? sfu.localMediaTracks : undefined,
+      muted: voicePreferences.muted,
       name: actorName,
       stream: sfu.mediaRoomId === room.id ? sfu.localStream : undefined
     });
@@ -56,13 +68,16 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
   for (const token of voiceTokens.filter((item) => item.scope === room.id)) {
     const id = token.clientId || token.ownerId || token.id;
     const current = participants.get(id);
+    const voiceStatus = tokenVoiceStatus(token);
     participants.set(id, {
       avatar: current?.avatar || tokenAvatar(token) || initialFor(token.ownerName || id),
+      deafened: voiceStatus.deafened || current?.deafened,
       id,
       isLocal: current?.isLocal,
       memberId: current?.memberId || token.ownerId,
       media: tokenMedia(token) || current?.media,
       mediaTracks: tokenMediaTracks(token) || current?.mediaTracks,
+      muted: voiceStatus.muted || current?.muted,
       name: token.ownerName || current?.name || id,
       screenPreview: tokenScreenPreview(token) || current?.screenPreview,
       stream: current?.stream
@@ -72,10 +87,12 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
     const current = participants.get(remote.clientId);
     participants.set(remote.clientId, {
       avatar: remote.avatar || initialFor(remote.name),
+      deafened: current?.deafened,
       id: remote.clientId,
       memberId: current?.memberId,
       media: remote.media || current?.media,
       mediaTracks: current?.mediaTracks || remote.mediaTracks,
+      muted: current?.muted,
       name: remote.name,
       screenPreview: current?.screenPreview,
       screenStream: current?.screenStream,
@@ -86,11 +103,13 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
     const current = participants.get(remote.clientId);
     participants.set(remote.clientId, {
       avatar: current?.avatar || remote.avatar || initialFor(remote.name),
+      deafened: current?.deafened,
       id: remote.clientId,
       isLocal: current?.isLocal,
       memberId: current?.memberId,
       media: current?.media || remote.media,
       mediaTracks: current?.mediaTracks,
+      muted: current?.muted,
       name: current?.name || remote.name,
       screenPreview: current?.screenPreview,
       screenStream: remote.stream,
@@ -148,7 +167,7 @@ export function mediaLabel(participant: VoiceParticipant) {
 }
 
 export function isVoiceParticipantMuted(participant: VoiceParticipant, mutedVoiceParticipantIds: Record<string, boolean> = {}) {
-  return Boolean(mutedVoiceParticipantIds[participant.id] || (participant.memberId && mutedVoiceParticipantIds[participant.memberId]));
+  return Boolean(participant.muted || mutedVoiceParticipantIds[participant.id] || (participant.memberId && mutedVoiceParticipantIds[participant.memberId]));
 }
 
 export function participantGridClass(count: number) {

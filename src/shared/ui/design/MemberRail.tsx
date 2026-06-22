@@ -4,7 +4,8 @@ import { sectionShell } from "./sectionShell";
 
 /** Right rail — owns only the column shell; children are RailGroup atoms. */
 export function MemberRail({ children }: React.PropsWithChildren) {
-  return <aside {...stylex.props(sectionShell.rail)}>{children}</aside>;
+  const rail = stylex.props(sectionShell.rail);
+  return <aside className={`rail ${rail.className}`} style={rail.style}>{children}</aside>;
 }
 
 export default MemberRail;

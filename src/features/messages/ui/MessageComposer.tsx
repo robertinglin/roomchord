@@ -1,14 +1,105 @@
 import React, { useEffect, useRef, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import type { Message } from "@entities/chat/model/types";
-import { LinkIcon, SendArrowIcon, SmileIcon } from "@shared/ui/Icons";
 import { InlineEmojiPicker } from "@features/messages/ui/InlineEmojiPicker";
 import { authorName, previewText } from "@features/messages/model/messageDisplay";
 import { mentionToken } from "@entities/chat/model/mentions";
+import { Button, ExternalLinkGlyph, SendGlyph, SmileGlyph } from "@shared/ui/design";
+import { tokens } from "../../../shared/ui/theme.stylex";
 
 const ZWSP = "\u200B"; // zero-width space used as a caret anchor around pills
 const MENTION_QUERY_RE = /(?:^|[\s\u200B])@([^\n@]*)$/u;
 
 type MentionCandidate = { id: string; name: string };
+
+const styles = stylex.create({
+  wrap: { flex: "0 0 auto", padding: "0 16px 18px" },
+  reply: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto",
+    alignItems: "center",
+    gap: "10px",
+    margin: "0 0 8px",
+    padding: "8px 10px",
+    borderRadius: tokens.radiusItem,
+    backgroundColor: tokens.surface,
+    boxShadow: tokens.elevCtrl,
+  },
+  replyCopy: { minWidth: 0, display: "grid", gap: "2px" },
+  replyTitle: {
+    minWidth: 0,
+    overflow: "hidden",
+    color: tokens.fg,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: "12px",
+  },
+  replyText: {
+    minWidth: 0,
+    overflow: "hidden",
+    color: tokens.quiet,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: "12px",
+  },
+  box: {
+    position: "relative",
+    overflow: "visible",
+    borderRadius: tokens.radiusPanel,
+    backgroundColor: tokens.surface,
+    boxShadow: tokens.elevPanel,
+  },
+  top: { display: "flex", alignItems: "center", gap: "2px", padding: "6px 6px 0" },
+  input: {
+    width: "100%",
+    minHeight: "46px",
+    maxHeight: "160px",
+    overflowY: "auto",
+    padding: "6px 14px 8px",
+    border: 0,
+    outline: "none",
+    backgroundColor: "transparent",
+    color: tokens.fg,
+    fontSize: "15px",
+    lineHeight: 1.4,
+    whiteSpace: "pre-wrap",
+    ":empty::before": { content: "attr(data-placeholder)", color: tokens.quiet },
+  },
+  mentionMenu: {
+    position: "absolute",
+    left: "10px",
+    right: "10px",
+    bottom: "calc(100% + 8px)",
+    zIndex: 12,
+    display: "grid",
+    gap: "4px",
+    padding: "6px",
+    border: `1px solid ${tokens.borderSoft}`,
+    borderRadius: tokens.radiusPanel,
+    backgroundColor: tokens.surfaceDeep,
+    boxShadow: tokens.elevPanel,
+  },
+  mentionOption: {
+    minHeight: "32px",
+    padding: "0 10px",
+    border: 0,
+    borderRadius: tokens.radiusItem,
+    backgroundColor: "transparent",
+    color: tokens.muted,
+    textAlign: "left",
+    cursor: "pointer",
+    ":hover": { backgroundColor: tokens.panelHover, color: tokens.fg },
+  },
+  mentionSelected: { backgroundColor: tokens.panelActive, color: tokens.fg },
+  bottom: { display: "flex", alignItems: "center", gap: "8px", padding: "4px 10px 8px" },
+  left: { display: "flex", gap: "2px" },
+  length: {
+    marginLeft: "auto",
+    color: tokens.quiet,
+    fontFamily: tokens.fontMono,
+    fontSize: "11px",
+  },
+});
 
 function mentionCandidates(memberNamesById: Record<string, string>, query: string) {
   const normalizedQuery = query.toLowerCase();
@@ -239,25 +330,25 @@ export function MessageComposer({
   }
 
   return (
-    <footer className="composer">
+    <footer {...stylex.props(styles.wrap)}>
       {replyTo ? (
-        <div className="replying-bar">
-          <span>
-            <strong>Replying to {authorName(replyTo, memberNamesById)}</strong>
-            <small>{previewText(replyTo.body)}</small>
+        <div {...stylex.props(styles.reply)}>
+          <span {...stylex.props(styles.replyCopy)}>
+            <strong {...stylex.props(styles.replyTitle)}>Replying to {authorName(replyTo, memberNamesById)}</strong>
+            <small {...stylex.props(styles.replyText)}>{previewText(replyTo.body)}</small>
           </span>
-          <button type="button" onClick={onCancelReply}>Cancel</button>
+          <Button variant="etched" tone="muted" onClick={onCancelReply}>Cancel</Button>
         </div>
       ) : null}
-      <div className="comp-box">
-        <div className="comp-top">
-          <button className="comp-tool accent" type="button" aria-label="Insert link" title="Insert link" disabled={disabled} onClick={insertLink}>
-            <LinkIcon className="ico" />
-          </button>
+      <div {...stylex.props(styles.box)}>
+        <div {...stylex.props(styles.top)}>
+          <Button tone="accent" aria-label="Insert link" title="Insert link" disabled={disabled} onClick={insertLink}>
+            <ExternalLinkGlyph size={16} />
+          </Button>
         </div>
         <div
           ref={editorRef}
-          className="comp-input"
+          {...stylex.props(styles.input)}
           contentEditable={!disabled}
           role="textbox"
           aria-multiline="true"
@@ -268,11 +359,11 @@ export function MessageComposer({
           onPaste={onPaste}
         />
         {mentionMenuOpen ? (
-          <div className="mention-menu" role="listbox" aria-label="Mention suggestions">
+          <div {...stylex.props(styles.mentionMenu)} role="listbox" aria-label="Mention suggestions">
             {mentionOptions.map((member, index) => (
               <button
                 aria-selected={index === selectedMentionIndex}
-                className={index === selectedMentionIndex ? "selected" : undefined}
+                {...stylex.props(styles.mentionOption, index === selectedMentionIndex && styles.mentionSelected)}
                 key={member.id}
                 type="button"
                 role="option"
@@ -284,24 +375,24 @@ export function MessageComposer({
             ))}
           </div>
         ) : null}
-        <div className="comp-bot">
-          <span className="left">
-            <button className="comp-tool" type="button" aria-label="Add emoji" title="Add emoji" disabled={disabled} onClick={() => setComposerEmojiOpen((open) => !open)}>
-              <SmileIcon className="ico" />
-            </button>
+        <div {...stylex.props(styles.bottom)}>
+          <span {...stylex.props(styles.left)}>
+            <Button aria-label="Add emoji" title="Add emoji" disabled={disabled} onClick={() => setComposerEmojiOpen((open) => !open)}>
+              <SmileGlyph size={16} />
+            </Button>
           </span>
-          <span className="comp-len" aria-live="polite">{contentLength} / 2000</span>
-          <button
-            className="send-btn etch composer-send-button"
-            type="button"
+          <span {...stylex.props(styles.length)} aria-live="polite">{contentLength} / 2000</span>
+          <Button
+            variant="solid"
+            tone="accent"
             aria-label={mode === "dm" ? "Send DM" : "Send message"}
             title={mode === "dm" ? "Send DM" : "Send message"}
             disabled={disabled || !hasContent}
             onClick={submitMessage}
           >
-            <SendArrowIcon className="ico" />
-            <span>Send</span>
-          </button>
+            <SendGlyph size={15} />
+            Send
+          </Button>
         </div>
       </div>
       {composerEmojiOpen ? (

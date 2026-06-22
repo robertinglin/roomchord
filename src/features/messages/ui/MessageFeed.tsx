@@ -1,11 +1,20 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import type { Message } from "@entities/chat/model/types";
 import { MessageComposer } from "@features/messages/ui/MessageComposer";
 import { MessageRow } from "@features/messages/ui/MessageRow";
 import { loadRecentReactions, rememberReaction } from "@features/messages/model/recentReactions";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
-import { MenuIcon } from "@shared/ui/Icons";
 import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
+import {
+  Button,
+  ChatHeader,
+  EmptyState,
+  MessageList,
+  NewMessagesButton,
+} from "@shared/ui/design";
+import { sectionShell } from "@shared/ui/design/sectionShell";
+import { HashGlyph, MenuGlyph } from "@shared/ui/design/icons";
 
 export type { MessageForwardTarget };
 
@@ -122,29 +131,33 @@ export function MessageFeed({
     onSend(body);
   }
 
-  return (
-    <section className="chat-main" aria-labelledby="active-room-heading">
-      <header className="chat-main-header">
-        <button
-          type="button"
-          className="chat-mobile-nav-toggle"
-          aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
-          onClick={() => ui.setSidebarOpen(!sidebarOpen)}
-        >
-          <MenuIcon />
-        </button>
-        <div>
-          <h1 id="active-room-heading">{title}</h1>
-          {subtitle ? <p>{subtitle}</p> : null}
-        </div>
-      </header>
+  const channelName = title.replace(/^#/, "");
 
-      <div ref={listRef} className="message-list" role="log" aria-label={`${title} messages`} onScroll={updateScrollPosition}>
+  return (
+    <section {...stylex.props(sectionShell.chat)}>
+      <ChatHeader
+        mobileToggle={
+          <Button
+            tone="muted"
+            aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
+            title={sidebarOpen ? "Close navigation" : "Open navigation"}
+            onClick={() => ui.setSidebarOpen(!sidebarOpen)}
+          >
+            <MenuGlyph size={16} />
+          </Button>
+        }
+        icon={<HashGlyph size={22} />}
+        title={channelName}
+        topic={subtitle}
+      />
+
+      <MessageList listRef={listRef} onScroll={updateScrollPosition} aria-label={`${title} messages`}>
         {messages.length === 0 ? (
-          <div className="empty-thread">
-            <strong>No messages yet</strong>
-            <span>Start the conversation in {title}.</span>
-          </div>
+          <EmptyState
+            icon={<HashGlyph size={52} />}
+            title={`Welcome to ${title}`}
+            description={`This is the start of ${title}. Send the first message to break the ice.`}
+          />
         ) : null}
         {displayMessages.map(({ message, pinnedCopy, instanceKey }) => (
           <MessageRow
@@ -171,15 +184,9 @@ export function MessageFeed({
             recentReactions={recentReactions}
           />
         ))}
-      </div>
+      </MessageList>
 
-      {showNewMessages ? (
-        <div className="new-messages-wrap">
-          <button className="new-messages-button" type="button" onClick={scrollToBottom}>
-            New messages
-          </button>
-        </div>
-      ) : null}
+      {showNewMessages ? <NewMessagesButton onClick={scrollToBottom} /> : null}
 
       <MessageComposer
         disabled={disabled}

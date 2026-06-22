@@ -16,6 +16,9 @@ const styles = stylex.create({
     display: "inline-flex",
     alignItems: "center",
     gap: "5px",
+    "@media (min-width: 600px) and (max-width: 1024px)": {
+      display: "none",
+    },
   },
   on: { color: tokens.success },
   warn: { color: tokens.warning },

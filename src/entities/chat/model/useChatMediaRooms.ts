@@ -5,6 +5,7 @@ import { mediaStreamForTrackRole, mediaTrackRole, normalizeCallMediaSettings, pu
 import type { CallMediaSettings, PeerJsMediaConnection, SfuCallState, ScreenPreviewSnapshot } from "matterhorn-sdk/browser/types";
 import type { MatterhornEphemeralToken, MatterhornEphemeralTokenHandle } from "matterhorn-sdk/browser/liveRoomConnector";
 import { mediaBridgeFromHost } from "@entities/chat/api/callBridge";
+import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { Actor, MediaRoom } from "@entities/chat/model/types";
 
 type LiveInput = {
@@ -15,6 +16,7 @@ type LiveInput = {
 type Input = {
   live: LiveInput;
   roomName: string;
+  voicePreferences: VoicePreferences;
 };
 
 function removePeerCallListener(peer: unknown, handler: (call: PeerJsMediaConnection) => void) {
@@ -179,6 +181,10 @@ export function useChatMediaRooms(input: Input) {
     const payload = {
       roomId: room.id,
       media: announcedMedia,
+      voiceStatus: {
+        deafened: input.voicePreferences.deafened,
+        muted: input.voicePreferences.muted
+      },
       mediaTracks: activeState.mediaRoomId === room.id ? activeState.localMediaTracks : undefined,
       screenPreview: media.screen ? screenPreviewRef.current : undefined,
       transport: relayHasSfu() ? "sfu" : "mesh",
@@ -213,7 +219,7 @@ export function useChatMediaRooms(input: Input) {
     const state = activeCallState();
     if (!room || state.mediaRoomId !== room.id || state.status !== "connected" || !state.media) return;
     claimVoiceToken(room, state.media);
-  }, [meshState.status, meshState.media, meshState.mediaRoomId, sfuState.status, sfuState.media, sfuState.mediaRoomId]);
+  }, [input.voicePreferences.deafened, input.voicePreferences.muted, meshState.status, meshState.media, meshState.mediaRoomId, sfuState.status, sfuState.media, sfuState.mediaRoomId]);
 
   useEffect(() => {
     const state = activeCallState();

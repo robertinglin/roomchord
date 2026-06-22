@@ -120,6 +120,24 @@ export function MenuGlyph({ size = 16, ...rest }: IconProps) {
   );
 }
 
+export function CloseGlyph({ size = 16, ...rest }: IconProps) {
+  return (
+    <Glyph size={size} {...rest}>
+      <path d="M6 6 18 18" />
+      <path d="M18 6 6 18" />
+    </Glyph>
+  );
+}
+
+export function DirectMessageGlyph({ size = 16, ...rest }: IconProps) {
+  return (
+    <Glyph size={size} {...rest}>
+      <circle cx="12" cy="8.25" r="3.25" />
+      <path d="M5.25 19.5c1.2-3.15 3.45-4.75 6.75-4.75s5.55 1.6 6.75 4.75" />
+    </Glyph>
+  );
+}
+
 export function LeaveGlyph({ size = 16, ...rest }: IconProps) {
   return (
     <Glyph size={size} {...rest}>
@@ -162,30 +180,10 @@ export function ChevronGlyph({ size = 16, ...rest }: IconProps) {
 }
 
 export function GearGlyph({ size = 16, ...rest }: IconProps) {
-  // Symmetric 8-tooth cog: a central circle plus 8 evenly-spaced tooth rects,
-  // all centered on (12,12). Avoids the slight horizontal asymmetry of the
-  // single-path feather "settings" icon.
-  const teeth = Array.from({ length: 8 }, (_, i) => {
-    const angle = (i * 45 * Math.PI) / 180;
-    const cx = 12 + Math.cos(angle) * 8.5;
-    const cy = 12 + Math.sin(angle) * 8.5;
-    return (
-      <rect
-        key={i}
-        x={cx - 1.4}
-        y={cy - 3}
-        width="2.8"
-        height="6"
-        rx="1"
-        transform={`rotate(${i * 45} ${cx} ${cy})`}
-      />
-    );
-  });
   return (
     <Glyph size={size} {...rest}>
-      {teeth}
-      <circle cx="12" cy="12" r="6.5" />
-      <circle cx="12" cy="12" r="2.6" />
+      <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+      <path d="M17.85 12.9a7.8 7.8 0 0 0 .05-1.4l2.05-1.55-2-3.46-2.42 1a8 8 0 0 0-1.2-.7L14 3.5h-4l-.34 3.28a8 8 0 0 0-1.2.7l-2.42-1-2 3.46L6.09 11.5a7.8 7.8 0 0 0 .05 1.4l-2.1 1.6 2 3.46 2.48-1.03c.38.27.78.5 1.22.67L10 20.5h4l.26-2.9c.44-.18.85-.4 1.22-.67l2.48 1.03 2-3.46-2.1-1.6Z" />
     </Glyph>
   );
 }
@@ -202,8 +200,9 @@ export function ExternalLinkGlyph({ size = 16, ...rest }: IconProps) {
 export function HeadphonesGlyph({ size = 16, ...rest }: IconProps) {
   return (
     <Glyph size={size} {...rest}>
-      <path d="M11 5 6 9H2v6h4l5 4V5Z" />
-      <path d="M17 9a4 4 0 0 1 0 6M23 9l-6 6M17 9l6 6" />
+      <path d="M4.5 13v-1.5a7.5 7.5 0 0 1 15 0V13" />
+      <path d="M6.25 13h1.5a1.5 1.5 0 0 1 1.5 1.5V18a1.5 1.5 0 0 1-1.5 1.5h-.5A2.75 2.75 0 0 1 4.5 16.75V14.75A1.75 1.75 0 0 1 6.25 13Z" />
+      <path d="M17.75 13h-1.5a1.5 1.5 0 0 0-1.5 1.5V18a1.5 1.5 0 0 0 1.5 1.5h.5a2.75 2.75 0 0 0 2.75-2.75V14.75A1.75 1.75 0 0 0 17.75 13Z" />
     </Glyph>
   );
 }

@@ -1,13 +1,60 @@
 import React, { useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { RemoteAudioSink } from "@features/voice-room/ui/RemoteAudioSink";
 import { VoiceParticipantGrid } from "@features/voice-room/ui/VoiceParticipantGrid";
 import { VoiceScreenShares, type ActiveScreenShare } from "@features/voice-room/ui/VoiceScreenShares";
 import type { VoiceRoomViewProps } from "@features/voice-room/model/types";
-import { MenuIcon, SpeakerIcon } from "@shared/ui/Icons";
 import { audioOn, isVoiceParticipantMuted, roomParticipants, screenOn, screenShareStream, streamHasTrack } from "@features/voice-room/model/voiceParticipants";
 import { VoiceControlPanel } from "@shared/ui/VoiceControlPanel";
+import { Button, MenuGlyph, MicGlyph } from "@shared/ui/design";
+import { tokens } from "../../../shared/ui/theme.stylex";
 
 export type { VoiceRoomViewProps };
+
+const styles = stylex.create({
+  stage: {
+    position: "relative",
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    backgroundColor: tokens.bg,
+  },
+  head: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    flex: "0 0 auto",
+    padding: "13px 16px",
+    borderBottom: "1px solid oklch(0.11 0.006 250 / 0.72)",
+  },
+  mobileToggle: {
+    display: "none",
+    "@media (max-width: 760px)": { display: "inline-grid" },
+  },
+  icon: { color: tokens.success, flex: "0 0 auto", display: "inline-flex" },
+  title: { margin: 0, fontFamily: tokens.fontDisplay, fontSize: "16px", fontWeight: 700 },
+  subtitle: {
+    minWidth: 0,
+    overflow: "hidden",
+    color: tokens.quiet,
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: "13px",
+  },
+  body: { minHeight: 0, flex: 1, overflow: "hidden" },
+  layout: { minHeight: "100%", display: "flex", flexDirection: "column" },
+  controls: {
+    flex: "0 0 auto",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    padding: "16px",
+    borderTop: "1px solid oklch(0.11 0.006 250 / 0.72)",
+    backgroundColor: tokens.surface,
+  },
+});
 
 export function VoiceRoomView(props: VoiceRoomViewProps) {
   const [watchedShares, setWatchedShares] = useState<Record<string, boolean>>({});
@@ -33,7 +80,6 @@ export function VoiceRoomView(props: VoiceRoomViewProps) {
       label: `${participant.name} room audio`,
       stream: participant.stream!
     }));
-  const layoutClass = activeShares.length ? "voice-room-layout has-active-share" : "voice-room-layout";
 
   function watchShare(participantId: string) {
     props.onWatchScreenShare?.(participantId);
@@ -46,28 +92,28 @@ export function VoiceRoomView(props: VoiceRoomViewProps) {
   }
 
   return (
-    <section className="chat voice-stage show" aria-labelledby="active-room-heading">
+    <section {...stylex.props(styles.stage)} aria-labelledby="active-room-heading">
       <RemoteAudioSink muted={props.voicePreferences.deafened} streams={remoteAudioStreams} />
-      <header className="vs-head">
+      <header {...stylex.props(styles.head)}>
         {props.showSidebarMenu ? (
-          <button
-            type="button"
-            className="h-btn mobile-toggle"
-            aria-label="Open navigation"
-            onClick={props.onOpenMenu || (() => undefined)}
-          >
-            <MenuIcon className="ico" />
-          </button>
+          <span {...stylex.props(styles.mobileToggle)}>
+            <Button
+              aria-label="Open navigation"
+              onClick={props.onOpenMenu || (() => undefined)}
+            >
+              <MenuGlyph size={16} />
+            </Button>
+          </span>
         ) : null}
-        <SpeakerIcon className="ico vs-ic" />
-        <h2 id="active-room-heading">{props.room.name}</h2>
-        <span className="vs-sub">
+        <span {...stylex.props(styles.icon)}><MicGlyph size={16} /></span>
+        <h2 {...stylex.props(styles.title)} id="active-room-heading">{props.room.name}</h2>
+        <span {...stylex.props(styles.subtitle)}>
           {participants.length} {participants.length === 1 ? "connected" : "connected"} · {props.room.allowsVideo === false ? "audio only" : "camera allowed"} · {status}
         </span>
       </header>
 
-      <div className="voice-room-body">
-        <div className={layoutClass}>
+      <div {...stylex.props(styles.body)}>
+        <div {...stylex.props(styles.layout)}>
           <VoiceScreenShares
             activeShares={activeShares}
             voiceDeafened={props.voicePreferences.deafened}
@@ -87,8 +133,9 @@ export function VoiceRoomView(props: VoiceRoomViewProps) {
         </div>
       </div>
       {props.joinedRoomId === props.room.id ? (
-        <div className="vs-ctrls">
+        <div {...stylex.props(styles.controls)}>
           <VoiceControlPanel
+            variant="bar"
             canSwapCamera={Boolean(props.voiceControlCanSwapCamera)}
             canUseVideo={Boolean(props.voiceControlCanUseVideo)}
             error={props.voiceControlError}

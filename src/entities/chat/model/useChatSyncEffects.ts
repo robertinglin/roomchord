@@ -10,6 +10,7 @@ import { currentHash, directThreadForUsers, hasDirectMessages, linkedMessageLoca
 export type ChatSyncEffectsInput = {
   live?: ChordLiveClient;
   channels: Array<{ id: string }>;
+  currentChannelId?: string;
   currentThreadId?: string;
   draftDirectThread?: DirectThread;
   feedMessages: Message[];
@@ -25,6 +26,7 @@ export type ChatSyncEffectsInput = {
 export function useChatSyncEffects(input: ChatSyncEffectsInput) {
   const {
     channels,
+    currentChannelId,
     currentThreadId,
     draftDirectThread,
     feedMessages,
@@ -103,6 +105,18 @@ export function useChatSyncEffects(input: ChatSyncEffectsInput) {
   }, [joinedMediaRoomId, state.rooms, ui]);
 
   useEffect(() => {
+    if (showingDm || !currentChannelId) return;
+    const latest = feedMessages
+      .filter((message) => !message.deletedAt)
+      .reduce((current, message) => Number(message.createdAt || 0) > Number(current?.createdAt || 0) ? message : current, undefined as Message | undefined);
+    if (!latest) return;
+    void input.live?.notifications?.markRead(`channel:${currentChannelId}`, {
+      createdAt: Number(latest.createdAt || 0),
+      operationId: String(latest.id)
+    }, { source: "route-visible" });
+  }, [currentChannelId, feedMessages, showingDm, input.live]);
+
+  useEffect(() => {
     if (!showingDm || !currentThreadId) return;
     const latest = latestDirectMessageTime(state, currentThreadId);
     ui.markDirectThreadRead(currentThreadId, latest);
@@ -110,18 +124,20 @@ export function useChatSyncEffects(input: ChatSyncEffectsInput) {
     // Also mark Matterhorn notifications read for each sender in this thread.
     const notifications = input.live?.notifications;
     if (notifications) {
+      const actorId = input.live?.actor.memberId;
       const messages = Object.values(state.directMessages || {})
         .filter((m) => m.threadId === currentThreadId && !m.deletedAt);
       const latestBySender = new Map<string, Message>();
       for (const message of messages) {
         if (!message.authorId) continue;
+        if (message.authorId === actorId) continue;
         const existing = latestBySender.get(message.authorId);
         if (!existing || (message.createdAt || 0) > (existing.createdAt || 0)) {
           latestBySender.set(message.authorId, message);
         }
       }
       for (const [authorId, message] of latestBySender) {
-        void notifications.markRead(authorId, {
+        void notifications.markRead(`dm:${authorId}`, {
           createdAt: Number(message.createdAt || 0),
           operationId: String(message.id)
         });

@@ -2,7 +2,6 @@ import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
 import { parseMarkdown, type MarkdownEmbed } from "matterhorn-sdk/browser/markdown";
 import type { Actor, AvatarSource, ChatState, DirectThread, MemberId, Message, MessageId, RoomMember, ThreadId } from "@entities/chat/model/types";
 import {
-  CHAT_DIRECT_PROTOCOL,
   channelEmbeds,
   channelMessages,
   channelThreads,
@@ -119,7 +118,6 @@ export function draftDirectThreadForUsers(actorId: string, userIds: string[]): D
   if (participants.length < 2) return undefined;
   return {
     id: directThreadIdForUsers(participants) as ThreadId,
-    protocol: CHAT_DIRECT_PROTOCOL,
     userIds: participants as MemberId[],
     topic: null,
     createdAt: 0,

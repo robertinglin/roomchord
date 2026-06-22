@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { createPortal } from "react-dom";
 
 export type MemberContextMenuAction = {
@@ -21,6 +22,14 @@ type ContextMenuItem = {
 };
 
 type MenuPosition = { x: number; y: number };
+
+const styles = stylex.create({
+  target: {
+    display: "block",
+    minWidth: 0,
+    width: "100%",
+  },
+});
 
 function noop() {}
 
@@ -108,7 +117,7 @@ export function MemberContextMenu({
   }
 
   return (
-    <span className="member-context-target" onContextMenu={openMenu}>
+    <span {...stylex.props(styles.target)} onContextMenu={openMenu}>
       {children}
       {position ? createPortal(
         <>

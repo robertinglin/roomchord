@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import { messageAnchorId, messageHref } from "@entities/chat/model/messageLinks";
 import type { Message } from "@entities/chat/model/types";
 import { Avatar } from "@shared/ui/Avatar";
@@ -9,6 +10,7 @@ import { InlineEmojiPicker } from "@features/messages/ui/InlineEmojiPicker";
 import { authorName, focusMessage, formatMessageTime, messageAvatar, previewText } from "@features/messages/model/messageDisplay";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
 import { parseMentionedMemberIds, renderMentionNames } from "@entities/chat/model/mentions";
+import { tokens } from "../../../shared/ui/theme.stylex";
 
 type MessageMenuPosition = { anchored: true } | { anchored: false; x: number; y: number };
 
@@ -22,6 +24,57 @@ type MessageMenuItem = {
   sectionBefore?: boolean;
   variant?: "danger";
 };
+
+const styles = stylex.create({
+  row: {
+    display: "grid",
+    gridTemplateColumns: "40px minmax(0, 1fr)",
+    columnGap: "12px",
+    rowGap: 0,
+    padding: "7px 16px",
+    position: "relative",
+  },
+  content: {
+    minWidth: 0,
+    display: "grid",
+    justifyItems: "start",
+  },
+  head: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: "8px",
+    marginBottom: "2px",
+    minWidth: 0,
+  },
+  name: {
+    color: tokens.fg,
+    fontSize: "15px",
+    fontWeight: 700,
+  },
+  nameYou: {
+    color: tokens.accent,
+  },
+  time: {
+    color: tokens.quiet,
+    fontSize: "11px",
+  },
+  role: {
+    padding: "1px 5px",
+    borderRadius: "4px",
+    backgroundColor: tokens.accentSoft,
+    color: tokens.mentionFg,
+    fontSize: "10px",
+    fontWeight: 700,
+  },
+  actions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    justifySelf: "start",
+    marginTop: "5px",
+    opacity: 0,
+  },
+});
 
 function ReplyPreview({
   message,
@@ -233,7 +286,8 @@ export function MessageRow({
 
   return (
     <article
-      className={rowClassName}
+      className={`${rowClassName} ${stylex.props(styles.row).className}`}
+      style={stylex.props(styles.row).style}
       id={pinnedCopy ? undefined : messageAnchorId(message.id)}
       tabIndex={-1}
       key={instanceKey}
@@ -249,11 +303,24 @@ export function MessageRow({
           {avatar}
         </MemberContextMenu>
       ) : avatar}
-      <div className="msg-content">
-        <div className="msg-head">
-          <span className={`msg-name${authoredByCurrentUser ? " you" : ""}`}>{name}</span>
-          {message.pinnedAt ? <span className="msg-role">Pinned</span> : authoredByCurrentUser ? <span className="msg-role">You</span> : null}
-          {message.createdAt ? <time className="msg-time" dateTime={new Date(message.createdAt).toISOString()}>{formatMessageTime(message.createdAt)}</time> : null}
+      <div className={`msg-content ${stylex.props(styles.content).className}`} style={stylex.props(styles.content).style}>
+        <div className={`msg-head ${stylex.props(styles.head).className}`} style={stylex.props(styles.head).style}>
+          <span
+            className={`msg-name${authoredByCurrentUser ? " you" : ""} ${stylex.props(styles.name, authoredByCurrentUser && styles.nameYou).className}`}
+            style={stylex.props(styles.name, authoredByCurrentUser && styles.nameYou).style}
+          >
+            {name}
+          </span>
+          {message.pinnedAt ? (
+            <span className={`msg-role ${stylex.props(styles.role).className}`} style={stylex.props(styles.role).style}>Pinned</span>
+          ) : authoredByCurrentUser ? (
+            <span className={`msg-role ${stylex.props(styles.role).className}`} style={stylex.props(styles.role).style}>You</span>
+          ) : null}
+          {message.createdAt ? (
+            <time className={`msg-time ${stylex.props(styles.time).className}`} style={stylex.props(styles.time).style} dateTime={new Date(message.createdAt).toISOString()}>
+              {formatMessageTime(message.createdAt)}
+            </time>
+          ) : null}
           <a className="message-permalink" href={messageHref(message.id)} aria-label={`Link to message from ${name}`} title="Message link" onClick={() => focusMessage(message.id)}>#</a>
         </div>
         {message.replyToId ? <ReplyPreview message={replyMessage} memberNamesById={memberNamesById} onFollow={focusMessage} /> : null}
@@ -282,6 +349,84 @@ export function MessageRow({
             {reactions.map(([emoji, members]) => (
               <button className={`react${currentUserId && members.some((memberId) => String(memberId) === currentUserId) ? " mine" : ""}`} key={emoji} type="button" onClick={() => reactWith(message.id, emoji)}>{emoji} {members.length}</button>
             ))}
+          </div>
+        ) : null}
+        {!isDeleted ? (
+          <div className={`msg-actions ${stylex.props(styles.actions).className}`} style={stylex.props(styles.actions).style} aria-label={`Actions for ${name}`}>
+            {canReact ? recentReactions.map((emoji) => (
+              <button className="message-action-emoji" key={emoji} type="button" aria-label={`React with ${emoji}`} onClick={() => reactWith(message.id, emoji)}>
+                {emoji}
+              </button>
+            )) : null}
+            {canReact ? (
+              <button className="message-action-icon" type="button" aria-label={`Choose reaction for message from ${name}`} title="Choose reaction" onClick={() => { closeMenus(); setReactionPickerOpen((open) => !open); }}>
+                <SmileIcon className="ico" />
+              </button>
+            ) : null}
+            {onReply ? (
+              <button className="message-action-icon" type="button" aria-label={`Reply to message from ${name}`} title="Reply" onClick={() => { closeMenus(); onReply(message); }}>
+                <ReplyIcon className="ico" />
+              </button>
+            ) : null}
+            {onForward ? (
+              <button className="message-action-icon" type="button" aria-label={`Forward message from ${name}`} title="Forward" onClick={() => { closeMenus(); setForwardMenuOpen((open) => !open); }}>
+                <ForwardIcon className="ico" />
+              </button>
+            ) : null}
+            {showMore ? (
+              <span className="message-more-wrap">
+                <button
+                  className="message-action-icon"
+                  type="button"
+                  aria-label={`More actions for message from ${name}`}
+                  title="More"
+                  onClick={() => {
+                    const open = Boolean(messageMenuPosition);
+                    closeMenus();
+                    if (!open) setMessageMenuPosition({ anchored: true });
+                  }}
+                >
+                  <MoreIcon className="ico" />
+                </button>
+                {messageMenuPosition ? (
+                  <>
+                    <span className="context-menu-shroud" role="presentation" onMouseDown={closeMenus} />
+                    <span
+                      className={`message-more-menu rich-context-menu${messageMenuPosition.anchored ? "" : " fixed"}`}
+                      role="menu"
+                      style={messageMenuPosition.anchored ? undefined : { left: messageMenuPosition.x, top: messageMenuPosition.y }}
+                      onMouseDown={(event) => event.stopPropagation()}
+                    >
+                      {canReact ? (
+                        <span className="message-menu-reaction-row">
+                          {(recentReactions.length ? recentReactions : ["👍", "😆", "😂", "🤘"]).slice(0, 4).map((emoji) => (
+                            <button key={emoji} type="button" aria-label={`React with ${emoji}`} onClick={() => reactWith(message.id, emoji)}>
+                              {emoji}
+                            </button>
+                          ))}
+                        </span>
+                      ) : null}
+                      {messageMenuItems.map((item) => (
+                        <button
+                          aria-label={item.ariaLabel}
+                          className={`${item.sectionBefore ? "sectioned" : ""}${item.variant === "danger" ? " danger" : ""}`}
+                          disabled={item.disabled}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => selectMessageMenuItem(item)}
+                          key={item.id}
+                        >
+                          <span>
+                            <strong>{item.label}</strong>
+                          </span>
+                          {item.icon ? <span className="context-menu-icon">{item.icon}</span> : null}
+                        </button>
+                      ))}
+                    </span>
+                  </>
+                ) : null}
+              </span>
+            ) : null}
           </div>
         ) : null}
         {!isDeleted && canReact && reactionPickerOpen ? (
@@ -317,84 +462,6 @@ export function MessageRow({
           </>
         ) : null}
       </div>
-      {!isDeleted ? (
-        <div className="msg-actions" aria-label={`Actions for ${name}`}>
-          {canReact ? recentReactions.map((emoji) => (
-            <button className="message-action-emoji" key={emoji} type="button" aria-label={`React with ${emoji}`} onClick={() => reactWith(message.id, emoji)}>
-              {emoji}
-            </button>
-          )) : null}
-          {canReact ? (
-            <button className="message-action-icon" type="button" aria-label={`Choose reaction for message from ${name}`} title="Choose reaction" onClick={() => { closeMenus(); setReactionPickerOpen((open) => !open); }}>
-              <SmileIcon className="ico" />
-            </button>
-          ) : null}
-          {onReply ? (
-            <button className="message-action-icon" type="button" aria-label={`Reply to message from ${name}`} title="Reply" onClick={() => { closeMenus(); onReply(message); }}>
-              <ReplyIcon className="ico" />
-            </button>
-          ) : null}
-          {onForward ? (
-            <button className="message-action-icon" type="button" aria-label={`Forward message from ${name}`} title="Forward" onClick={() => { closeMenus(); setForwardMenuOpen((open) => !open); }}>
-              <ForwardIcon className="ico" />
-            </button>
-          ) : null}
-          {showMore ? (
-            <span className="message-more-wrap">
-              <button
-                className="message-action-icon"
-                type="button"
-                aria-label={`More actions for message from ${name}`}
-                title="More"
-                onClick={() => {
-                  const open = Boolean(messageMenuPosition);
-                  closeMenus();
-                  if (!open) setMessageMenuPosition({ anchored: true });
-                }}
-              >
-                <MoreIcon className="ico" />
-              </button>
-              {messageMenuPosition ? (
-                <>
-                  <span className="context-menu-shroud" role="presentation" onMouseDown={closeMenus} />
-                  <span
-                    className={`message-more-menu rich-context-menu${messageMenuPosition.anchored ? "" : " fixed"}`}
-                    role="menu"
-                    style={messageMenuPosition.anchored ? undefined : { left: messageMenuPosition.x, top: messageMenuPosition.y }}
-                    onMouseDown={(event) => event.stopPropagation()}
-                  >
-                    {canReact ? (
-                      <span className="message-menu-reaction-row">
-                        {(recentReactions.length ? recentReactions : ["👍", "😆", "😂", "🤘"]).slice(0, 4).map((emoji) => (
-                          <button key={emoji} type="button" aria-label={`React with ${emoji}`} onClick={() => reactWith(message.id, emoji)}>
-                            {emoji}
-                          </button>
-                        ))}
-                      </span>
-                    ) : null}
-                    {messageMenuItems.map((item) => (
-                      <button
-                        aria-label={item.ariaLabel}
-                        className={`${item.sectionBefore ? "sectioned" : ""}${item.variant === "danger" ? " danger" : ""}`}
-                        disabled={item.disabled}
-                        type="button"
-                        role="menuitem"
-                        onClick={() => selectMessageMenuItem(item)}
-                        key={item.id}
-                      >
-                        <span>
-                          <strong>{item.label}</strong>
-                        </span>
-                        {item.icon ? <span className="context-menu-icon">{item.icon}</span> : null}
-                      </button>
-                    ))}
-                </span>
-                </>
-              ) : null}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
     </article>
   );
 }

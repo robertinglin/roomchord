@@ -27,12 +27,11 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   const draftDirectThread = useChatUiStore((value) => value.draftDirectThread);
   const joinedMediaRoomId = useChatUiStore((value) => value.joinedMediaRoomId);
   const pendingScrollMessageId = useChatUiStore((value) => value.pendingScrollMessageId);
-  const readAtByThread = useChatUiStore((value) => value.readAtByThread);
   const recentVoiceJoin = useChatUiStore((value) => value.recentVoiceJoin);
   const selectedMediaRoomId = useChatUiStore((value) => value.selectedMediaRoomId);
   const voicePreferences = useChatUiStore((value) => value.voicePreferences);
   const voiceSettingsOpen = useChatUiStore((value) => value.voiceSettingsOpen);
-  const media = useChatMediaRooms({ live, roomName });
+  const media = useChatMediaRooms({ live, roomName, voicePreferences });
   const view = useChatViewData({
     activeChannelId,
     activeThreadId,
@@ -42,7 +41,6 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
     joinedMediaRoomId,
     live,
     media,
-    readAtByThread,
     recentVoiceJoin,
     selectedMediaRoomId,
     voicePreferences,
@@ -63,6 +61,7 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   useChatSyncEffects({
     live,
     channels: view.channels,
+    currentChannelId: view.currentChannelId,
     currentThreadId: view.currentThreadId,
     draftDirectThread,
     feedMessages: view.feedMessages,

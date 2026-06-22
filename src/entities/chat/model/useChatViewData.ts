@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
+import { unreadCountsByTopic, type TopicReadCursor, type TopicReadableItem } from "matterhorn-sdk/browser";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
 import type { ActiveView } from "@entities/chat/model/chatUiStore";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { canEditRoom, canViewRoom, assignedRoleIds } from "@entities/chat/model/roles";
-import { channelThreads, directUnreadCounts, directUnreadCountsUsingNotifications, latestDirectMessageTime, memberChatDisabled, visibleChannelMessages } from "@entities/chat/model/state";
+import { channelThreads, latestDirectMessageTime, memberChatDisabled, visibleChannelMessages } from "@entities/chat/model/state";
 import type { ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
 import type { ChordLiveClient } from "@entities/chat/model/useChordClient";
 import type { ChannelId, DirectThread, ThreadId } from "@entities/chat/model/types";
@@ -26,7 +27,6 @@ export type ChatViewDataInput = {
   joinedMediaRoomId?: string;
   live: ChordLiveClient;
   media: ChatMediaRooms;
-  readAtByThread: Record<string, number>;
   recentVoiceJoin?: RecentVoiceJoin;
   selectedMediaRoomId?: string;
   voicePreferences: VoicePreferences;
@@ -60,12 +60,30 @@ export function useChatViewData(input: ChatViewDataInput) {
   }, [directGroups, input.closedDirectThreads, input.draftDirectThread, state]);
   const memberNamesById = useMemo(() => memberNamesForState(state, live.actor), [live.actor, state.members, state.presence]);
   const memberAvatarsById = useMemo(() => memberAvatarsForState(state, live.actor), [live.actor, state.members, state.presence]);
-  const unreadCounts = useMemo(() => {
-    if (live.notifications) {
-      return directUnreadCountsUsingNotifications(state, live.actor.memberId, live.notifications);
-    }
-    return directUnreadCounts(state, live.actor.memberId, input.readAtByThread);
-  }, [input.readAtByThread, live.actor.memberId, live.notifications, state]);
+  const topicUnreadCounts = useMemo(() => {
+    const readTags = (state.members?.[live.actor.memberId as keyof typeof state.members] as { readTags?: Record<string, TopicReadCursor> } | undefined)?.readTags || {};
+    const items: TopicReadableItem[] = [
+      ...Object.values(state.messages || {}).filter((message) => !message.deletedAt && message.channelId).map((message) => ({
+        topic: `channel:${message.channelId}`,
+        id: String(message.id),
+        createdAt: Number(message.createdAt || 0),
+        operationId: String(message.id),
+        actorId: message.authorId
+      })),
+      ...Object.values(state.directMessages || {}).filter((message) => !message.deletedAt && message.threadId && message.authorId).map((message) => ({
+        topic: `dm:${message.authorId}`,
+        id: String(message.id),
+        createdAt: Number(message.createdAt || 0),
+        operationId: String(message.id),
+        actorId: message.authorId
+      }))
+    ];
+    return unreadCountsByTopic(items, (topic) => live.notifications?.getReadCursor(topic) || readTags[topic], { currentUserId: live.actor.memberId });
+  }, [live.actor.memberId, live.notifications, state.directMessages, state.members, state.messages]);
+  const unreadCounts = useMemo(() => Object.fromEntries(directGroups.map((group) => {
+    const otherUserId = group.thread.userIds?.find((id) => id !== live.actor.memberId);
+    return [group.thread.id, otherUserId ? topicUnreadCounts[`dm:${otherUserId}`] || 0 : 0];
+  })), [directGroups, live.actor.memberId, topicUnreadCounts]);
   const actorCanManageRooms = live.can("mediaRoomCreate");
   const actorCanCreateChannels = live.can("channelCreate");
   const actorCanManageRoles = live.can("roleCreate");
@@ -151,6 +169,7 @@ export function useChatViewData(input: ChatViewDataInput) {
     showingMediaRoom,
     threads,
     threadsForChannel,
+    topicUnreadCounts,
     unreadCounts,
     visibleRooms
   };

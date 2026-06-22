@@ -7,13 +7,6 @@ function repoRoot() {
   return path.resolve(__dirname, '..', '..');
 }
 
-const WATCH_DEBOUNCE_MS = 150;
-const GENERATED_FRONTEND_FILES = new Set([
-  'matterhorn-frontend-bundle.zip',
-  'matterhorn-frontend-manifest.json'
-]);
-const IGNORED_WATCH_DIRS = new Set(['dist', 'node_modules']);
-
 function usage() {
   console.error('Usage: node shared/frontendCommand.cjs <dev|build|watch|check|test> <app-root> [-- extra args]');
 }
@@ -44,20 +37,14 @@ function splitExtraArgs(args) {
   return { args: args.slice(0, separator), extra: args.slice(separator + 1) };
 }
 
-function relativeLabel(root, file) {
-  const relative = path.relative(root, file);
-  return relative && !relative.startsWith('..') && !path.isAbsolute(relative)
-    ? relative
-    : file;
-}
-
-function shouldWatchFrontendPath(sourceDir, changedPath) {
-  if (!changedPath) return true;
-  const relative = path.relative(sourceDir, changedPath);
-  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return false;
-  const parts = relative.split(path.sep).filter(Boolean);
-  if (parts.some((part) => IGNORED_WATCH_DIRS.has(part))) return false;
-  return !GENERATED_FRONTEND_FILES.has(parts[parts.length - 1]);
+function viteBuildArgs(frontendRoot, extra = [], options = {}) {
+  return [
+    'build',
+    ...(options.watch ? ['--watch'] : []),
+    '--config',
+    path.join(frontendRoot, 'vite.config.ts'),
+    ...extra
+  ];
 }
 
 function runNode(script, args, options) {
@@ -98,7 +85,7 @@ async function main(argv = process.argv.slice(2)) {
 
   async function buildFrontend() {
     await runNode(tsc, ['--project', path.join(frontendRoot, 'tsconfig.json')], { cwd: appRoot });
-    await runNode(vite, ['build', '--config', path.join(frontendRoot, 'vite.config.ts'), ...split.extra], { cwd: appRoot });
+    await runNode(vite, viteBuildArgs(frontendRoot, split.extra), { cwd: appRoot });
   }
 
   if (command === 'build') {
@@ -107,60 +94,7 @@ async function main(argv = process.argv.slice(2)) {
   }
 
   if (command === 'watch') {
-    const sourceDir = path.join(frontendRoot, 'src');
-    if (!fs.existsSync(sourceDir)) throw new Error(`Frontend source directory not found: ${sourceDir}`);
-    console.error(`[frontend:watch] watching ${relativeLabel(appRoot, sourceDir)}`);
-    let timer;
-    let running = false;
-    let requested = false;
-
-    async function runBuild(reason) {
-      if (running) {
-        requested = true;
-        return;
-      }
-      running = true;
-      console.error(`[frontend:watch] build started (${reason})`);
-      try {
-        await buildFrontend();
-        console.error('[frontend:watch] build completed');
-      } catch (error) {
-        console.error(`[frontend:watch] build failed: ${error?.message || error}`);
-      } finally {
-        running = false;
-        if (requested) {
-          requested = false;
-          scheduleBuild('queued source changes');
-        }
-      }
-    }
-
-    function scheduleBuild(reason) {
-      if (running) {
-        requested = true;
-        return;
-      }
-      clearTimeout(timer);
-      timer = setTimeout(() => void runBuild(reason), WATCH_DEBOUNCE_MS);
-    }
-
-    const watcher = fs.watch(sourceDir, { recursive: true }, (_event, fileName) => {
-      const changedPath = fileName ? path.join(sourceDir, fileName.toString()) : undefined;
-      if (!shouldWatchFrontendPath(sourceDir, changedPath)) return;
-      scheduleBuild(changedPath ? relativeLabel(appRoot, changedPath) : 'source change');
-    });
-
-    await runBuild('initial');
-    await new Promise((resolve, reject) => {
-      watcher.on('error', reject);
-      const stop = () => {
-        clearTimeout(timer);
-        watcher.close();
-        resolve();
-      };
-      process.once('SIGINT', stop);
-      process.once('SIGTERM', stop);
-    });
+    await runNode(vite, viteBuildArgs(frontendRoot, split.extra, { watch: true }), { cwd: appRoot });
     return;
   }
 
@@ -189,4 +123,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main, resolveFromRoots, resolvePackageBin, shouldWatchFrontendPath, splitExtraArgs };
+module.exports = { main, resolveFromRoots, resolvePackageBin, splitExtraArgs, viteBuildArgs };

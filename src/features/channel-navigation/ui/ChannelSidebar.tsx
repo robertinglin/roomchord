@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import type { Channel } from "@entities/chat/model/types";
 import { groupedChannelItems, optionalChannelGroup } from "@entities/chat/model/channelGroups";
-import { ChevronRightIcon, HashIcon, PlusIcon } from "@shared/ui/Icons";
 import { MediaRooms, type MediaRoomsProps } from "@features/channel-navigation/ui/MediaRooms";
+import { Badge, ChannelCreateForm, ChannelGroup, ChannelRow } from "@shared/ui/design";
+import { HashGlyph } from "@shared/ui/design/icons";
 
 export function ChannelSidebar({
   channels,
   activeChannelId,
   canCreateChannels,
+  unreadCounts,
   voice,
   onCreateChannel,
   onSelect
@@ -15,94 +17,62 @@ export function ChannelSidebar({
   channels: Channel[];
   activeChannelId?: string;
   canCreateChannels: boolean;
+  unreadCounts: Record<string, number>;
   voice: MediaRoomsProps;
   onCreateChannel: (input: { name: string; group?: string }) => void | Promise<void>;
   onSelect: (id: string) => void;
 }) {
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [creatingGroupKey, setCreatingGroupKey] = useState<string | undefined>();
-  const [newChannelName, setNewChannelName] = useState("");
   const grouped = groupedChannelItems(channels, "General");
   const groups = grouped.length || !canCreateChannels ? grouped : [{ key: "general", label: "General", items: [] }];
 
-  function toggleGroup(groupKey: string) {
-    setCollapsedGroups((current) => ({ ...current, [groupKey]: !current[groupKey] }));
+  function toggleCreateGroup(groupKey: string) {
+    setCreatingGroupKey((current) => (current === groupKey ? undefined : groupKey));
   }
 
-  async function createChannel(event: React.FormEvent<HTMLFormElement>, groupLabel: string) {
-    event.preventDefault();
-    const name = newChannelName.trim().replace(/^#/, "");
-    if (!name) return;
+  async function createChannel(name: string, groupLabel: string) {
     await onCreateChannel({ name, group: optionalChannelGroup(groupLabel) });
-    setNewChannelName("");
     setCreatingGroupKey(undefined);
   }
 
-  function toggleCreateGroup(groupKey: string) {
-    setNewChannelName("");
-    setCreatingGroupKey((current) => current === groupKey ? undefined : groupKey);
-  }
-
   return (
-    <section className="sidebar-section channels-section" aria-label="Channels">
-      <div className="channel-group-list">
-        {groups.length === 0 ? <p className="sidebar-empty">No channels</p> : null}
-        {groups.map((group) => {
-          const collapsed = Boolean(collapsedGroups[group.key]);
-          const creating = creatingGroupKey === group.key;
-          return (
-            <div className="channel-group" key={group.key}>
-              <div className={`channel-group-heading${canCreateChannels ? " has-add" : ""}`}>
-                <button className="channel-group-toggle" type="button" aria-expanded={!collapsed} onClick={() => toggleGroup(group.key)}>
-                  <span>{group.label}</span>
-                  <ChevronRightIcon className={`ui-icon channel-group-chevron${collapsed ? "" : " open"}`} />
-                </button>
-                {canCreateChannels ? (
-                  <button
-                    className="sidebar-icon-button channel-group-add"
-                    type="button"
-                    aria-label={creating ? `Cancel new text channel in ${group.label}` : `Add text channel to ${group.label}`}
-                    aria-expanded={creating}
-                    onClick={() => toggleCreateGroup(group.key)}
-                  >
-                    <PlusIcon className={`ui-icon${creating ? " open" : ""}`} />
-                  </button>
-                ) : null}
-              </div>
-              {creating ? (
-                <form className="sidebar-form channel-create-form" onSubmit={(event) => createChannel(event, group.label)}>
-                  <label>
-                    <span>Name</span>
-                    <input aria-label={`New text channel name in ${group.label}`} value={newChannelName} onChange={(event) => setNewChannelName(event.target.value)} placeholder="channel-name" />
-                  </label>
-                  <button className="primary-action" type="submit" disabled={!newChannelName.trim()}>
-                    Create
-                  </button>
-                </form>
-              ) : null}
-              {!collapsed ? (
-                <div className="sidebar-list channel-group-items">
-                  {group.items.map((channel) => (
-                    <button
-                      className={`sidebar-item channel-button${channel.id === activeChannelId ? " active" : ""}`}
-                      type="button"
-                      aria-label={`#${channel.name}`}
-                      onClick={() => onSelect(channel.id)}
-                      key={channel.id}
-                    >
-                      <HashIcon className="ui-icon channel-type-icon" />
-                      <span className="sidebar-item-text">
-                        <span>{channel.name}</span>
-                        {channel.topic ? <small>{channel.topic}</small> : null}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+    <section aria-label="Channels">
+      {groups.map((group) => {
+        const collapsed = Boolean(collapsedGroups[group.key]);
+        const creating = creatingGroupKey === group.key;
+        return (
+          <ChannelGroup
+            key={group.key}
+            label={group.label}
+            open={!collapsed}
+            onToggle={() => setCollapsedGroups((c) => ({ ...c, [group.key]: !c[group.key] }))}
+            onAdd={canCreateChannels ? () => toggleCreateGroup(group.key) : undefined}
+          >
+            {creating ? (
+              <ChannelCreateForm
+                placeholder="channel-name"
+                ariaLabel={`New text channel name in ${group.label}`}
+                onSubmit={(name) => createChannel(name, group.label)}
+              />
+            ) : null}
+            {!collapsed
+              ? group.items.map((channel) => (
+                  <ChannelRow
+                    key={channel.id}
+                    icon={<HashGlyph size={18} />}
+                    name={channel.name}
+                    topic={channel.topic || undefined}
+                    active={channel.id === activeChannelId}
+                    badge={(unreadCounts[`channel:${channel.id}`] || 0) > 0 ? <Badge count={unreadCounts[`channel:${channel.id}`]} /> : undefined}
+                    aria-label={`#${channel.name}`}
+                    onClick={() => onSelect(channel.id)}
+                  />
+                ))
+              : null}
+          </ChannelGroup>
+        );
+      })}
 
       <MediaRooms {...voice} />
     </section>

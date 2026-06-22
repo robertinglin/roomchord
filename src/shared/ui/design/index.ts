@@ -21,6 +21,8 @@ export { Badge } from "./Badge";
 export { SidebarHead } from "./SidebarHead";
 export { SearchInput } from "./SearchInput";
 export { GroupHeading } from "./GroupHeading";
+export { ChannelGroup } from "./ChannelGroup";
+export { ChannelCreateForm } from "./ChannelCreateForm";
 export { ChannelRow } from "./ChannelRow";
 export { VoiceMember } from "./VoiceMember";
 export { VoiceMembers } from "./VoiceMembers";
@@ -48,6 +50,8 @@ export { EmbedCard } from "./EmbedCard";
 export { CodeBlock, codeTokens } from "./CodeBlock";
 export { ChatMessage, MessageBody, InlineCode } from "./ChatMessage";
 export { TypingIndicator } from "./TypingIndicator";
+export { MessageList } from "./MessageList";
+export { NewMessagesButton } from "./NewMessagesButton";
 
 // Chat column atoms
 export { Composer } from "./Composer";
@@ -65,7 +69,6 @@ export { RailGroup } from "./RailGroup";
 
 // Composed sections
 export { Sidebar } from "./Sidebar";
-export { ChannelGroup } from "./ChannelGroup";
 export { ChatColumn } from "./ChatColumn";
 export { MemberRail } from "./MemberRail";
 export { AppShell } from "./AppShell";
