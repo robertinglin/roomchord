@@ -23,11 +23,11 @@ async function testingApi() {
   return import("matterhorn-sdk/testing");
 }
 
-function assertCleanChordTypes(types) {
+function assertCleanMoshTypes(types) {
   assert.equal(types.includes("PluginState"), false);
   assert.match(types, /export type ScopedRole = "none" \| "viewer" \| "editor" \| "moderator" \| "admin" \| "owner";/);
   assert.match(types, /export interface CoreAccessState/);
-  assert.doesNotMatch(types, /ActionHelpers|ConnectionStatus|export interface Client|Chord\.DispatchResult/);
+  assert.doesNotMatch(types, /ActionHelpers|ConnectionStatus|export interface Client|Mosh.DispatchResult/);
   assert.doesNotMatch(types, /dispatch<K extends ActionName>|subscribeDMs/);
   assert.match(types, /export type ChannelId = string & \{ readonly __brand: "ChannelId" \};/);
   assert.match(types, /export type MessageId = string & \{ readonly __brand: "MessageId" \};/);
@@ -70,7 +70,7 @@ test("Chat generated TypeScript contract stays flattened across SDK export helpe
     exports.matterhornApp.types.declaration,
     exports.matterhornApp.artifacts.types
   ]) {
-    assertCleanChordTypes(types);
+    assertCleanMoshTypes(types);
   }
 
   assert.equal("types" in bundle, false);
@@ -90,7 +90,7 @@ test("Chat emit writes flattened TypeScript contract artifacts", () => {
   assert.equal("types" in emittedBundle.artifacts, false);
 
   const emitOut = sdkApp.emit({ outDir: path.join(outDir, "chat"), typesFile: "./types.d.ts" });
-  assertCleanChordTypes(fs.readFileSync(emitOut.typesPath, "utf8"));
+  assertCleanMoshTypes(fs.readFileSync(emitOut.typesPath, "utf8"));
 });
 
 test("Chat app behavior runs through Matterhorn testing helpers", async () => {
@@ -242,8 +242,8 @@ test("Chat SDK client uses app scope for role gates and dispatch errors", async 
   });
   const room = Matterhorn();
 
-  assert.equal(room.can.messageSend().status, "allowed");
-  assert.equal(room.can.channelCreate().status, "denied");
+  assert.equal(room.can("messageSend"), true);
+  assert.equal(room.can("channelCreate"), false);
   await assert.rejects(
     () => room.dispatch("messageSend", { channelId: "general", body: "x".repeat(4001) }),
     (error) => error instanceof MatterhornValidationError && /body/.test(error.message)

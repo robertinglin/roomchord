@@ -1,13 +1,14 @@
 import { useEffect, useRef } from "react";
 import type { ChatActionHandlers } from "@entities/chat/model/chatActions";
 import type { ChatUiActions } from "@entities/chat/model/chatUiStore";
-import type { ChordLiveClient } from "@entities/chat/model/useChordClient";
 import { currentHash } from "@entities/chat/model/chatViewModel";
 import { notificationHref, NotificationTarget, notificationTargetFromHash } from "@entities/chat/model/messageLinks";
+import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Mosh} from "../../../../types";
 
 export type ChatNotificationsInput = {
   actions: ChatActionHandlers;
-  live: ChordLiveClient;
+  live: MatterhornRoom<Mosh>;
   ui: ChatUiActions;
 };
 

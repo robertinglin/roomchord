@@ -7,10 +7,11 @@ import type { MatterhornEphemeralToken, MatterhornEphemeralTokenHandle } from "m
 import { mediaBridgeFromHost } from "@entities/chat/api/callBridge";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { Actor, MediaRoom } from "@entities/chat/model/types";
+import type { MatterhornMedia } from "matterhorn-sdk/client";
 
 type LiveInput = {
   actor: Actor;
-  mediaHost?: unknown;
+  media: MatterhornMedia;
 };
 
 type Input = {
@@ -31,7 +32,7 @@ function actorAvatar(actor: Actor) {
 }
 
 export function useChatMediaRooms(input: Input) {
-  const bridge = useMemo(() => mediaBridgeFromHost(input.live.mediaHost), [input.live.mediaHost]);
+  const bridge = useMemo(() => mediaBridgeFromHost(input.live.media), [input.live.media]);
   const clientId = bridge?.clientId || input.live.actor.memberId;
   const [sfuState, setSfuState] = useState<SfuCallState>({ status: "unavailable", remoteStreams: [] });
   const [meshState, setMeshState] = useState<SfuCallState>({ status: "idle", remoteStreams: [] });

@@ -4,12 +4,13 @@ import { useChatMediaRooms, type ChatMediaRooms } from "@entities/chat/model/use
 import { useChatNotifications } from "@entities/chat/model/useChatNotifications";
 import { useChatSyncEffects } from "@entities/chat/model/useChatSyncEffects";
 import { useChatViewData, type ChatViewData } from "@entities/chat/model/useChatViewData";
-import { useChordClient, type ChordLiveClient } from "@entities/chat/model/useChordClient";
 import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
+import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Mosh} from "../../../../types";
 
 type ChatRuntime = {
   actions: ChatActionHandlers;
-  live: ChordLiveClient;
+  live: MatterhornRoom<Mosh>;
   media: ChatMediaRooms;
   roomName: string;
   view: ChatViewData;
@@ -17,7 +18,7 @@ type ChatRuntime = {
 
 const ChatRuntimeContext = createContext<ChatRuntime | undefined>(undefined);
 
-export function ChatRuntimeProvider({ children, live, roomName }: { children: ReactNode; live: ChordLiveClient; roomName: string }) {
+export function ChatRuntimeProvider({ children, live, roomName }: { children: ReactNode; live: MatterhornRoom<Mosh>; roomName: string }) {
   const state = live.state;
   const ui = useChatUiActions();
   const activeChannelId = useChatUiStore((value) => value.activeChannelId);
@@ -86,5 +87,3 @@ export function useChatRuntime() {
   if (!runtime) throw new Error("useChatRuntime must be used inside ChatRuntimeProvider");
   return runtime;
 }
-
-export { useChordClient };

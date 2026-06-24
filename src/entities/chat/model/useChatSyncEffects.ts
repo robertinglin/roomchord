@@ -1,14 +1,16 @@
 import { useEffect } from "react";
+import { channelReadTopic, directThreadReadTopic } from "matterhorn-sdk/browser";
 import { messageAnchorId, messageIdFromHash } from "@entities/chat/model/messageLinks";
 import { VOICE_RECONNECT_WINDOW_MS, type RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { latestDirectMessageTime } from "@entities/chat/model/state";
 import type { ChatUiActions } from "@entities/chat/model/chatUiStore";
-import type { ChordLiveClient } from "@entities/chat/model/useChordClient";
 import type { ChatState, DirectThread, Message } from "@entities/chat/model/types";
 import { currentHash, directThreadForUsers, hasDirectMessages, linkedMessageLocation } from "@entities/chat/model/chatViewModel";
+import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Mosh} from "../../../../types";
 
 export type ChatSyncEffectsInput = {
-  live?: ChordLiveClient;
+  live?: MatterhornRoom<Mosh>;
   channels: Array<{ id: string }>;
   currentChannelId?: string;
   currentThreadId?: string;
@@ -110,7 +112,7 @@ export function useChatSyncEffects(input: ChatSyncEffectsInput) {
       .filter((message) => !message.deletedAt)
       .reduce((current, message) => Number(message.createdAt || 0) > Number(current?.createdAt || 0) ? message : current, undefined as Message | undefined);
     if (!latest) return;
-    void input.live?.notifications?.markRead(`channel:${currentChannelId}`, {
+    void input.live?.notifications?.markRead(channelReadTopic(currentChannelId), {
       createdAt: Number(latest.createdAt || 0),
       operationId: String(latest.id)
     }, { source: "route-visible" });
@@ -121,27 +123,29 @@ export function useChatSyncEffects(input: ChatSyncEffectsInput) {
     const latest = latestDirectMessageTime(state, currentThreadId);
     ui.markDirectThreadRead(currentThreadId, latest);
 
-    // Also mark Matterhorn notifications read for each sender in this thread.
     const notifications = input.live?.notifications;
     if (notifications) {
-      const actorId = input.live?.actor.memberId;
-      const messages = Object.values(state.directMessages || {})
-        .filter((m) => m.threadId === currentThreadId && !m.deletedAt);
-      const latestBySender = new Map<string, Message>();
-      for (const message of messages) {
-        if (!message.authorId) continue;
-        if (message.authorId === actorId) continue;
-        const existing = latestBySender.get(message.authorId);
-        if (!existing || (message.createdAt || 0) > (existing.createdAt || 0)) {
-          latestBySender.set(message.authorId, message);
-        }
+      const latestMessage = Object.values(state.directMessages || {})
+        .filter((message) => message.threadId === currentThreadId && !message.deletedAt)
+        .reduce((current, message) => Number(message.createdAt || 0) > Number(current?.createdAt || 0) ? message : current, undefined as Message | undefined);
+      console.info("[mosh.read-cursors] dm route-visible decision", {
+        threadId: currentThreadId,
+        messageCount: Object.values(state.directMessages || {}).filter((message) => message.threadId === currentThreadId && !message.deletedAt).length,
+        latestMessageId: latestMessage?.id,
+        latestMessageCreatedAt: latestMessage?.createdAt,
+        hasNotifications: true
+      });
+      if (latestMessage) {
+        void notifications.markRead(directThreadReadTopic(currentThreadId), {
+          createdAt: Number(latestMessage.createdAt || 0),
+          operationId: String(latestMessage.id)
+        }, { source: "route-visible" });
       }
-      for (const [authorId, message] of latestBySender) {
-        void notifications.markRead(`dm:${authorId}`, {
-          createdAt: Number(message.createdAt || 0),
-          operationId: String(message.id)
-        });
-      }
+    } else {
+      console.info("[mosh.read-cursors] dm route-visible decision", {
+        threadId: currentThreadId,
+        hasNotifications: false
+      });
     }
   }, [currentThreadId, showingDm, state, ui, input.live]);
 }

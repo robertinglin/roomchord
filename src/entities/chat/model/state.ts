@@ -1,5 +1,7 @@
 import type { ChatEmbed, ChatState, CommentThread, MemberModeration, Message, PublicInvite, JoinRequest, ScopedReaction } from "@entities/chat/model/types";
 
+const DIRECT_MESSAGE_PROTOCOL = "matterhorn.direct.v1";
+
 export function emptyChatState(): ChatState {
   return {
     channels: [],
@@ -62,12 +64,12 @@ export function directThreadIdForUsers(userIds: string[]): string {
   return `dm_${users.map(safeThreadPart).join("__")}`;
 }
 
-export function isCoreDirectThread(_thread: { protocol?: string }) {
-  return true;
+export function isCoreDirectThread(thread: { protocol?: string }) {
+  return thread.protocol === undefined || thread.protocol === DIRECT_MESSAGE_PROTOCOL;
 }
 
-export function isCoreDirectMessage(_message: { protocol?: string }) {
-  return true;
+export function isCoreDirectMessage(message: { protocol?: string }) {
+  return message.protocol === undefined || message.protocol === DIRECT_MESSAGE_PROTOCOL;
 }
 
 export function channelMessages(state: ChatState, channelId?: string): Message[] {

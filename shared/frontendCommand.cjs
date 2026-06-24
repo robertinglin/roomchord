@@ -17,7 +17,7 @@ function resolveFromRoots(request, roots) {
       return require.resolve(request, { paths: [root] });
     } catch {}
   }
-  throw new Error(`Unable to resolve ${request}. Run pnpm install once in the Chord project root.`);
+  throw new Error(`Unable to resolve ${request}. Run pnpm install once in the Mosh project root.`);
 }
 
 function resolvePackageBin(packageName, binName, roots) {

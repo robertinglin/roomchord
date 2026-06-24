@@ -565,7 +565,7 @@ const notifications = {
 
 const app = defineApp({
   id: "gg.matterhorn.mosh",
-  name: "Chord",
+  name: "Mosh",
   version: "1.0.0",
   pluginId: "gg.matterhorn.mosh.plugin",
   slug: "matterhorn-mosh",
@@ -604,7 +604,7 @@ const app = defineApp({
   },
   example: {
     id: "matterhorn-mosh",
-    title: "Chord Matterhorn example",
+    title: "Mosh Matterhorn example",
   },
   model: chat.withOperations(operations),
   actions: {

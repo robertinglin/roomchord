@@ -1,15 +1,19 @@
 import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
 import {
-  DEFAULT_ROOM_ROLES as MATTERHORN_DEFAULT_ROLES,
   ROOM_ACCESS_RANKS,
-  activeRoleDefinitions as matterhornActiveRoleDefinitions,
   roleIdsForActor,
   roomAccessLevelForActor as matterhornRoomAccessLevelForActor
 } from "matterhorn-sdk/browser";
 import type { MatterhornPermissionActor } from "matterhorn-sdk/browser";
-import type { Actor, ChatState, MediaRoom, MemberRoleAssignment, Presence, RoleDefinition, RoleId, RoomMember, RoomRoleAccessLevel } from "@entities/chat/model/types";
+import type { Actor, ChatState, MediaRoom, Presence, RoleDefinition, RoleId, RoomMember, RoomRoleAccessLevel } from "@entities/chat/model/types";
 
-export const DEFAULT_ROLES: Record<string, RoleDefinition> = MATTERHORN_DEFAULT_ROLES as Record<string, RoleDefinition>;
+const DEFAULT_ROLE_LABELS: Record<string, string> = {
+  guest: "Guest",
+  member: "Member",
+  moderator: "Moderator",
+  admin: "Admin",
+  owner: "Owner"
+};
 
 export type MemberOption = {
   id: string;
@@ -22,39 +26,35 @@ export function cleanRoleId(name: string) {
   return name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "custom-role";
 }
 
-function roleState(input?: Record<string, RoleDefinition> | Partial<ChatState>) {
-  if (!input) return { roleDefinitions: DEFAULT_ROLES };
-  if ("roleDefinitions" in input || "access" in input || "scopedRoles" in input) return input;
-  return { roleDefinitions: input };
+type RoleDefinitionsInput = ChatState["roleDefinitions"] | Partial<Pick<ChatState, "roleDefinitions">>;
+
+function roleDefinitions(input?: RoleDefinitionsInput) {
+  if (!input) return {};
+  if ("roleDefinitions" in input) return input.roleDefinitions || {};
+  return input;
 }
 
-export function activeRoles(roleDefinitions?: Record<string, RoleDefinition> | Partial<ChatState>) {
-  return Object.values(matterhornActiveRoleDefinitions(roleState(roleDefinitions)) as Record<string, RoleDefinition>)
+export function activeRoles(input?: RoleDefinitionsInput) {
+  return Object.values(roleDefinitions(input))
     .filter((role) => !role.archivedAt)
     .sort((left, right) => (Number(right.rank) || 0) - (Number(left.rank) || 0) || String(left.name || left.id).localeCompare(String(right.name || right.id)));
 }
 
-export function roleLabel(roleId: string | undefined, roleDefinitions?: Record<string, RoleDefinition> | Partial<ChatState>) {
+export function roleLabel(roleId: string | undefined, input?: RoleDefinitionsInput) {
   if (!roleId) return undefined;
-  const definitions = matterhornActiveRoleDefinitions(roleState(roleDefinitions)) as Record<string, RoleDefinition>;
-  return definitions[roleId]?.name || DEFAULT_ROLES[roleId]?.name || roleId;
+  const role = Object.values(roleDefinitions(input)).find((definition) => definition.id === roleId);
+  return role?.name || DEFAULT_ROLE_LABELS[roleId] || roleId;
 }
 
 function memberIdFromEntry(key: string, member?: (RoomMember | Presence) & { id?: string }) {
   return member?.memberId || member?.id || key;
 }
 
-function stateFromAssignmentInput(input?: Partial<ChatState> | Record<string, MemberRoleAssignment>) {
-  if (!input) return undefined;
-  if ("roleDefinitions" in input || "access" in input || "scopedRoles" in input || "memberRoles" in input) return input;
-  return { memberRoles: input };
+export function assignedRoleIds(memberId: string, baseRole?: string, state?: Partial<ChatState>) {
+  return roleIdsForActor({ memberId, role: baseRole }, state);
 }
 
-export function assignedRoleIds(memberId: string, baseRole?: string, stateOrMemberRoles?: Partial<ChatState> | Record<string, MemberRoleAssignment>) {
-  return roleIdsForActor({ memberId, role: baseRole }, stateFromAssignmentInput(stateOrMemberRoles));
-}
-
-export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMember>, presence: Record<string, Presence>, stateOrMemberRoles?: Partial<ChatState> | Record<string, MemberRoleAssignment>): MemberOption[] {
+export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMember>, presence: Record<string, Presence>, state?: Partial<ChatState>): MemberOption[] {
   const members = new Map<string, Omit<MemberOption, "roleIds">>();
   for (const [key, member] of Object.entries(roomMembers || {})) {
     if (member.revokedAt || member.bannedAt) continue;
@@ -78,11 +78,11 @@ export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMemb
     baseRole: actor.role
   });
   return [...members.values()]
-    .map((member) => ({ ...member, roleIds: assignedRoleIds(member.id, member.baseRole, stateOrMemberRoles) }))
+    .map((member) => ({ ...member, roleIds: assignedRoleIds(member.id, member.baseRole, state) }))
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 
-export function roleNames(roleIds: string[], roleDefinitions?: Record<string, RoleDefinition> | Partial<ChatState>) {
+export function roleNames(roleIds: string[], roleDefinitions?: RoleDefinitionsInput) {
   return roleIds.map((roleId) => roleLabel(roleId, roleDefinitions) || roleId);
 }
 

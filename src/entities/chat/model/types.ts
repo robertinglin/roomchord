@@ -1,50 +1,49 @@
-import type { Chord } from "../../../../types";
-import type { MatterhornPublicAccessState, MatterhornRoleDefinition } from "matterhorn-sdk/browser";
+import type { Mosh } from "../../../../types";
 import type { MtnHomeData, MtnHomeOpenRoomDetail } from "matterhorn-sdk/browser";
 
 export type AvatarSource = { avatar?: string; avatarUrl?: string; profileImageUrl?: string };
-export type Actor = Chord.Actor & AvatarSource;
-export type ChannelId = Chord.ChannelId;
-export type CommentId = Chord.CommentId;
-export type EmbedId = Chord.EmbedId;
-export type MemberId = Chord.MemberId;
-export type MessageId = Chord.MessageId;
-export type RoleId = Chord.RoleId;
-export type RoomId = Chord.RoomId;
-export type ShareId = Chord.ShareId;
-export type ThreadId = Chord.ThreadId;
-export type RoomMember = Chord.Member & AvatarSource;
-export type Channel = Chord.Channel;
-export type RoomRoleAccessLevel = Chord.AccessLevel;
-export type RoomRoleAccess = Chord.RoomRoleAccess;
+export type Actor = Mosh.Actor & AvatarSource;
+export type ChannelId = Mosh.ChannelId;
+export type CommentId = Mosh.CommentId;
+export type EmbedId = Mosh.EmbedId;
+export type MemberId = Mosh.MemberId;
+export type MessageId = Mosh.MessageId;
+export type RoleId = Mosh.RoleId;
+export type RoomId = Mosh.RoomId;
+export type ShareId = Mosh.ShareId;
+export type ThreadId = Mosh.ThreadId;
+export type RoomMember = Mosh.Member & AvatarSource;
+export type Channel = Mosh.Channel;
+export type RoomRoleAccessLevel = Mosh.AccessLevel;
+export type RoomRoleAccess = Mosh.RoomRoleAccess;
 
-export type Message = (Chord.Message | Chord.DirectMessage) & {
+export type Message = (Mosh.Message | Mosh.DirectMessage) & {
   authorName?: string;
   authorAvatar?: string;
   authorAvatarUrl?: string;
   authorImageUrl?: string;
 };
 
-export type DirectThread = Chord.DirectThread;
-export type DirectMessageThread = Chord.DirectMessageThread;
+export type DirectThread = Mosh.DirectThread;
+export type DirectMessageThread = Mosh.DirectMessageThread;
 
-export type MediaRoomParticipant = Chord.MediaRoomParticipant;
-export type MediaRoom = Omit<Chord.MediaRoom, "participants"> & {
+export type MediaRoomParticipant = Mosh.MediaRoomParticipant;
+export type MediaRoom = Omit<Mosh.MediaRoom, "participants"> & {
   participants?: Record<string, MediaRoomParticipant> | string[];
 };
 
-export type ScreenShare = Chord.ScreenShare & {
+export type ScreenShare = Mosh.ScreenShare & {
   ownerId?: string;
   ownerName?: string;
 };
 
-export type Presence = Chord.PresenceMember & AvatarSource;
+export type Presence = Mosh.PresenceMember & AvatarSource;
 
-export type ChatEmbed = Chord.Embed;
-export type CommentThread = Chord.CommentThread;
-export type ThreadComment = Chord.Comment;
-export type ScopedReaction = Chord.ScopedReaction;
-export type RoleDefinition = MatterhornRoleDefinition & { id: RoleId; name: string; rank?: number | string; archivedAt?: number | null };
+export type ChatEmbed = Mosh.Embed;
+export type CommentThread = Mosh.CommentThread;
+export type ThreadComment = Mosh.Comment;
+export type ScopedReaction = Mosh.ScopedReaction;
+export type RoleDefinition = Mosh.RoleDefinition;
 export type MemberRoleAssignment = {
   memberId?: string;
   roleId?: string | null;
@@ -75,22 +74,17 @@ export type JoinRequest = {
   decidedAt?: number | null;
 };
 
-export type ChatState = Chord.State & {
-  access?: MatterhornPublicAccessState;
-  scopedRoles?: unknown;
-  memberRoles?: Record<string, MemberRoleAssignment>;
-  roleDefinitions?: Record<string, RoleDefinition>;
-};
+export type ChatState = Mosh.State;
 
 export type ChatProps = {
-  envelope?: Chord.LaunchEnvelope;
-  initialState?: Chord.LaunchEnvelope["initialState"];
+  envelope?: Mosh.LaunchEnvelope;
+  initialState?: Mosh.LaunchEnvelope["initialState"];
   home?: MtnHomeData;
   launchHome?: MtnHomeData;
   openRoom?: (detail: MtnHomeOpenRoomDetail) => void;
   onOpenLaunchHomeRoom?: (detail: MtnHomeOpenRoomDetail) => void;
 };
-export type ChatActionName = Chord.ActionName;
-export type ChatActionPayload<K extends ChatActionName> = Chord.Actions[K];
+export type ChatActionName = Mosh.ActionName;
+export type ChatActionPayload<K extends ChatActionName> = Mosh.Actions[K];
 export type ChatDispatchResult = unknown;
-export type ChatCore = Chord.Core;
+export type ChatCore = Mosh.Core;

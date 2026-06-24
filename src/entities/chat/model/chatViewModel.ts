@@ -169,7 +169,7 @@ export function forwardTargetsForState(input: {
     if (input.activeView === "dm" && threadId === input.activeThreadId) continue;
     if (seenThreads.has(threadId)) continue;
     seenThreads.add(threadId);
-    targets.push({ id: `dm:${threadId}`, type: "dm", label: input.memberNamesById[memberId] || memberId, threadId, userIds });
+    targets.push({ id: `direct.thread:${threadId}`, type: "dm", label: input.memberNamesById[memberId] || memberId, threadId, userIds });
   }
   return targets;
 }

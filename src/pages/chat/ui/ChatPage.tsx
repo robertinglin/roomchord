@@ -10,15 +10,16 @@ import { voiceReconnectStorageKey } from "@entities/chat/model/localVoiceReconne
 import { voicePreferencesStorageKey } from "@entities/chat/model/localVoicePreferences";
 import { messageIdFromHash } from "@entities/chat/model/messageLinks";
 import { currentHash, linkedMessageLocation } from "@entities/chat/model/chatViewModel";
-import { useChordClient } from "@entities/chat/model/useChordClient";
+import { useRoom } from "matterhorn-sdk/react";
+import type { Mosh} from "../../../../types";
 
 export function ChatApp(props: ChatProps) {
-  const live = useChordClient(props);
-  if (!live.ready) {
+  const live = useRoom<Mosh>();
+  if (live.status === "connecting") {
     return (
       <ChatLoading
         roomName={live.envelope.room?.name || live.envelope.room?.id || "mosh"}
-        message={live.message}
+        message={live.status}
         status={live.status}
       />
     );

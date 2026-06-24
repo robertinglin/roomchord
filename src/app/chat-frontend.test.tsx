@@ -23,8 +23,8 @@ const state: ChatState = {
   guests: {},
   publicInvites: [],
   joinRequests: {},
-  directThreads: { dm_alice__lee: { id: "dm_alice__lee", protocol: "nostr.nip17", userIds: ["alice", "lee"] } },
-  directMessages: { dm_msg_1: { id: "dm_msg_1", protocol: "nostr.nip17", threadId: "dm_alice__lee", body: "Private hello", authorName: "Lee", authorId: "lee", reactions: {}, createdAt: 2 } },
+  directThreads: { dm_alice__lee: { id: "dm_alice__lee", userIds: ["alice", "lee"] } },
+  directMessages: { dm_msg_1: { id: "dm_msg_1", threadId: "dm_alice__lee", body: "Private hello", authorName: "Lee", authorId: "lee", reactions: {}, createdAt: 2 } },
   rooms: [{ id: "media1", name: "Launch Room", allowsVideo: true, participants: {} }],
   screenShares: {},
   members: {
@@ -279,7 +279,8 @@ function sidebarVoiceControls() {
 
 async function memberRailAvatar(name: string, label: string) {
   const memberRow = await screen.findByRole("button", { name: label });
-  return within(memberRow).getByLabelText(`${name} avatar`);
+  return within(memberRow).queryByLabelText(`${name} avatar`)
+    || within(memberRow).getByLabelText(`${label} avatar`);
 }
 
 function stateWithMessage(body: string): ChatState {
@@ -294,6 +295,7 @@ function stateWithMessage(body: string): ChatState {
 
 describe("ChatApp", () => {
   beforeEach(() => {
+    window.localStorage.clear();
     installTestMatterhornScope();
   });
 
@@ -306,11 +308,11 @@ describe("ChatApp", () => {
       ...state,
       directThreads: {
         ...state.directThreads,
-        dm_groups_launch: { id: "dm_groups_launch", protocol: "nostr.nip17", userIds: ["alice", "lee"], topicKey: "groups.launch" }
+        dm_groups_launch: { id: "dm_groups_launch", userIds: ["alice", "lee"], topicKey: "groups.launch" }
       },
       directMessages: {
         ...state.directMessages,
-        dm_msg_group: { id: "dm_msg_group", protocol: "nostr.nip17", threadId: "dm_groups_launch", body: "Group note", authorId: "lee", reactions: {}, createdAt: 3 }
+        dm_msg_group: { id: "dm_msg_group", threadId: "dm_groups_launch", body: "Group note", authorId: "lee", reactions: {}, createdAt: 3 }
       }
     };
 
@@ -619,12 +621,46 @@ describe("ChatApp", () => {
         ...state,
         directMessages: {
           ...state.directMessages,
-          dm_msg_2: { id: "dm_msg_2", protocol: "nostr.nip17", threadId: "dm_alice__lee", body: "Second private hello", authorName: "Lee", authorId: "lee", reactions: {}, createdAt: 3 }
+          dm_msg_2: { id: "dm_msg_2", threadId: "dm_alice__lee", body: "Second private hello", authorName: "Lee", authorId: "lee", reactions: {}, createdAt: 3 }
         }
       });
     });
 
     expect(await screen.findByRole("button", { name: "Lee, 2 unread DMs" })).toBeInTheDocument();
+  });
+
+  it("uses launcher direct groups for persisted direct-message read cursors", async () => {
+    const rawState = { ...state, directThreads: {}, directMessages: {} };
+    const thread = state.directThreads.dm_alice__lee;
+    const message = state.directMessages.dm_msg_1;
+    window.localStorage.setItem("matterhorn:notification-read-state", JSON.stringify({
+      kind: "matterhorn.notification-read-state.v1",
+      version: 1,
+      userId: "alice",
+      rooms: {
+        chat: {
+          kind: "matterhorn.notification-read-cursors.v1",
+          roomName: "chat",
+          updatedAt: 2,
+          cursors: {
+            "direct.thread:dm_alice__lee": {
+              scopeKey: "direct.thread:dm_alice__lee",
+              cursor: { createdAt: 2, operationId: "dm_msg_1" },
+              readAt: 2,
+              source: "manual"
+            }
+          }
+        }
+      }
+    }));
+    installTestMatterhornScope(rawState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: rawState, operation })), {
+      getDMs: () => [{ thread, messages: [message], unreadCount: 1, firstUnreadMessageId: message.id }]
+    });
+
+    render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
+
+    expect(await screen.findByRole("button", { name: "Lee" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Lee, 1 unread DM" })).not.toBeInTheDocument();
   });
 
   it("marks launcher-provided initial state as connected immediately", () => {
@@ -2377,12 +2413,12 @@ describe("ChatApp", () => {
     await user.click(screen.getByRole("button", { name: "Close Lee DM" }));
 
     expect(screen.queryByRole("button", { name: "Lee, 1 unread DM" })).not.toBeInTheDocument();
-    expect(screen.getByText("No DMs")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Lee" })).not.toBeInTheDocument();
     expect(sent).toHaveLength(0);
     first.unmount();
 
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
-    expect(await screen.findByText("No DMs")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Lee, online" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Lee, 1 unread DM" })).not.toBeInTheDocument();
 
     fireEvent.contextMenu(await memberRailAvatar("Lee", "Lee, online"), { clientX: 80, clientY: 90 });
@@ -2399,9 +2435,8 @@ describe("ChatApp", () => {
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: initialState, operation }; }), initialState);
 
-    await user.click(await screen.findByRole("button", { name: "Lee, online" }));
-    const sendButtons = screen.getAllByRole("button", { name: "Send DM" });
-    await user.click(sendButtons[sendButtons.length - 1]);
+    fireEvent.contextMenu(await memberRailAvatar("Lee", "Lee, online"), { clientX: 80, clientY: 90 });
+    await user.click(await screen.findByRole("menuitem", { name: "Send DM" }));
 
     expect(sent).toHaveLength(0);
     expect(await screen.findByRole("button", { name: "Lee" })).toBeInTheDocument();
@@ -2504,7 +2539,7 @@ describe("ChatApp", () => {
     fireEvent.contextMenu(await memberRailAvatar("Lee", "Lee, online"), { clientX: 80, clientY: 90 });
     await user.click(await screen.findByRole("menuitem", { name: "Send DM" }));
     await user.type(screen.getByLabelText("Message Lee"), "Private update");
-    const composer = screen.getByLabelText("Message Lee").closest(".comp-box");
+    const composer = screen.getByLabelText("Message Lee").closest("footer");
     if (!composer) throw new Error("Expected direct-message composer");
     await user.click(within(composer).getByRole("button", { name: "Send DM" }));
 
@@ -2529,9 +2564,8 @@ describe("ChatApp", () => {
     expect(screen.queryByRole("button", { name: "Lee, 1 unread DM" })).not.toBeInTheDocument();
     expect(screen.queryByText("Wrong app message")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Lee, online" }));
-    const sendButtons = screen.getAllByRole("button", { name: "Send DM" });
-    await user.click(sendButtons[sendButtons.length - 1]);
+    fireEvent.contextMenu(await memberRailAvatar("Lee", "Lee, online"), { clientX: 80, clientY: 90 });
+    await user.click(await screen.findByRole("menuitem", { name: "Send DM" }));
     expect(sent).toHaveLength(0);
     expect(screen.getByLabelText("Message Lee")).toHaveFocus();
   });

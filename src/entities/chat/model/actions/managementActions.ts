@@ -1,6 +1,7 @@
 import type { ManagementTab } from "@entities/chat/model/managementTypes";
 import type { ChannelId, MemberId, RoleId, RoomId, RoomRoleAccess } from "@entities/chat/model/types";
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
+import { assignedRoleIds } from "@entities/chat/model/roles";
 
 const DEFAULT_ROLE_GRANTS = [{ scopeType: "*", scopeId: "*", role: "viewer" }];
 const ARCHIVED_ROLE_GRANTS = [{ scopeType: "*", scopeId: "*", role: "none" }];
@@ -9,14 +10,11 @@ export function managementActions(input: ChatActionHandlersInput) {
   const { dispatch } = input.live;
 
   function scopedRole(roleId: string) {
-    return (input.live.state as any).scopedRoles?.roles?.[roleId] || {};
+    return Object.values(input.live.state.roleDefinitions || {}).find((role) => role.id === roleId);
   }
 
   function assignedRoleIdsForMember(memberId: string): string[] {
-    const scoped = (input.live.state as any).scopedRoles?.assignments?.[memberId];
-    if (Array.isArray(scoped)) return scoped;
-    const legacy = input.live.state.memberRoles?.[memberId];
-    return [...new Set([legacy?.roleId, ...(legacy?.roleIds || [])].filter(Boolean))] as string[];
+    return assignedRoleIds(memberId, undefined, input.live.state);
   }
 
   async function createTextChannel(channel: { name: string; topic?: string; group?: string }) {
@@ -52,13 +50,10 @@ export function managementActions(input: ChatActionHandlersInput) {
     const current = scopedRole(roleId);
     await dispatch("roleCreate", {
       roleId: roleId as RoleId,
-      name: role.name || current.name || roleId,
-      description: role.description ?? current.description,
-      color: role.color ?? current.color,
-      synthetic: Boolean(current.synthetic),
-      grants: current.grants?.length ? current.grants : DEFAULT_ROLE_GRANTS,
-      ...(current.gates ? { gates: current.gates } : {}),
-      ...(current.when ? { when: current.when } : {})
+      name: role.name || current?.name || roleId,
+      description: role.description ?? current?.description,
+      color: role.color ?? current?.color,
+      grants: DEFAULT_ROLE_GRANTS
     });
   }
 
@@ -66,10 +61,10 @@ export function managementActions(input: ChatActionHandlersInput) {
     const current = scopedRole(roleId);
     await dispatch("roleCreate", {
       roleId: roleId as RoleId,
-      name: current.name || roleId,
-      description: current.description,
-      color: current.color,
-      grants: current.grants?.length ? current.grants : ARCHIVED_ROLE_GRANTS,
+      name: current?.name || roleId,
+      description: current?.description,
+      color: current?.color,
+      grants: ARCHIVED_ROLE_GRANTS,
       archivedAt: Date.now()
     });
   }

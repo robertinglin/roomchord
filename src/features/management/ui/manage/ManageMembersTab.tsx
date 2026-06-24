@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { roleNames, type MemberOption } from "@entities/chat/model/roles";
-import type { RoleDefinition } from "@entities/chat/model/types";
+import type { ChatState, RoleDefinition } from "@entities/chat/model/types";
 import { RoleCheckboxes } from "@features/management/ui/manage/RoleFields";
 
 export function ManageMembersTab({
@@ -14,7 +14,7 @@ export function ManageMembersTab({
   canManageRoles: boolean;
   initialMemberId?: string;
   members: MemberOption[];
-  roleDefinitions?: Record<string, RoleDefinition>;
+  roleDefinitions?: ChatState["roleDefinitions"];
   roles: RoleDefinition[];
   onAssignMemberRoles: (memberId: string, roleIds: string[], displayName?: string) => void;
 }) {

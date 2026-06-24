@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
-import { unreadCountsByTopic, type TopicReadCursor, type TopicReadableItem } from "matterhorn-sdk/browser";
+import { channelReadTopic, unreadCountsByTopic, type MatterhornReadTopic, type TopicReadCursor, type TopicReadableItem } from "matterhorn-sdk/browser";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
 import type { ActiveView } from "@entities/chat/model/chatUiStore";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
@@ -8,7 +8,6 @@ import type { RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { canEditRoom, canViewRoom, assignedRoleIds } from "@entities/chat/model/roles";
 import { channelThreads, latestDirectMessageTime, memberChatDisabled, visibleChannelMessages } from "@entities/chat/model/state";
 import type { ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
-import type { ChordLiveClient } from "@entities/chat/model/useChordClient";
 import type { ChannelId, DirectThread, MediaRoom, ThreadId } from "@entities/chat/model/types";
 import {
   forwardTargetsForState,
@@ -17,6 +16,8 @@ import {
   memberNamesForState
 } from "@entities/chat/model/chatViewModel";
 import { threadTitle } from "@entities/chat/model/directThreads";
+import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Mosh} from "../../../../types";
 
 export type ChatViewDataInput = {
   activeChannelId?: string;
@@ -25,7 +26,7 @@ export type ChatViewDataInput = {
   closedDirectThreads: Record<string, number>;
   draftDirectThread?: DirectThread;
   joinedMediaRoomId?: string;
-  live: ChordLiveClient;
+  live: MatterhornRoom<Mosh>;
   media: ChatMediaRooms;
   recentVoiceJoin?: RecentVoiceJoin;
   selectedMediaRoomId?: string;
@@ -37,7 +38,20 @@ export function useChatViewData(input: ChatViewDataInput) {
   const { live, media } = input;
   const state = live.state;
   const channels = useMemo(() => (live.select.channels?.() || state.channels).filter((channel) => !channel.archivedAt), [live.select, state.channels]);
-  const directGroups = useMemo(() => live.getDMs(), [live.getDMs, state.directMessages, state.directThreads]);
+  const [directGroups, setDirectGroups] = useState<Awaited<ReturnType<MatterhornRoom<Mosh>["getDMs"]>>>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void live.getDMs().then((groups) => {
+      if (!cancelled) setDirectGroups(groups);
+    });
+    const unsubscribe = live.subscribeDMs((groups) => {
+      if (!cancelled) setDirectGroups(groups);
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [live, state.directMessages, state.directThreads]);
   const directGroupsByThreadId = useMemo(() => new Map(directGroups.map((group) => [group.thread.id, group])), [directGroups]);
   const threads = useMemo(() => {
     const visible = directGroups
@@ -61,29 +75,21 @@ export function useChatViewData(input: ChatViewDataInput) {
   const memberNamesById = useMemo(() => memberNamesForState(state, live.actor), [live.actor, state.members, state.presence]);
   const memberAvatarsById = useMemo(() => memberAvatarsForState(state, live.actor), [live.actor, state.members, state.presence]);
   const topicUnreadCounts = useMemo(() => {
-    const readTags = (state.members?.[live.actor.memberId as keyof typeof state.members] as { readTags?: Record<string, TopicReadCursor> } | undefined)?.readTags || {};
-    const items: TopicReadableItem[] = [
+    const readTags = state.members?.[live.actor.memberId]?.readTags || {};
+    const items: TopicReadableItem<MatterhornReadTopic>[] = [
       ...Object.values(state.messages || {}).filter((message) => !message.deletedAt && message.channelId).map((message) => ({
-        topic: `channel:${message.channelId}`,
+        topic: channelReadTopic(String(message.channelId)),
         id: String(message.id),
         createdAt: Number(message.createdAt || 0),
         operationId: String(message.id),
         actorId: message.authorId
       })),
-      ...Object.values(state.directMessages || {}).filter((message) => !message.deletedAt && message.threadId && message.authorId).map((message) => ({
-        topic: `dm:${message.authorId}`,
-        id: String(message.id),
-        createdAt: Number(message.createdAt || 0),
-        operationId: String(message.id),
-        actorId: message.authorId
-      }))
     ];
     return unreadCountsByTopic(items, (topic) => live.notifications?.getReadCursor(topic) || readTags[topic], { currentUserId: live.actor.memberId });
-  }, [live.actor.memberId, live.notifications, state.directMessages, state.members, state.messages]);
+  }, [live.actor.memberId, live.notifications, state.members, state.messages]);
   const unreadCounts = useMemo(() => Object.fromEntries(directGroups.map((group) => {
-    const otherUserId = group.thread.userIds?.find((id) => id !== live.actor.memberId);
-    return [group.thread.id, otherUserId ? topicUnreadCounts[`dm:${otherUserId}`] || 0 : 0];
-  })), [directGroups, live.actor.memberId, topicUnreadCounts]);
+    return [group.thread.id, group.unreadCount || 0];
+  })), [directGroups]);
   const actorCanManageRooms = live.can("mediaRoomCreate");
   const actorCanCreateChannels = live.can("channelCreate");
   const actorCanManageRoles = live.can("roleCreate") || live.can("memberRoleAssign") || live.can("scopeRoleSet");
@@ -115,7 +121,7 @@ export function useChatViewData(input: ChatViewDataInput) {
   const threadsForChannel = showingDm ? [] : channel.threads;
   const activeScreenShares = Object.values(state.screenShares || {}).filter((share) => !share.stoppedAt);
   const joinedRoomId = media.sfu.mediaRoomId || input.joinedMediaRoomId;
-  const visibleRooms = useMemo(() => live.select.records<MediaRoom>("rooms").filter((room) => {
+  const visibleRooms = useMemo(() => live.select.records("rooms").filter((room) => {
     if (room.archivedAt) return false;
     const access = live.permissions.roomAccessLevel?.(room);
     return access ? access !== "hidden" : canViewRoom(room, actorRoleIds, actorCanManageRooms);
