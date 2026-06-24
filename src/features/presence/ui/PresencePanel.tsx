@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
 import type { MatterhornEphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
-import type { Actor, ChatEmbed, CommentThread, MediaRoom, MemberRoleAssignment, Presence, RoleDefinition, RoomMember, ScreenShare } from "@entities/chat/model/types";
+import type { Actor, ChatEmbed, ChatState, CommentThread, MediaRoom, MemberRoleAssignment, Presence, RoleDefinition, RoomMember, ScreenShare } from "@entities/chat/model/types";
 import { assignedRoleIds, roleNames } from "@entities/chat/model/roles";
 import { MemberContextMenu, type MemberContextMenuAction } from "@shared/ui/MemberContextMenu";
 import { Button, RailGroup, RailMember } from "@shared/ui/design";
@@ -32,6 +32,7 @@ const styles = stylex.create({
   memberButton: {
     width: "100%",
     display: "block",
+    overflow: "visible",
     padding: 0,
     border: 0,
     borderRadius: tokens.radiusItem,
@@ -92,7 +93,7 @@ function avatarFor(member?: RoomMember, presence?: Presence, actor?: Actor) {
   return presence?.profileImageUrl || presence?.avatarUrl || presence?.avatar || member?.profileImageUrl || member?.avatarUrl || member?.avatar || actor?.profileImageUrl || actor?.avatarUrl || actor?.avatar;
 }
 
-function memberRows(roomMembers: Record<string, RoomMember> | undefined, presence: Record<string, Presence> | undefined, actor?: Actor, roleDefinitions?: Record<string, RoleDefinition>, memberRoles?: Record<string, MemberRoleAssignment>): MemberRow[] {
+function memberRows(roomMembers: Record<string, RoomMember> | undefined, presence: Record<string, Presence> | undefined, actor?: Actor, roleDefinitions?: Record<string, RoleDefinition>, memberRoles?: Partial<ChatState> | Record<string, MemberRoleAssignment>): MemberRow[] {
   const rows = new Map<string, MemberRow>();
   const safeRoomMembers = roomMembers || {};
   const safePresence = presence || {};
@@ -170,7 +171,7 @@ export function PresencePanel({
   screenShares: ScreenShare[];
   voiceTokens: MatterhornEphemeralToken[];
   roleDefinitions?: Record<string, RoleDefinition>;
-  memberRoles?: Record<string, MemberRoleAssignment>;
+  memberRoles?: Partial<ChatState> | Record<string, MemberRoleAssignment>;
   canManageRoles: boolean;
   onDirectMessage: (memberId: string) => void;
   onSetMemberRoles: (memberId: string) => void;
@@ -233,18 +234,10 @@ export function PresencePanel({
               avatar={member.avatar || ""}
               name={member.self ? `${member.name} (you)` : member.name}
               status={presenceStatus(member.status)}
-              sub={member.activity || member.role || member.status}
+              sub={member.role || member.status}
             />
           </button>
         </MemberContextMenu>
-        {selectedMemberId === member.id && member.canMessage ? (
-          <div {...stylex.props(styles.context)}>
-            <span>{member.role || member.status}</span>
-            <Button variant="etched" tone="muted" onClick={() => onDirectMessage(member.id)}>
-              Send DM
-            </Button>
-          </div>
-        ) : null}
       </React.Fragment>
     );
   }

@@ -15,7 +15,7 @@ export function ChatPresenceRail() {
       screenShares={view.activeScreenShares}
       voiceTokens={media.voiceTokens}
       roleDefinitions={live.state.roleDefinitions}
-      memberRoles={live.state.memberRoles}
+      memberRoles={live.state}
       canManageRoles={view.actorCanManageRoles}
       onDirectMessage={actions.openDirectThreadForMember}
       onSetMemberRoles={(memberId) => actions.openManageDialog("members", memberId)}

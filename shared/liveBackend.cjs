@@ -2,6 +2,7 @@
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const { permissions } = require("matterhorn-sdk");
 const { createExampleActor } = require("./matterhornExample/identity.cjs");
 
 const SHARED_PLUGIN_IDS = Object.freeze({
@@ -159,8 +160,8 @@ function defaultMediaRooms(app) {
   return (plugin?.config?.defaultRooms || []).map((room) => ({ ...clone(room), roleAccess: room.roleAccess || {}, participants: {} }));
 }
 
-function projectStateForFrontend(app, primary = {}) {
-  return {
+function projectStateForFrontend(app, primary = {}, actor = actorFromRequest()) {
+  const projected = {
     ...clone(primary),
     comments: {},
     commentThreads: {},
@@ -174,6 +175,9 @@ function projectStateForFrontend(app, primary = {}) {
     rooms: defaultMediaRooms(app),
     screenShares: {}
   };
+  return permissions.filterStateForActor(projected, actor, {
+    metadata: { composition: app.compositionSchema, appPack: { composition: app.appPack?.composition } }
+  });
 }
 
 function safeObjectFileName(value) {
@@ -244,8 +248,8 @@ async function createLiveExampleBackend(options = {}) {
   let operations = persisted.operations.slice();
   let seq = operations.reduce((max, operation) => Math.max(max, Number(operation.seq) || 0), 0);
 
-  async function projectedState() {
-    return projectStateForFrontend(app, room.state);
+  async function projectedState(actor = actorFromRequest()) {
+    return projectStateForFrontend(app, room.state, actor);
   }
 
   async function handleDraftOperation(draft = {}) {
@@ -254,11 +258,11 @@ async function createLiveExampleBackend(options = {}) {
     try {
       await dispatchOperation(room, operationIds, operation);
     } catch (error) {
-      return { ok: false, reason: error?.message || String(error), state: await projectedState(), operation };
+      return { ok: false, reason: error?.message || String(error), state: await projectedState(operation.actor), operation };
     }
     operations.push(operation);
     savePersisted(persistedFile, operations);
-    return { ok: true, state: await projectedState(), operation };
+    return { ok: true, state: await projectedState(operation.actor), operation };
   }
 
   return {
@@ -293,6 +297,17 @@ function readJson(req, maxBytes = 1024 * 1024) {
   });
 }
 
+
+function actorFromUrl(url) {
+  const raw = url.searchParams.get("actor");
+  if (!raw) return actorFromRequest();
+  try {
+    return actorFromRequest(JSON.parse(raw));
+  } catch {
+    return actorFromRequest();
+  }
+}
+
 function sendJson(res, status, value) {
   const body = JSON.stringify(value);
   res.writeHead(status, {
@@ -313,7 +328,7 @@ async function startLiveExampleServer(options = {}) {
       const url = new URL(req.url || "/", `http://${req.headers.host || "127.0.0.1"}`);
       if (req.method === "GET" && url.pathname === "/matterhorn/health") return sendJson(res, 200, { ok: true, roomId: backend.roomId, appId: backend.app.appPack.id });
       if (req.method === "GET" && url.pathname === "/matterhorn/app") return sendJson(res, 200, { ok: true, roomId: backend.roomId, appPack: backend.app.appPack, composition: backend.app.compositionSchema });
-      if (req.method === "GET" && url.pathname === "/matterhorn/state") return sendJson(res, 200, { ok: true, state: await backend.getState() });
+      if (req.method === "GET" && url.pathname === "/matterhorn/state") return sendJson(res, 200, { ok: true, state: await backend.getState(actorFromUrl(url)) });
       if (req.method === "POST" && url.pathname === "/matterhorn/git/object") return sendJson(res, 200, { ok: true, object: saveGitObjectEnvelope(backend.appRoot, backend.roomId, await readJson(req, 32 * 1024 * 1024)) });
       if (req.method === "GET" && url.pathname.startsWith("/matterhorn/git/object/")) {
         const objectId = decodeURIComponent(url.pathname.slice("/matterhorn/git/object/".length));

@@ -78,10 +78,10 @@ export function ManageOverviewDialog({
   onRemoveInvite,
   onUnbanMember
 }: Props) {
-  const roles = useMemo(() => activeRoles(state.roleDefinitions), [state.roleDefinitions]);
+  const roles = useMemo(() => activeRoles(state), [state]);
   const channels = useMemo(() => activeChannels(state.channels || []), [state.channels]);
   const rooms = useMemo(() => activeRooms(state.rooms || []), [state.rooms]);
-  const members = useMemo(() => memberOptions(actor, state.members || {}, state.presence || {}, state.memberRoles), [actor, state.memberRoles, state.members, state.presence]);
+  const members = useMemo(() => memberOptions(actor, state.members || {}, state.presence || {}, state), [actor, state]);
   const pendingAdminCount = useMemo(() => joinRequestsForState(state).filter((request) => request.status === "pending").length, [state]);
   const [tab, setTab] = useState<ManagementTab>(initialTab || "overview");
 

@@ -1947,7 +1947,8 @@ button {
   pointer-events: auto;
 }
 
-.message-actions button {
+.message-actions > button,
+.message-actions > .message-more-wrap > button {
   min-height: var(--control-size-sm);
   width: var(--control-size-sm);
   display: inline-grid;
@@ -2093,12 +2094,12 @@ button {
 
 .message-menu-reaction-row button {
   min-height: var(--row-height);
-  display: grid;
-  place-items: center;
+  display: block;
   padding: 0;
   border-radius: var(--item-radius);
   background: oklch(0.275 0.010 250);
   font-size: 19px;
+  line-height: var(--row-height);
   text-align: center;
 }
 
@@ -5382,7 +5383,8 @@ button {
   grid-template-columns: 40px minmax(0, 1fr);
   column-gap: 12px;
   row-gap: 0;
-  padding: 7px 16px;
+  position: relative;
+  padding: 8px 16px;
 }
 
 .msg:hover {
@@ -5553,37 +5555,80 @@ button {
 }
 
 .msg-actions {
+  position: absolute;
+  left: 68px;
+  top: calc(100% - 14px);
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 4px;
-  justify-self: start;
-  margin-top: 5px;
+  margin-top: 0;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--surface-deep);
+  box-shadow: var(--elev-panel);
   opacity: 0;
+  pointer-events: none;
 }
 
 .msg:hover .msg-actions,
 .msg-actions:focus-within {
   opacity: 1;
+  pointer-events: auto;
 }
 
-.msg-actions button {
+.msg-actions > button,
+.msg-actions > .message-more-wrap > button {
   width: 28px;
   height: 28px;
-  display: grid;
-  place-items: center;
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
   border-radius: var(--r-item);
+  background: transparent;
   color: var(--quiet);
+  line-height: 1;
+  text-align: center;
 }
 
-.msg-actions button:hover,
-.msg-actions button:focus {
+.msg-actions > button:hover,
+.msg-actions > button:focus,
+.msg-actions > .message-more-wrap > button:hover,
+.msg-actions > .message-more-wrap > button:focus {
   background: var(--panel-hover);
   color: var(--fg);
   outline: none;
 }
 
-.message-action-emoji {
-  font-size: 14px;
+.message-action-emoji,
+.msg-actions > .message-action-emoji {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 15px;
+  line-height: 1;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  text-indent: 0;
+  letter-spacing: 0;
+}
+
+.msg-actions > .message-action-emoji {
+  transform: translateY(-0.5px);
+}
+
+.msg-actions > .message-action-icon .ico,
+.msg-actions > .message-action-icon .ui-icon,
+.msg-actions > .message-more-wrap > .message-action-icon .ico,
+.msg-actions > .message-more-wrap > .message-action-icon .ui-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .embed-stack {
@@ -5992,8 +6037,7 @@ button {
   }
 
   .msg-actions {
-    grid-column: 2;
-    opacity: 1;
+    left: 62px;
   }
 
   .composer {

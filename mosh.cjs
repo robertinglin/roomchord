@@ -7,7 +7,7 @@
 // descriptors that model/effects.cjs interprets, so no app code runs on a node.
 
 const path = require("node:path");
-const { p, action, query, defineModel, defineApp } = require("matterhorn-sdk");
+const { p, action, query, defineModel, defineApp, permissions } = require("matterhorn-sdk");
 
 const packageRoot = path.join(__dirname, ".");
 const frontendCommand = path.join(packageRoot, "shared", "frontendCommand.cjs");
@@ -15,43 +15,7 @@ const frontendCommand = path.join(packageRoot, "shared", "frontendCommand.cjs");
 /* ----- model: roles seed roleDefinitions; state shape drives collections ----- */
 
 const chat = defineModel({
-  roles: {
-    guest: {
-      name: "Guest",
-      description: "Can view public room activity",
-      color: "#6b7280",
-      rank: 0,
-      system: true,
-    },
-    member: {
-      name: "Member",
-      description: "Can send messages and join voice channels",
-      color: "#22c55e",
-      rank: 1,
-      system: true,
-    },
-    moderator: {
-      name: "Moderator",
-      description: "Can manage channels, messages, and voice channels",
-      color: "#38bdf8",
-      rank: 2,
-      system: true,
-    },
-    admin: {
-      name: "Admin",
-      description: "Can create channels and manage roles",
-      color: "#a78bfa",
-      rank: 3,
-      system: true,
-    },
-    owner: {
-      name: "Owner",
-      description: "Full room ownership",
-      color: "#f59e0b",
-      rank: 4,
-      system: true,
-    },
-  },
+  roles: permissions.DEFAULT_ROOM_ROLES,
   state: {
     initial: {
       channels: [
@@ -69,8 +33,7 @@ const chat = defineModel({
       guests: {},
       publicInvites: [],
       joinRequests: {},
-      memberRoles: {},
-      // activity: [] and roleDefinitions are seeded by the builder from `roles`.
+      // activity: [] and roleDefinitions are seeded by Matterhorn from `roles`.
     },
   },
   shapes: {
@@ -90,7 +53,6 @@ const chat = defineModel({
     joinRequests: { readClass: "head", integrityClass: "signature" },
     activity: { readClass: "window", integrityClass: "seq" },
     channels: { readClass: "head", integrityClass: "signature" },
-    memberRoles: { readClass: "head", integrityClass: "signature" },
     roleDefinitions: { readClass: "head", integrityClass: "signature" },
   },
 });
@@ -101,8 +63,6 @@ const {
   guests,
   publicInvites,
   joinRequests,
-  roleDefinitions,
-  memberRoles,
 } = chat.collections;
 
 /* ----- operations (faithful to the existing model.json) ----- */
@@ -518,108 +478,8 @@ const operations = {
     }),
   ),
 
-  "role.create": action(
-    {
-      authorize: { roles: ["admin"] },
-      payload: {
-        roleId: p.string({ max: 80 }),
-        name: p.string({ max: 80 }),
-        description: p.string({ max: 240 }).nullable().optional(),
-        color: p.string({ max: 40 }).nullable().optional(),
-      },
-    },
-    ({ ref, fx }) => ({
-      effects: [
-        fx.create(roleDefinitions, {
-          id: ref.payload("roleId"),
-          fields: {
-            name: ref.payload("name"),
-            description: ref.payload("description", null),
-            color: ref.payload("color", null),
-            rank: 1,
-            systemRole: false,
-            createdBy: ref.actor("memberId"),
-            createdAt: ref.now(),
-            archivedAt: null,
-          },
-          activity: "created role",
-        }),
-      ],
-    }),
-  ),
-
-  "role.update": action(
-    {
-      authorize: { roles: ["admin"] },
-      payload: {
-        roleId: p.string({ max: 80 }),
-        name: p.string({ max: 80 }).nullable().optional(),
-        description: p.string({ max: 240 }).nullable().optional(),
-        color: p.string({ max: 40 }).nullable().optional(),
-      },
-    },
-    ({ ref, fx }) => ({
-      effects: [
-        fx.update(roleDefinitions, {
-          id: ref.payload("roleId"),
-          recordLabel: "Role",
-          set: {
-            name: ref.payload("name"),
-            description: ref.payload("description"),
-            color: ref.payload("color"),
-            updatedAt: ref.now(),
-            updatedBy: ref.actor("memberId"),
-          },
-          activity: "updated role",
-        }),
-      ],
-    }),
-  ),
-
-  "role.archive": action(
-    {
-      authorize: { roles: ["admin"] },
-      payload: { roleId: p.string({ max: 80 }) },
-    },
-    ({ ref, fx }) => ({
-      effects: [
-        fx.mark(roleDefinitions, {
-          id: ref.payload("roleId"),
-          recordLabel: "Role",
-          set: { archivedAt: ref.now(), archivedBy: ref.actor("memberId") },
-          activity: "archived role",
-        }),
-      ],
-    }),
-  ),
-
-  "member.role.assign": action(
-    {
-      authorize: { roles: ["admin"] },
-      payload: {
-        memberId: p.string({ max: 120 }),
-        roleId: p.string({ max: 80 }).nullable().optional(),
-        roleIds: p.array(p.string({ max: 80 })).optional(),
-        displayName: p.string({ max: 120 }).nullable().optional(),
-      },
-    },
-    ({ ref, fx }) => ({
-      effects: [
-        fx.create(memberRoles, {
-          id: ref.payload("memberId"),
-          fields: {
-            memberId: ref.payload("memberId"),
-            roleId: ref.payload("roleId", null),
-            roleIds: ref.payload("roleIds", []),
-            displayName: ref.payload("displayName", null),
-            assignedBy: ref.actor("memberId"),
-            assignedAt: ref.now(),
-          },
-          activity: "assigned role",
-        }),
-      ],
-    }),
-  ),
+  // Custom Mosh role CRUD moved to Matterhorn core scoped access.
+  // SDK actions below delegate to access.role.define/assign/unassign and scope.role.set.
 };
 
 /* ----- declarative notifications -----
@@ -748,6 +608,12 @@ const app = defineApp({
   },
   model: chat.withOperations(operations),
   actions: {
+    ...permissions.roleManagementActions({
+      defineName: "roleCreate",
+      assignName: "memberRoleAssign",
+      unassignName: "memberRoleUnassign",
+      scopeName: "scopeRoleSet",
+    }),
     moderateMember: {
       plugin: "primary",
       type: "member.moderate",

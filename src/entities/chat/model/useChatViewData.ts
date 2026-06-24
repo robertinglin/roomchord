@@ -9,7 +9,7 @@ import { canEditRoom, canViewRoom, assignedRoleIds } from "@entities/chat/model/
 import { channelThreads, latestDirectMessageTime, memberChatDisabled, visibleChannelMessages } from "@entities/chat/model/state";
 import type { ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
 import type { ChordLiveClient } from "@entities/chat/model/useChordClient";
-import type { ChannelId, DirectThread, ThreadId } from "@entities/chat/model/types";
+import type { ChannelId, DirectThread, MediaRoom, ThreadId } from "@entities/chat/model/types";
 import {
   forwardTargetsForState,
   hasDirectMessages,
@@ -36,7 +36,7 @@ export type ChatViewDataInput = {
 export function useChatViewData(input: ChatViewDataInput) {
   const { live, media } = input;
   const state = live.state;
-  const channels = useMemo(() => state.channels.filter((channel) => !channel.archivedAt), [state.channels]);
+  const channels = useMemo(() => (live.select.channels?.() || state.channels).filter((channel) => !channel.archivedAt), [live.select, state.channels]);
   const directGroups = useMemo(() => live.getDMs(), [live.getDMs, state.directMessages, state.directThreads]);
   const directGroupsByThreadId = useMemo(() => new Map(directGroups.map((group) => [group.thread.id, group])), [directGroups]);
   const threads = useMemo(() => {
@@ -86,11 +86,11 @@ export function useChatViewData(input: ChatViewDataInput) {
   })), [directGroups, live.actor.memberId, topicUnreadCounts]);
   const actorCanManageRooms = live.can("mediaRoomCreate");
   const actorCanCreateChannels = live.can("channelCreate");
-  const actorCanManageRoles = live.can("roleCreate");
+  const actorCanManageRoles = live.can("roleCreate") || live.can("memberRoleAssign") || live.can("scopeRoleSet");
   const actorCanManageMembers = live.can("banMember") || live.can("moderateMember") || live.can("disableInvite") || live.can("approveJoinRequest");
   const actorCanManageAnything = actorCanManageRooms || actorCanCreateChannels || actorCanManageRoles || actorCanManageMembers;
   const actorChatDisabled = memberChatDisabled(state, live.actor.memberId);
-  const actorRoleIds = useMemo(() => assignedRoleIds(live.actor.memberId, live.actor.role, state.memberRoles), [live.actor.memberId, live.actor.role, state.memberRoles]);
+  const actorRoleIds = useMemo(() => assignedRoleIds(live.actor.memberId, live.actor.role, state), [live.actor.memberId, live.actor.role, state]);
   const effectiveVoicePreferences = useMemo(
     () => input.voiceSettingsOpen && !input.voicePreferences.deafened ? { ...input.voicePreferences, deafened: true } : input.voicePreferences,
     [input.voicePreferences, input.voiceSettingsOpen]
@@ -115,12 +115,19 @@ export function useChatViewData(input: ChatViewDataInput) {
   const threadsForChannel = showingDm ? [] : channel.threads;
   const activeScreenShares = Object.values(state.screenShares || {}).filter((share) => !share.stoppedAt);
   const joinedRoomId = media.sfu.mediaRoomId || input.joinedMediaRoomId;
-  const visibleRooms = useMemo(() => state.rooms.filter((room) => !room.archivedAt && canViewRoom(room, actorRoleIds, actorCanManageRooms)), [actorCanManageRooms, actorRoleIds, state.rooms]);
+  const visibleRooms = useMemo(() => live.select.records<MediaRoom>("rooms").filter((room) => {
+    if (room.archivedAt) return false;
+    const access = live.permissions.roomAccessLevel?.(room);
+    return access ? access !== "hidden" : canViewRoom(room, actorRoleIds, actorCanManageRooms);
+  }), [actorCanManageRooms, actorRoleIds, live.permissions, live.select, state.rooms]);
   const selectedMediaRoom = visibleRooms.find((room) => room.id === input.selectedMediaRoomId)
     || visibleRooms.find((room) => room.id === joinedRoomId);
   const showingMediaRoom = input.activeView === "media" && Boolean(selectedMediaRoom);
   const reconnectRoom = !joinedRoomId && input.recentVoiceJoin
-    ? visibleRooms.find((room) => canEditRoom(room, actorRoleIds, actorCanManageRooms) && room.id === input.recentVoiceJoin?.roomId)
+    ? visibleRooms.find((room) => {
+      const access = live.permissions.roomAccessLevel?.(room);
+      return (access ? access === "editor" : canEditRoom(room, actorRoleIds, actorCanManageRooms)) && room.id === input.recentVoiceJoin?.roomId;
+    })
     : undefined;
   const forwardTargets = useMemo<MessageForwardTarget[]>(() => forwardTargetsForState({
     activeChannelId: currentChannelId,

@@ -24,8 +24,9 @@ async function testingApi() {
 }
 
 function assertCleanChordTypes(types) {
-  assert.equal(types.includes("ScopedRole"), false);
   assert.equal(types.includes("PluginState"), false);
+  assert.match(types, /export type ScopedRole = "none" \| "viewer" \| "editor" \| "moderator" \| "admin" \| "owner";/);
+  assert.match(types, /export interface CoreAccessState/);
   assert.doesNotMatch(types, /ActionHelpers|ConnectionStatus|export interface Client|Chord\.DispatchResult/);
   assert.doesNotMatch(types, /dispatch<K extends ActionName>|subscribeDMs/);
   assert.match(types, /export type ChannelId = string & \{ readonly __brand: "ChannelId" \};/);
@@ -40,10 +41,10 @@ function assertCleanChordTypes(types) {
 
 test("Chat exports schema-only Matterhorn app metadata", () => {
   assert.equal(app.appPack.kind, "matterhorn.app-pack");
-  assert.equal(app.appPack.id, app.CHORD_APP_ID);
+  assert.equal(app.appPack.id, app.MOSH_APP_ID);
   assert.equal(app.hostPack.appPackId, app.appPack.id);
   assert.equal(app.playerPack.supports[0].appPackId, app.appPack.id);
-  assert.equal(app.hostPlugin.id, app.CHORD_PLUGIN_ID);
+  assert.equal(app.hostPlugin.id, app.MOSH_PLUGIN_ID);
   assert.equal(app.hostPlugin.schemaDefined, true);
   assert.equal(app.hostPlugin.schemaSource, "schema:matterhorn.primary-model");
   assert.equal(app.appPack.composition.primaryPlugin.source, undefined);
@@ -125,6 +126,11 @@ test("Chat schema declares moderation, author-only edits, and moderator deletes"
     assert.ok(primaryAction(type), `${type} action required`);
     assert.deepEqual(primaryOperation(type).authorize.roles, ["admin"]);
   }
+
+  assert.deepEqual(
+    ["roleCreate", "memberRoleAssign", "memberRoleUnassign", "scopeRoleSet"].map((name) => app.appPack.composition.actions.find((action) => action.name === name)?.type),
+    ["access.role.define", "access.role.assign", "access.role.unassign", "scope.role.set"]
+  );
 
   assert.deepEqual(primaryOperation("message.edit").guards, [
     {

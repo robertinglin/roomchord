@@ -17,14 +17,14 @@
     "matterhornVersion": ">=0.1 <0.2",
     "hostPack": {
       "url": "workspace:matterhorn-mosh#hostPack",
-      "integrity": "sha256-833038faf73f812a5c69392fc0ae56c7c5215a49a0b5fc75348f63b13d171290"
+      "integrity": "sha256-af5739c5622420651f60763584ad8b562a4bf418a1e940175ed139af91dc301e"
     },
     "playerPacks": [
       {
         "id": "gg.matterhorn.mosh.player",
         "name": "Mosh Player",
         "url": "workspace:matterhorn-mosh#playerPack",
-        "integrity": "sha256-be4429c37791e6ebe0b419575669686a511e9b4d937ca47cfbee5bebf3d13c8f",
+        "integrity": "sha256-32f317d8a261c0ff1f42ba498159a3ed4148b81835c766f717e8c1de1e49320b",
         "recommendedFor": {
           "devices": [
             "desktop",
@@ -38,11 +38,11 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-83c84658f70bdaf7c8b46f95dba3db967aa57fb8036b2957aafe46e3fc5a34e9",
-      "operationSchemaHash": "sha256-8c780eef5ee0dfd72d15dac086d79f114f4affba2cc41da92dbec77543f03ed9",
-      "stateSchemaHash": "sha256-efde982b25b7f60767432b1f11b29e2cd8b0cdf218c700ef0f9305b4a4657890",
-      "pluginGraphHash": "sha256-a9c4cf578a740745b56cae30145afe61fd10d6b92046e794f358eea3bbfe929e",
-      "compositionSchemaHash": "sha256-9665ec0c91b078b1c1a7e79db0c5cee195eafa881964f27b41d998b06f226281"
+      "appProtocolHash": "sha256-c4cf74ff489b778de9272ff7af819e8e4c3ca1f5cace55dd88c29d633a62db32",
+      "operationSchemaHash": "sha256-383daaa322dc414ba17e68f96c5fc4561fb247e55ddaee5c65eaebed641b946e",
+      "stateSchemaHash": "sha256-ac391b0efaf006b5120d00f48ed1067a8d767ee9113351332eb61630de666bbf",
+      "pluginGraphHash": "sha256-b45cacb8a1f9637fa523f4fd71cbd218ca44da5e2b5ed8ad26d61d204fe65f23",
+      "compositionSchemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
     },
     "composition": {
       "kind": "matterhorn.app-composition.schema",
@@ -75,7 +75,6 @@
               "guests": {},
               "publicInvites": [],
               "joinRequests": {},
-              "memberRoles": {},
               "roleDefinitions": {
                 "guest": {
                   "id": "guest",
@@ -89,7 +88,7 @@
                 "member": {
                   "id": "member",
                   "name": "Member",
-                  "description": "Can send messages and join voice channels",
+                  "description": "Can send messages and join collaborative scopes",
                   "color": "#22c55e",
                   "rank": 1,
                   "systemRole": true,
@@ -98,7 +97,7 @@
                 "moderator": {
                   "id": "moderator",
                   "name": "Moderator",
-                  "description": "Can manage channels, messages, and voice channels",
+                  "description": "Can manage messages and scoped resources",
                   "color": "#38bdf8",
                   "rank": 2,
                   "systemRole": true,
@@ -107,7 +106,7 @@
                 "admin": {
                   "id": "admin",
                   "name": "Admin",
-                  "description": "Can create channels and manage roles",
+                  "description": "Can delegate access and manage roles",
                   "color": "#a78bfa",
                   "rank": 3,
                   "systemRole": true,
@@ -797,204 +796,6 @@
                   "activity": "denied join request"
                 }
               ]
-            },
-            "role.create": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80
-                  },
-                  "name": {
-                    "type": "string",
-                    "max": 80
-                  }
-                },
-                "optional": {
-                  "description": {
-                    "type": "string",
-                    "max": 240,
-                    "nullable": true
-                  },
-                  "color": {
-                    "type": "string",
-                    "max": 40,
-                    "nullable": true
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "createRecord",
-                  "collection": "roleDefinitions",
-                  "storage": "map",
-                  "partition": "roleDefinitions",
-                  "idField": "roleId",
-                  "fields": {
-                    "name": "$payload.name",
-                    "description": {
-                      "$expr": "$payload.description",
-                      "fallback": null
-                    },
-                    "color": {
-                      "$expr": "$payload.color",
-                      "fallback": null
-                    },
-                    "rank": 1,
-                    "systemRole": false,
-                    "createdBy": "$actor.memberId",
-                    "createdAt": "$createdAt",
-                    "archivedAt": null
-                  },
-                  "activity": "created role"
-                }
-              ]
-            },
-            "role.update": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80
-                  }
-                },
-                "optional": {
-                  "name": {
-                    "type": "string",
-                    "max": 80,
-                    "nullable": true
-                  },
-                  "description": {
-                    "type": "string",
-                    "max": 240,
-                    "nullable": true
-                  },
-                  "color": {
-                    "type": "string",
-                    "max": 40,
-                    "nullable": true
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "updateRecord",
-                  "collection": "roleDefinitions",
-                  "storage": "map",
-                  "partition": "roleDefinitions",
-                  "idField": "roleId",
-                  "fields": {
-                    "name": "$payload.name",
-                    "description": "$payload.description",
-                    "color": "$payload.color",
-                    "updatedAt": "$createdAt",
-                    "updatedBy": "$actor.memberId"
-                  },
-                  "activity": "updated role",
-                  "recordLabel": "Role"
-                }
-              ]
-            },
-            "role.archive": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "markRecord",
-                  "collection": "roleDefinitions",
-                  "storage": "map",
-                  "partition": "roleDefinitions",
-                  "idField": "roleId",
-                  "fields": {
-                    "archivedAt": "$createdAt",
-                    "archivedBy": "$actor.memberId"
-                  },
-                  "activity": "archived role",
-                  "recordLabel": "Role"
-                }
-              ]
-            },
-            "member.role.assign": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "memberId": {
-                    "type": "string",
-                    "max": 120
-                  }
-                },
-                "optional": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80,
-                    "nullable": true
-                  },
-                  "roleIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "max": 80
-                    }
-                  },
-                  "displayName": {
-                    "type": "string",
-                    "max": 120,
-                    "nullable": true
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "createRecord",
-                  "collection": "memberRoles",
-                  "storage": "map",
-                  "partition": "memberRoles",
-                  "idField": "memberId",
-                  "fields": {
-                    "memberId": "$payload.memberId",
-                    "roleId": {
-                      "$expr": "$payload.roleId",
-                      "fallback": null
-                    },
-                    "roleIds": {
-                      "$expr": "$payload.roleIds",
-                      "fallback": []
-                    },
-                    "displayName": {
-                      "$expr": "$payload.displayName",
-                      "fallback": null
-                    },
-                    "assignedBy": "$actor.memberId",
-                    "assignedAt": "$createdAt"
-                  },
-                  "activity": "assigned role"
-                }
-              ]
             }
           },
           "views": {},
@@ -1044,15 +845,6 @@
               "storage": "map",
               "partition": "joinRequests"
             },
-            "memberRoles": {
-              "readClass": "head",
-              "integrityClass": "signature",
-              "historyVisibility": {
-                "mode": "active-epoch-only"
-              },
-              "storage": "map",
-              "partition": "memberRoles"
-            },
             "roleDefinitions": {
               "readClass": "head",
               "integrityClass": "signature",
@@ -1092,6 +884,98 @@
           "id": "gg.matterhorn.examples.plugins.media-rooms",
           "version": "1.0.0",
           "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "rooms": {},
+                "activity": []
+              }
+            },
+            "operations": {
+              "media.room.create": {
+                "payload": {
+                  "required": {
+                    "name": {
+                      "type": "string",
+                      "max": 100
+                    }
+                  },
+                  "optional": {
+                    "allowsVideo": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "group": {
+                      "type": "string",
+                      "max": 80,
+                      "nullable": true,
+                      "nonEmpty": false
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "max": 80
+                    },
+                    "scopeId": {
+                      "type": "string",
+                      "max": 160
+                    },
+                    "roleAccess": {
+                      "type": "record",
+                      "values": {
+                        "type": "enum",
+                        "values": [
+                          "editor",
+                          "readonly"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "authorize": {
+                  "roles": [
+                    "moderator"
+                  ]
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "rooms",
+                    "idPrefix": "media_room",
+                    "fields": {
+                      "name": "$payload.name",
+                      "group": "$payload.group",
+                      "allowsVideo": "$payload.allowsVideo",
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "roleAccess": "$payload.roleAccess",
+                      "createdBy": "$actor.memberId",
+                      "createdAt": "$createdAt",
+                      "locked": false,
+                      "archivedAt": null,
+                      "participants": {},
+                      "participantCount": 0
+                    }
+                  },
+                  {
+                    "kind": "appendToArray",
+                    "path": "activity",
+                    "item": {
+                      "type": "media.room.create",
+                      "actorId": "$actor.memberId",
+                      "actorName": "$actor.displayName",
+                      "createdAt": "$createdAt"
+                    }
+                  }
+                ]
+              }
+            },
+            "views": {},
+            "publicView": {
+              "kind": "state"
+            }
+          },
           "config": {
             "defaultRooms": [
               {
@@ -1190,11 +1074,6 @@
           "type": "member.moderate"
         },
         {
-          "name": "memberRoleAssign",
-          "plugin": "primary",
-          "type": "member.role.assign"
-        },
-        {
           "name": "memberUnban",
           "plugin": "primary",
           "type": "member.unban"
@@ -1233,21 +1112,6 @@
           "name": "messageUnpin",
           "plugin": "primary",
           "type": "message.unpin"
-        },
-        {
-          "name": "roleArchive",
-          "plugin": "primary",
-          "type": "role.archive"
-        },
-        {
-          "name": "roleCreate",
-          "plugin": "primary",
-          "type": "role.create"
-        },
-        {
-          "name": "roleUpdate",
-          "plugin": "primary",
-          "type": "role.update"
         },
         {
           "name": "commentsAdd",
@@ -1668,6 +1532,164 @@
               ]
             }
           }
+        },
+        {
+          "name": "roleCreate",
+          "plugin": "core",
+          "type": "access.role.define",
+          "payloadSchema": {
+            "required": {
+              "roleId": {
+                "type": "string",
+                "max": 120
+              }
+            },
+            "optional": {
+              "name": {
+                "type": "string",
+                "max": 120
+              },
+              "grants": {
+                "type": "array"
+              },
+              "description": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              },
+              "color": {
+                "type": "string",
+                "max": 40,
+                "nullable": true
+              },
+              "rank": {
+                "type": "number",
+                "min": 0,
+                "max": 100
+              },
+              "archivedAt": {
+                "type": "number",
+                "min": 0
+              },
+              "synthetic": {
+                "type": "boolean"
+              },
+              "when": {
+                "type": "object"
+              },
+              "gates": {
+                "type": "array"
+              },
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "memberRoleAssign",
+          "plugin": "core",
+          "type": "access.role.assign",
+          "payloadSchema": {
+            "required": {
+              "target": {
+                "type": "string",
+                "max": 240
+              },
+              "roleId": {
+                "type": "string",
+                "max": 120
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "memberRoleUnassign",
+          "plugin": "core",
+          "type": "access.role.unassign",
+          "payloadSchema": {
+            "required": {
+              "target": {
+                "type": "string",
+                "max": 240
+              },
+              "roleId": {
+                "type": "string",
+                "max": 120
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeRoleSet",
+          "plugin": "core",
+          "type": "scope.role.set",
+          "payloadSchema": {
+            "required": {
+              "scopeType": {
+                "type": "string",
+                "max": 80
+              },
+              "scopeId": {
+                "type": "string",
+                "max": 180
+              }
+            },
+            "optional": {
+              "target": {
+                "type": "string",
+                "max": 240,
+                "nullable": true
+              },
+              "role": {
+                "type": "enum",
+                "values": [
+                  "none",
+                  "viewer",
+                  "editor",
+                  "moderator",
+                  "admin",
+                  "owner"
+                ]
+              },
+              "defaultRole": {
+                "type": "enum",
+                "values": [
+                  "none",
+                  "viewer",
+                  "editor",
+                  "moderator",
+                  "admin",
+                  "owner"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "moderator"
         },
         {
           "name": "moderateMember",
@@ -1861,7 +1883,7 @@
           }
         }
       },
-      "schemaHash": "sha256-9665ec0c91b078b1c1a7e79db0c5cee195eafa881964f27b41d998b06f226281"
+      "schemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
     },
     "capabilities": {
       "required": [
@@ -1933,8 +1955,8 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-83c84658f70bdaf7c8b46f95dba3db967aa57fb8036b2957aafe46e3fc5a34e9",
-      "pluginGraphHash": "sha256-a9c4cf578a740745b56cae30145afe61fd10d6b92046e794f358eea3bbfe929e"
+      "appProtocolHash": "sha256-c4cf74ff489b778de9272ff7af819e8e4c3ca1f5cace55dd88c29d633a62db32",
+      "pluginGraphHash": "sha256-b45cacb8a1f9637fa523f4fd71cbd218ca44da5e2b5ed8ad26d61d204fe65f23"
     },
     "runtime": {
       "minMatterhornVersion": "0.1.0",
@@ -1950,7 +1972,7 @@
       ]
     },
     "composition": {
-      "schemaHash": "sha256-9665ec0c91b078b1c1a7e79db0c5cee195eafa881964f27b41d998b06f226281",
+      "schemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f",
       "primaryPlugin": {
         "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
@@ -1974,7 +1996,6 @@
               "guests": {},
               "publicInvites": [],
               "joinRequests": {},
-              "memberRoles": {},
               "roleDefinitions": {
                 "guest": {
                   "id": "guest",
@@ -1988,7 +2009,7 @@
                 "member": {
                   "id": "member",
                   "name": "Member",
-                  "description": "Can send messages and join voice channels",
+                  "description": "Can send messages and join collaborative scopes",
                   "color": "#22c55e",
                   "rank": 1,
                   "systemRole": true,
@@ -1997,7 +2018,7 @@
                 "moderator": {
                   "id": "moderator",
                   "name": "Moderator",
-                  "description": "Can manage channels, messages, and voice channels",
+                  "description": "Can manage messages and scoped resources",
                   "color": "#38bdf8",
                   "rank": 2,
                   "systemRole": true,
@@ -2006,7 +2027,7 @@
                 "admin": {
                   "id": "admin",
                   "name": "Admin",
-                  "description": "Can create channels and manage roles",
+                  "description": "Can delegate access and manage roles",
                   "color": "#a78bfa",
                   "rank": 3,
                   "systemRole": true,
@@ -2696,204 +2717,6 @@
                   "activity": "denied join request"
                 }
               ]
-            },
-            "role.create": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80
-                  },
-                  "name": {
-                    "type": "string",
-                    "max": 80
-                  }
-                },
-                "optional": {
-                  "description": {
-                    "type": "string",
-                    "max": 240,
-                    "nullable": true
-                  },
-                  "color": {
-                    "type": "string",
-                    "max": 40,
-                    "nullable": true
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "createRecord",
-                  "collection": "roleDefinitions",
-                  "storage": "map",
-                  "partition": "roleDefinitions",
-                  "idField": "roleId",
-                  "fields": {
-                    "name": "$payload.name",
-                    "description": {
-                      "$expr": "$payload.description",
-                      "fallback": null
-                    },
-                    "color": {
-                      "$expr": "$payload.color",
-                      "fallback": null
-                    },
-                    "rank": 1,
-                    "systemRole": false,
-                    "createdBy": "$actor.memberId",
-                    "createdAt": "$createdAt",
-                    "archivedAt": null
-                  },
-                  "activity": "created role"
-                }
-              ]
-            },
-            "role.update": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80
-                  }
-                },
-                "optional": {
-                  "name": {
-                    "type": "string",
-                    "max": 80,
-                    "nullable": true
-                  },
-                  "description": {
-                    "type": "string",
-                    "max": 240,
-                    "nullable": true
-                  },
-                  "color": {
-                    "type": "string",
-                    "max": 40,
-                    "nullable": true
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "updateRecord",
-                  "collection": "roleDefinitions",
-                  "storage": "map",
-                  "partition": "roleDefinitions",
-                  "idField": "roleId",
-                  "fields": {
-                    "name": "$payload.name",
-                    "description": "$payload.description",
-                    "color": "$payload.color",
-                    "updatedAt": "$createdAt",
-                    "updatedBy": "$actor.memberId"
-                  },
-                  "activity": "updated role",
-                  "recordLabel": "Role"
-                }
-              ]
-            },
-            "role.archive": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "markRecord",
-                  "collection": "roleDefinitions",
-                  "storage": "map",
-                  "partition": "roleDefinitions",
-                  "idField": "roleId",
-                  "fields": {
-                    "archivedAt": "$createdAt",
-                    "archivedBy": "$actor.memberId"
-                  },
-                  "activity": "archived role",
-                  "recordLabel": "Role"
-                }
-              ]
-            },
-            "member.role.assign": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "memberId": {
-                    "type": "string",
-                    "max": 120
-                  }
-                },
-                "optional": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80,
-                    "nullable": true
-                  },
-                  "roleIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "max": 80
-                    }
-                  },
-                  "displayName": {
-                    "type": "string",
-                    "max": 120,
-                    "nullable": true
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "createRecord",
-                  "collection": "memberRoles",
-                  "storage": "map",
-                  "partition": "memberRoles",
-                  "idField": "memberId",
-                  "fields": {
-                    "memberId": "$payload.memberId",
-                    "roleId": {
-                      "$expr": "$payload.roleId",
-                      "fallback": null
-                    },
-                    "roleIds": {
-                      "$expr": "$payload.roleIds",
-                      "fallback": []
-                    },
-                    "displayName": {
-                      "$expr": "$payload.displayName",
-                      "fallback": null
-                    },
-                    "assignedBy": "$actor.memberId",
-                    "assignedAt": "$createdAt"
-                  },
-                  "activity": "assigned role"
-                }
-              ]
             }
           },
           "views": {},
@@ -2943,15 +2766,6 @@
               "storage": "map",
               "partition": "joinRequests"
             },
-            "memberRoles": {
-              "readClass": "head",
-              "integrityClass": "signature",
-              "historyVisibility": {
-                "mode": "active-epoch-only"
-              },
-              "storage": "map",
-              "partition": "memberRoles"
-            },
             "roleDefinitions": {
               "readClass": "head",
               "integrityClass": "signature",
@@ -2991,6 +2805,98 @@
           "id": "gg.matterhorn.examples.plugins.media-rooms",
           "version": "1.0.0",
           "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "rooms": {},
+                "activity": []
+              }
+            },
+            "operations": {
+              "media.room.create": {
+                "payload": {
+                  "required": {
+                    "name": {
+                      "type": "string",
+                      "max": 100
+                    }
+                  },
+                  "optional": {
+                    "allowsVideo": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "group": {
+                      "type": "string",
+                      "max": 80,
+                      "nullable": true,
+                      "nonEmpty": false
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "max": 80
+                    },
+                    "scopeId": {
+                      "type": "string",
+                      "max": 160
+                    },
+                    "roleAccess": {
+                      "type": "record",
+                      "values": {
+                        "type": "enum",
+                        "values": [
+                          "editor",
+                          "readonly"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "authorize": {
+                  "roles": [
+                    "moderator"
+                  ]
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "rooms",
+                    "idPrefix": "media_room",
+                    "fields": {
+                      "name": "$payload.name",
+                      "group": "$payload.group",
+                      "allowsVideo": "$payload.allowsVideo",
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "roleAccess": "$payload.roleAccess",
+                      "createdBy": "$actor.memberId",
+                      "createdAt": "$createdAt",
+                      "locked": false,
+                      "archivedAt": null,
+                      "participants": {},
+                      "participantCount": 0
+                    }
+                  },
+                  {
+                    "kind": "appendToArray",
+                    "path": "activity",
+                    "item": {
+                      "type": "media.room.create",
+                      "actorId": "$actor.memberId",
+                      "actorName": "$actor.displayName",
+                      "createdAt": "$createdAt"
+                    }
+                  }
+                ]
+              }
+            },
+            "views": {},
+            "publicView": {
+              "kind": "state"
+            }
+          },
           "config": {
             "defaultRooms": [
               {
@@ -3090,11 +2996,6 @@
           "type": "member.moderate"
         },
         {
-          "name": "memberRoleAssign",
-          "plugin": "primary",
-          "type": "member.role.assign"
-        },
-        {
           "name": "memberUnban",
           "plugin": "primary",
           "type": "member.unban"
@@ -3133,21 +3034,6 @@
           "name": "messageUnpin",
           "plugin": "primary",
           "type": "message.unpin"
-        },
-        {
-          "name": "roleArchive",
-          "plugin": "primary",
-          "type": "role.archive"
-        },
-        {
-          "name": "roleCreate",
-          "plugin": "primary",
-          "type": "role.create"
-        },
-        {
-          "name": "roleUpdate",
-          "plugin": "primary",
-          "type": "role.update"
         },
         {
           "name": "commentsAdd",
@@ -3568,6 +3454,164 @@
               ]
             }
           }
+        },
+        {
+          "name": "roleCreate",
+          "plugin": "core",
+          "type": "access.role.define",
+          "payloadSchema": {
+            "required": {
+              "roleId": {
+                "type": "string",
+                "max": 120
+              }
+            },
+            "optional": {
+              "name": {
+                "type": "string",
+                "max": 120
+              },
+              "grants": {
+                "type": "array"
+              },
+              "description": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              },
+              "color": {
+                "type": "string",
+                "max": 40,
+                "nullable": true
+              },
+              "rank": {
+                "type": "number",
+                "min": 0,
+                "max": 100
+              },
+              "archivedAt": {
+                "type": "number",
+                "min": 0
+              },
+              "synthetic": {
+                "type": "boolean"
+              },
+              "when": {
+                "type": "object"
+              },
+              "gates": {
+                "type": "array"
+              },
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "memberRoleAssign",
+          "plugin": "core",
+          "type": "access.role.assign",
+          "payloadSchema": {
+            "required": {
+              "target": {
+                "type": "string",
+                "max": 240
+              },
+              "roleId": {
+                "type": "string",
+                "max": 120
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "memberRoleUnassign",
+          "plugin": "core",
+          "type": "access.role.unassign",
+          "payloadSchema": {
+            "required": {
+              "target": {
+                "type": "string",
+                "max": 240
+              },
+              "roleId": {
+                "type": "string",
+                "max": 120
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeRoleSet",
+          "plugin": "core",
+          "type": "scope.role.set",
+          "payloadSchema": {
+            "required": {
+              "scopeType": {
+                "type": "string",
+                "max": 80
+              },
+              "scopeId": {
+                "type": "string",
+                "max": 180
+              }
+            },
+            "optional": {
+              "target": {
+                "type": "string",
+                "max": 240,
+                "nullable": true
+              },
+              "role": {
+                "type": "enum",
+                "values": [
+                  "none",
+                  "viewer",
+                  "editor",
+                  "moderator",
+                  "admin",
+                  "owner"
+                ]
+              },
+              "defaultRole": {
+                "type": "enum",
+                "values": [
+                  "none",
+                  "viewer",
+                  "editor",
+                  "moderator",
+                  "admin",
+                  "owner"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "moderator"
         },
         {
           "name": "moderateMember",
@@ -3783,7 +3827,6 @@
                 "guests": {},
                 "publicInvites": [],
                 "joinRequests": {},
-                "memberRoles": {},
                 "roleDefinitions": {
                   "guest": {
                     "id": "guest",
@@ -3797,7 +3840,7 @@
                   "member": {
                     "id": "member",
                     "name": "Member",
-                    "description": "Can send messages and join voice channels",
+                    "description": "Can send messages and join collaborative scopes",
                     "color": "#22c55e",
                     "rank": 1,
                     "systemRole": true,
@@ -3806,7 +3849,7 @@
                   "moderator": {
                     "id": "moderator",
                     "name": "Moderator",
-                    "description": "Can manage channels, messages, and voice channels",
+                    "description": "Can manage messages and scoped resources",
                     "color": "#38bdf8",
                     "rank": 2,
                     "systemRole": true,
@@ -3815,7 +3858,7 @@
                   "admin": {
                     "id": "admin",
                     "name": "Admin",
-                    "description": "Can create channels and manage roles",
+                    "description": "Can delegate access and manage roles",
                     "color": "#a78bfa",
                     "rank": 3,
                     "systemRole": true,
@@ -4505,204 +4548,6 @@
                     "activity": "denied join request"
                   }
                 ]
-              },
-              "role.create": {
-                "authorize": {
-                  "roles": [
-                    "admin"
-                  ]
-                },
-                "payload": {
-                  "required": {
-                    "roleId": {
-                      "type": "string",
-                      "max": 80
-                    },
-                    "name": {
-                      "type": "string",
-                      "max": 80
-                    }
-                  },
-                  "optional": {
-                    "description": {
-                      "type": "string",
-                      "max": 240,
-                      "nullable": true
-                    },
-                    "color": {
-                      "type": "string",
-                      "max": 40,
-                      "nullable": true
-                    }
-                  }
-                },
-                "effects": [
-                  {
-                    "kind": "createRecord",
-                    "collection": "roleDefinitions",
-                    "storage": "map",
-                    "partition": "roleDefinitions",
-                    "idField": "roleId",
-                    "fields": {
-                      "name": "$payload.name",
-                      "description": {
-                        "$expr": "$payload.description",
-                        "fallback": null
-                      },
-                      "color": {
-                        "$expr": "$payload.color",
-                        "fallback": null
-                      },
-                      "rank": 1,
-                      "systemRole": false,
-                      "createdBy": "$actor.memberId",
-                      "createdAt": "$createdAt",
-                      "archivedAt": null
-                    },
-                    "activity": "created role"
-                  }
-                ]
-              },
-              "role.update": {
-                "authorize": {
-                  "roles": [
-                    "admin"
-                  ]
-                },
-                "payload": {
-                  "required": {
-                    "roleId": {
-                      "type": "string",
-                      "max": 80
-                    }
-                  },
-                  "optional": {
-                    "name": {
-                      "type": "string",
-                      "max": 80,
-                      "nullable": true
-                    },
-                    "description": {
-                      "type": "string",
-                      "max": 240,
-                      "nullable": true
-                    },
-                    "color": {
-                      "type": "string",
-                      "max": 40,
-                      "nullable": true
-                    }
-                  }
-                },
-                "effects": [
-                  {
-                    "kind": "updateRecord",
-                    "collection": "roleDefinitions",
-                    "storage": "map",
-                    "partition": "roleDefinitions",
-                    "idField": "roleId",
-                    "fields": {
-                      "name": "$payload.name",
-                      "description": "$payload.description",
-                      "color": "$payload.color",
-                      "updatedAt": "$createdAt",
-                      "updatedBy": "$actor.memberId"
-                    },
-                    "activity": "updated role",
-                    "recordLabel": "Role"
-                  }
-                ]
-              },
-              "role.archive": {
-                "authorize": {
-                  "roles": [
-                    "admin"
-                  ]
-                },
-                "payload": {
-                  "required": {
-                    "roleId": {
-                      "type": "string",
-                      "max": 80
-                    }
-                  }
-                },
-                "effects": [
-                  {
-                    "kind": "markRecord",
-                    "collection": "roleDefinitions",
-                    "storage": "map",
-                    "partition": "roleDefinitions",
-                    "idField": "roleId",
-                    "fields": {
-                      "archivedAt": "$createdAt",
-                      "archivedBy": "$actor.memberId"
-                    },
-                    "activity": "archived role",
-                    "recordLabel": "Role"
-                  }
-                ]
-              },
-              "member.role.assign": {
-                "authorize": {
-                  "roles": [
-                    "admin"
-                  ]
-                },
-                "payload": {
-                  "required": {
-                    "memberId": {
-                      "type": "string",
-                      "max": 120
-                    }
-                  },
-                  "optional": {
-                    "roleId": {
-                      "type": "string",
-                      "max": 80,
-                      "nullable": true
-                    },
-                    "roleIds": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "max": 80
-                      }
-                    },
-                    "displayName": {
-                      "type": "string",
-                      "max": 120,
-                      "nullable": true
-                    }
-                  }
-                },
-                "effects": [
-                  {
-                    "kind": "createRecord",
-                    "collection": "memberRoles",
-                    "storage": "map",
-                    "partition": "memberRoles",
-                    "idField": "memberId",
-                    "fields": {
-                      "memberId": "$payload.memberId",
-                      "roleId": {
-                        "$expr": "$payload.roleId",
-                        "fallback": null
-                      },
-                      "roleIds": {
-                        "$expr": "$payload.roleIds",
-                        "fallback": []
-                      },
-                      "displayName": {
-                        "$expr": "$payload.displayName",
-                        "fallback": null
-                      },
-                      "assignedBy": "$actor.memberId",
-                      "assignedAt": "$createdAt"
-                    },
-                    "activity": "assigned role"
-                  }
-                ]
               }
             },
             "views": {},
@@ -4752,15 +4597,6 @@
                 "storage": "map",
                 "partition": "joinRequests"
               },
-              "memberRoles": {
-                "readClass": "head",
-                "integrityClass": "signature",
-                "historyVisibility": {
-                  "mode": "active-epoch-only"
-                },
-                "storage": "map",
-                "partition": "memberRoles"
-              },
               "roleDefinitions": {
                 "readClass": "head",
                 "integrityClass": "signature",
@@ -4800,6 +4636,98 @@
             "id": "gg.matterhorn.examples.plugins.media-rooms",
             "version": "1.0.0",
             "required": true,
+            "model": {
+              "kind": "matterhorn.primary-model.schema",
+              "schemaVersion": 1,
+              "state": {
+                "initial": {
+                  "rooms": {},
+                  "activity": []
+                }
+              },
+              "operations": {
+                "media.room.create": {
+                  "payload": {
+                    "required": {
+                      "name": {
+                        "type": "string",
+                        "max": 100
+                      }
+                    },
+                    "optional": {
+                      "allowsVideo": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "group": {
+                        "type": "string",
+                        "max": 80,
+                        "nullable": true,
+                        "nonEmpty": false
+                      },
+                      "scopeType": {
+                        "type": "string",
+                        "max": 80
+                      },
+                      "scopeId": {
+                        "type": "string",
+                        "max": 160
+                      },
+                      "roleAccess": {
+                        "type": "record",
+                        "values": {
+                          "type": "enum",
+                          "values": [
+                            "editor",
+                            "readonly"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "authorize": {
+                    "roles": [
+                      "moderator"
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "kind": "createRecord",
+                      "collection": "rooms",
+                      "idPrefix": "media_room",
+                      "fields": {
+                        "name": "$payload.name",
+                        "group": "$payload.group",
+                        "allowsVideo": "$payload.allowsVideo",
+                        "scopeType": "$payload.scopeType",
+                        "scopeId": "$payload.scopeId",
+                        "roleAccess": "$payload.roleAccess",
+                        "createdBy": "$actor.memberId",
+                        "createdAt": "$createdAt",
+                        "locked": false,
+                        "archivedAt": null,
+                        "participants": {},
+                        "participantCount": 0
+                      }
+                    },
+                    {
+                      "kind": "appendToArray",
+                      "path": "activity",
+                      "item": {
+                        "type": "media.room.create",
+                        "actorId": "$actor.memberId",
+                        "actorName": "$actor.displayName",
+                        "createdAt": "$createdAt"
+                      }
+                    }
+                  ]
+                }
+              },
+              "views": {},
+              "publicView": {
+                "kind": "state"
+              }
+            },
             "config": {
               "defaultRooms": [
                 {
@@ -4898,11 +4826,6 @@
             "type": "member.moderate"
           },
           {
-            "name": "memberRoleAssign",
-            "plugin": "primary",
-            "type": "member.role.assign"
-          },
-          {
             "name": "memberUnban",
             "plugin": "primary",
             "type": "member.unban"
@@ -4941,21 +4864,6 @@
             "name": "messageUnpin",
             "plugin": "primary",
             "type": "message.unpin"
-          },
-          {
-            "name": "roleArchive",
-            "plugin": "primary",
-            "type": "role.archive"
-          },
-          {
-            "name": "roleCreate",
-            "plugin": "primary",
-            "type": "role.create"
-          },
-          {
-            "name": "roleUpdate",
-            "plugin": "primary",
-            "type": "role.update"
           },
           {
             "name": "commentsAdd",
@@ -5378,6 +5286,164 @@
             }
           },
           {
+            "name": "roleCreate",
+            "plugin": "core",
+            "type": "access.role.define",
+            "payloadSchema": {
+              "required": {
+                "roleId": {
+                  "type": "string",
+                  "max": 120
+                }
+              },
+              "optional": {
+                "name": {
+                  "type": "string",
+                  "max": 120
+                },
+                "grants": {
+                  "type": "array"
+                },
+                "description": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true
+                },
+                "color": {
+                  "type": "string",
+                  "max": 40,
+                  "nullable": true
+                },
+                "rank": {
+                  "type": "number",
+                  "min": 0,
+                  "max": 100
+                },
+                "archivedAt": {
+                  "type": "number",
+                  "min": 0
+                },
+                "synthetic": {
+                  "type": "boolean"
+                },
+                "when": {
+                  "type": "object"
+                },
+                "gates": {
+                  "type": "array"
+                },
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true
+                }
+              }
+            },
+            "requiredRole": "admin"
+          },
+          {
+            "name": "memberRoleAssign",
+            "plugin": "core",
+            "type": "access.role.assign",
+            "payloadSchema": {
+              "required": {
+                "target": {
+                  "type": "string",
+                  "max": 240
+                },
+                "roleId": {
+                  "type": "string",
+                  "max": 120
+                }
+              },
+              "optional": {
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true
+                }
+              }
+            },
+            "requiredRole": "admin"
+          },
+          {
+            "name": "memberRoleUnassign",
+            "plugin": "core",
+            "type": "access.role.unassign",
+            "payloadSchema": {
+              "required": {
+                "target": {
+                  "type": "string",
+                  "max": 240
+                },
+                "roleId": {
+                  "type": "string",
+                  "max": 120
+                }
+              },
+              "optional": {
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true
+                }
+              }
+            },
+            "requiredRole": "admin"
+          },
+          {
+            "name": "scopeRoleSet",
+            "plugin": "core",
+            "type": "scope.role.set",
+            "payloadSchema": {
+              "required": {
+                "scopeType": {
+                  "type": "string",
+                  "max": 80
+                },
+                "scopeId": {
+                  "type": "string",
+                  "max": 180
+                }
+              },
+              "optional": {
+                "target": {
+                  "type": "string",
+                  "max": 240,
+                  "nullable": true
+                },
+                "role": {
+                  "type": "enum",
+                  "values": [
+                    "none",
+                    "viewer",
+                    "editor",
+                    "moderator",
+                    "admin",
+                    "owner"
+                  ]
+                },
+                "defaultRole": {
+                  "type": "enum",
+                  "values": [
+                    "none",
+                    "viewer",
+                    "editor",
+                    "moderator",
+                    "admin",
+                    "owner"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true
+                }
+              }
+            },
+            "requiredRole": "moderator"
+          },
+          {
             "name": "moderateMember",
             "plugin": "primary",
             "type": "member.moderate",
@@ -5569,7 +5635,7 @@
             }
           }
         },
-        "schemaHash": "sha256-9665ec0c91b078b1c1a7e79db0c5cee195eafa881964f27b41d998b06f226281"
+        "schemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
       }
     },
     {
@@ -5640,7 +5706,7 @@
         {
           "appPackId": "gg.matterhorn.mosh",
           "appPackRange": "^1.0.0",
-          "appProtocolHash": "sha256-83c84658f70bdaf7c8b46f95dba3db967aa57fb8036b2957aafe46e3fc5a34e9",
+          "appProtocolHash": "sha256-c4cf74ff489b778de9272ff7af819e8e4c3ca1f5cace55dd88c29d633a62db32",
           "pluginIds": [
             "gg.matterhorn.examples.plugins.comments",
             "gg.matterhorn.examples.plugins.embeds",
@@ -5650,7 +5716,7 @@
             "gg.matterhorn.examples.plugins.screen-share",
             "gg.matterhorn.mosh.plugin"
           ],
-          "compositionSchemaHash": "sha256-9665ec0c91b078b1c1a7e79db0c5cee195eafa881964f27b41d998b06f226281"
+          "compositionSchemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
         }
       ],
       "recommendedFor": {
@@ -5770,7 +5836,6 @@
             "guests": {},
             "publicInvites": [],
             "joinRequests": {},
-            "memberRoles": {},
             "roleDefinitions": {
               "guest": {
                 "id": "guest",
@@ -5784,7 +5849,7 @@
               "member": {
                 "id": "member",
                 "name": "Member",
-                "description": "Can send messages and join voice channels",
+                "description": "Can send messages and join collaborative scopes",
                 "color": "#22c55e",
                 "rank": 1,
                 "systemRole": true,
@@ -5793,7 +5858,7 @@
               "moderator": {
                 "id": "moderator",
                 "name": "Moderator",
-                "description": "Can manage channels, messages, and voice channels",
+                "description": "Can manage messages and scoped resources",
                 "color": "#38bdf8",
                 "rank": 2,
                 "systemRole": true,
@@ -5802,7 +5867,7 @@
               "admin": {
                 "id": "admin",
                 "name": "Admin",
-                "description": "Can create channels and manage roles",
+                "description": "Can delegate access and manage roles",
                 "color": "#a78bfa",
                 "rank": 3,
                 "systemRole": true,
@@ -6492,204 +6557,6 @@
                 "activity": "denied join request"
               }
             ]
-          },
-          "role.create": {
-            "authorize": {
-              "roles": [
-                "admin"
-              ]
-            },
-            "payload": {
-              "required": {
-                "roleId": {
-                  "type": "string",
-                  "max": 80
-                },
-                "name": {
-                  "type": "string",
-                  "max": 80
-                }
-              },
-              "optional": {
-                "description": {
-                  "type": "string",
-                  "max": 240,
-                  "nullable": true
-                },
-                "color": {
-                  "type": "string",
-                  "max": 40,
-                  "nullable": true
-                }
-              }
-            },
-            "effects": [
-              {
-                "kind": "createRecord",
-                "collection": "roleDefinitions",
-                "storage": "map",
-                "partition": "roleDefinitions",
-                "idField": "roleId",
-                "fields": {
-                  "name": "$payload.name",
-                  "description": {
-                    "$expr": "$payload.description",
-                    "fallback": null
-                  },
-                  "color": {
-                    "$expr": "$payload.color",
-                    "fallback": null
-                  },
-                  "rank": 1,
-                  "systemRole": false,
-                  "createdBy": "$actor.memberId",
-                  "createdAt": "$createdAt",
-                  "archivedAt": null
-                },
-                "activity": "created role"
-              }
-            ]
-          },
-          "role.update": {
-            "authorize": {
-              "roles": [
-                "admin"
-              ]
-            },
-            "payload": {
-              "required": {
-                "roleId": {
-                  "type": "string",
-                  "max": 80
-                }
-              },
-              "optional": {
-                "name": {
-                  "type": "string",
-                  "max": 80,
-                  "nullable": true
-                },
-                "description": {
-                  "type": "string",
-                  "max": 240,
-                  "nullable": true
-                },
-                "color": {
-                  "type": "string",
-                  "max": 40,
-                  "nullable": true
-                }
-              }
-            },
-            "effects": [
-              {
-                "kind": "updateRecord",
-                "collection": "roleDefinitions",
-                "storage": "map",
-                "partition": "roleDefinitions",
-                "idField": "roleId",
-                "fields": {
-                  "name": "$payload.name",
-                  "description": "$payload.description",
-                  "color": "$payload.color",
-                  "updatedAt": "$createdAt",
-                  "updatedBy": "$actor.memberId"
-                },
-                "activity": "updated role",
-                "recordLabel": "Role"
-              }
-            ]
-          },
-          "role.archive": {
-            "authorize": {
-              "roles": [
-                "admin"
-              ]
-            },
-            "payload": {
-              "required": {
-                "roleId": {
-                  "type": "string",
-                  "max": 80
-                }
-              }
-            },
-            "effects": [
-              {
-                "kind": "markRecord",
-                "collection": "roleDefinitions",
-                "storage": "map",
-                "partition": "roleDefinitions",
-                "idField": "roleId",
-                "fields": {
-                  "archivedAt": "$createdAt",
-                  "archivedBy": "$actor.memberId"
-                },
-                "activity": "archived role",
-                "recordLabel": "Role"
-              }
-            ]
-          },
-          "member.role.assign": {
-            "authorize": {
-              "roles": [
-                "admin"
-              ]
-            },
-            "payload": {
-              "required": {
-                "memberId": {
-                  "type": "string",
-                  "max": 120
-                }
-              },
-              "optional": {
-                "roleId": {
-                  "type": "string",
-                  "max": 80,
-                  "nullable": true
-                },
-                "roleIds": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "max": 80
-                  }
-                },
-                "displayName": {
-                  "type": "string",
-                  "max": 120,
-                  "nullable": true
-                }
-              }
-            },
-            "effects": [
-              {
-                "kind": "createRecord",
-                "collection": "memberRoles",
-                "storage": "map",
-                "partition": "memberRoles",
-                "idField": "memberId",
-                "fields": {
-                  "memberId": "$payload.memberId",
-                  "roleId": {
-                    "$expr": "$payload.roleId",
-                    "fallback": null
-                  },
-                  "roleIds": {
-                    "$expr": "$payload.roleIds",
-                    "fallback": []
-                  },
-                  "displayName": {
-                    "$expr": "$payload.displayName",
-                    "fallback": null
-                  },
-                  "assignedBy": "$actor.memberId",
-                  "assignedAt": "$createdAt"
-                },
-                "activity": "assigned role"
-              }
-            ]
           }
         },
         "views": {},
@@ -6739,15 +6606,6 @@
             "storage": "map",
             "partition": "joinRequests"
           },
-          "memberRoles": {
-            "readClass": "head",
-            "integrityClass": "signature",
-            "historyVisibility": {
-              "mode": "active-epoch-only"
-            },
-            "storage": "map",
-            "partition": "memberRoles"
-          },
           "roleDefinitions": {
             "readClass": "head",
             "integrityClass": "signature",
@@ -6787,6 +6645,98 @@
         "id": "gg.matterhorn.examples.plugins.media-rooms",
         "version": "1.0.0",
         "required": true,
+        "model": {
+          "kind": "matterhorn.primary-model.schema",
+          "schemaVersion": 1,
+          "state": {
+            "initial": {
+              "rooms": {},
+              "activity": []
+            }
+          },
+          "operations": {
+            "media.room.create": {
+              "payload": {
+                "required": {
+                  "name": {
+                    "type": "string",
+                    "max": 100
+                  }
+                },
+                "optional": {
+                  "allowsVideo": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "group": {
+                    "type": "string",
+                    "max": 80,
+                    "nullable": true,
+                    "nonEmpty": false
+                  },
+                  "scopeType": {
+                    "type": "string",
+                    "max": 80
+                  },
+                  "scopeId": {
+                    "type": "string",
+                    "max": 160
+                  },
+                  "roleAccess": {
+                    "type": "record",
+                    "values": {
+                      "type": "enum",
+                      "values": [
+                        "editor",
+                        "readonly"
+                      ]
+                    }
+                  }
+                }
+              },
+              "authorize": {
+                "roles": [
+                  "moderator"
+                ]
+              },
+              "effects": [
+                {
+                  "kind": "createRecord",
+                  "collection": "rooms",
+                  "idPrefix": "media_room",
+                  "fields": {
+                    "name": "$payload.name",
+                    "group": "$payload.group",
+                    "allowsVideo": "$payload.allowsVideo",
+                    "scopeType": "$payload.scopeType",
+                    "scopeId": "$payload.scopeId",
+                    "roleAccess": "$payload.roleAccess",
+                    "createdBy": "$actor.memberId",
+                    "createdAt": "$createdAt",
+                    "locked": false,
+                    "archivedAt": null,
+                    "participants": {},
+                    "participantCount": 0
+                  }
+                },
+                {
+                  "kind": "appendToArray",
+                  "path": "activity",
+                  "item": {
+                    "type": "media.room.create",
+                    "actorId": "$actor.memberId",
+                    "actorName": "$actor.displayName",
+                    "createdAt": "$createdAt"
+                  }
+                }
+              ]
+            }
+          },
+          "views": {},
+          "publicView": {
+            "kind": "state"
+          }
+        },
         "config": {
           "defaultRooms": [
             {
@@ -6885,11 +6835,6 @@
         "type": "member.moderate"
       },
       {
-        "name": "memberRoleAssign",
-        "plugin": "primary",
-        "type": "member.role.assign"
-      },
-      {
         "name": "memberUnban",
         "plugin": "primary",
         "type": "member.unban"
@@ -6928,21 +6873,6 @@
         "name": "messageUnpin",
         "plugin": "primary",
         "type": "message.unpin"
-      },
-      {
-        "name": "roleArchive",
-        "plugin": "primary",
-        "type": "role.archive"
-      },
-      {
-        "name": "roleCreate",
-        "plugin": "primary",
-        "type": "role.create"
-      },
-      {
-        "name": "roleUpdate",
-        "plugin": "primary",
-        "type": "role.update"
       },
       {
         "name": "commentsAdd",
@@ -7365,6 +7295,164 @@
         }
       },
       {
+        "name": "roleCreate",
+        "plugin": "core",
+        "type": "access.role.define",
+        "payloadSchema": {
+          "required": {
+            "roleId": {
+              "type": "string",
+              "max": 120
+            }
+          },
+          "optional": {
+            "name": {
+              "type": "string",
+              "max": 120
+            },
+            "grants": {
+              "type": "array"
+            },
+            "description": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            },
+            "color": {
+              "type": "string",
+              "max": 40,
+              "nullable": true
+            },
+            "rank": {
+              "type": "number",
+              "min": 0,
+              "max": 100
+            },
+            "archivedAt": {
+              "type": "number",
+              "min": 0
+            },
+            "synthetic": {
+              "type": "boolean"
+            },
+            "when": {
+              "type": "object"
+            },
+            "gates": {
+              "type": "array"
+            },
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      {
+        "name": "memberRoleAssign",
+        "plugin": "core",
+        "type": "access.role.assign",
+        "payloadSchema": {
+          "required": {
+            "target": {
+              "type": "string",
+              "max": 240
+            },
+            "roleId": {
+              "type": "string",
+              "max": 120
+            }
+          },
+          "optional": {
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      {
+        "name": "memberRoleUnassign",
+        "plugin": "core",
+        "type": "access.role.unassign",
+        "payloadSchema": {
+          "required": {
+            "target": {
+              "type": "string",
+              "max": 240
+            },
+            "roleId": {
+              "type": "string",
+              "max": 120
+            }
+          },
+          "optional": {
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      {
+        "name": "scopeRoleSet",
+        "plugin": "core",
+        "type": "scope.role.set",
+        "payloadSchema": {
+          "required": {
+            "scopeType": {
+              "type": "string",
+              "max": 80
+            },
+            "scopeId": {
+              "type": "string",
+              "max": 180
+            }
+          },
+          "optional": {
+            "target": {
+              "type": "string",
+              "max": 240,
+              "nullable": true
+            },
+            "role": {
+              "type": "enum",
+              "values": [
+                "none",
+                "viewer",
+                "editor",
+                "moderator",
+                "admin",
+                "owner"
+              ]
+            },
+            "defaultRole": {
+              "type": "enum",
+              "values": [
+                "none",
+                "viewer",
+                "editor",
+                "moderator",
+                "admin",
+                "owner"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "moderator"
+      },
+      {
         "name": "moderateMember",
         "plugin": "primary",
         "type": "member.moderate",
@@ -7556,7 +7644,7 @@
         }
       }
     },
-    "schemaHash": "sha256-9665ec0c91b078b1c1a7e79db0c5cee195eafa881964f27b41d998b06f226281"
+    "schemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
   },
   "artifacts": {
     "composition": {
@@ -7590,7 +7678,6 @@
               "guests": {},
               "publicInvites": [],
               "joinRequests": {},
-              "memberRoles": {},
               "roleDefinitions": {
                 "guest": {
                   "id": "guest",
@@ -7604,7 +7691,7 @@
                 "member": {
                   "id": "member",
                   "name": "Member",
-                  "description": "Can send messages and join voice channels",
+                  "description": "Can send messages and join collaborative scopes",
                   "color": "#22c55e",
                   "rank": 1,
                   "systemRole": true,
@@ -7613,7 +7700,7 @@
                 "moderator": {
                   "id": "moderator",
                   "name": "Moderator",
-                  "description": "Can manage channels, messages, and voice channels",
+                  "description": "Can manage messages and scoped resources",
                   "color": "#38bdf8",
                   "rank": 2,
                   "systemRole": true,
@@ -7622,7 +7709,7 @@
                 "admin": {
                   "id": "admin",
                   "name": "Admin",
-                  "description": "Can create channels and manage roles",
+                  "description": "Can delegate access and manage roles",
                   "color": "#a78bfa",
                   "rank": 3,
                   "systemRole": true,
@@ -8312,204 +8399,6 @@
                   "activity": "denied join request"
                 }
               ]
-            },
-            "role.create": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80
-                  },
-                  "name": {
-                    "type": "string",
-                    "max": 80
-                  }
-                },
-                "optional": {
-                  "description": {
-                    "type": "string",
-                    "max": 240,
-                    "nullable": true
-                  },
-                  "color": {
-                    "type": "string",
-                    "max": 40,
-                    "nullable": true
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "createRecord",
-                  "collection": "roleDefinitions",
-                  "storage": "map",
-                  "partition": "roleDefinitions",
-                  "idField": "roleId",
-                  "fields": {
-                    "name": "$payload.name",
-                    "description": {
-                      "$expr": "$payload.description",
-                      "fallback": null
-                    },
-                    "color": {
-                      "$expr": "$payload.color",
-                      "fallback": null
-                    },
-                    "rank": 1,
-                    "systemRole": false,
-                    "createdBy": "$actor.memberId",
-                    "createdAt": "$createdAt",
-                    "archivedAt": null
-                  },
-                  "activity": "created role"
-                }
-              ]
-            },
-            "role.update": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80
-                  }
-                },
-                "optional": {
-                  "name": {
-                    "type": "string",
-                    "max": 80,
-                    "nullable": true
-                  },
-                  "description": {
-                    "type": "string",
-                    "max": 240,
-                    "nullable": true
-                  },
-                  "color": {
-                    "type": "string",
-                    "max": 40,
-                    "nullable": true
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "updateRecord",
-                  "collection": "roleDefinitions",
-                  "storage": "map",
-                  "partition": "roleDefinitions",
-                  "idField": "roleId",
-                  "fields": {
-                    "name": "$payload.name",
-                    "description": "$payload.description",
-                    "color": "$payload.color",
-                    "updatedAt": "$createdAt",
-                    "updatedBy": "$actor.memberId"
-                  },
-                  "activity": "updated role",
-                  "recordLabel": "Role"
-                }
-              ]
-            },
-            "role.archive": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "markRecord",
-                  "collection": "roleDefinitions",
-                  "storage": "map",
-                  "partition": "roleDefinitions",
-                  "idField": "roleId",
-                  "fields": {
-                    "archivedAt": "$createdAt",
-                    "archivedBy": "$actor.memberId"
-                  },
-                  "activity": "archived role",
-                  "recordLabel": "Role"
-                }
-              ]
-            },
-            "member.role.assign": {
-              "authorize": {
-                "roles": [
-                  "admin"
-                ]
-              },
-              "payload": {
-                "required": {
-                  "memberId": {
-                    "type": "string",
-                    "max": 120
-                  }
-                },
-                "optional": {
-                  "roleId": {
-                    "type": "string",
-                    "max": 80,
-                    "nullable": true
-                  },
-                  "roleIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "max": 80
-                    }
-                  },
-                  "displayName": {
-                    "type": "string",
-                    "max": 120,
-                    "nullable": true
-                  }
-                }
-              },
-              "effects": [
-                {
-                  "kind": "createRecord",
-                  "collection": "memberRoles",
-                  "storage": "map",
-                  "partition": "memberRoles",
-                  "idField": "memberId",
-                  "fields": {
-                    "memberId": "$payload.memberId",
-                    "roleId": {
-                      "$expr": "$payload.roleId",
-                      "fallback": null
-                    },
-                    "roleIds": {
-                      "$expr": "$payload.roleIds",
-                      "fallback": []
-                    },
-                    "displayName": {
-                      "$expr": "$payload.displayName",
-                      "fallback": null
-                    },
-                    "assignedBy": "$actor.memberId",
-                    "assignedAt": "$createdAt"
-                  },
-                  "activity": "assigned role"
-                }
-              ]
             }
           },
           "views": {},
@@ -8559,15 +8448,6 @@
               "storage": "map",
               "partition": "joinRequests"
             },
-            "memberRoles": {
-              "readClass": "head",
-              "integrityClass": "signature",
-              "historyVisibility": {
-                "mode": "active-epoch-only"
-              },
-              "storage": "map",
-              "partition": "memberRoles"
-            },
             "roleDefinitions": {
               "readClass": "head",
               "integrityClass": "signature",
@@ -8607,6 +8487,98 @@
           "id": "gg.matterhorn.examples.plugins.media-rooms",
           "version": "1.0.0",
           "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "rooms": {},
+                "activity": []
+              }
+            },
+            "operations": {
+              "media.room.create": {
+                "payload": {
+                  "required": {
+                    "name": {
+                      "type": "string",
+                      "max": 100
+                    }
+                  },
+                  "optional": {
+                    "allowsVideo": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "group": {
+                      "type": "string",
+                      "max": 80,
+                      "nullable": true,
+                      "nonEmpty": false
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "max": 80
+                    },
+                    "scopeId": {
+                      "type": "string",
+                      "max": 160
+                    },
+                    "roleAccess": {
+                      "type": "record",
+                      "values": {
+                        "type": "enum",
+                        "values": [
+                          "editor",
+                          "readonly"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "authorize": {
+                  "roles": [
+                    "moderator"
+                  ]
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "rooms",
+                    "idPrefix": "media_room",
+                    "fields": {
+                      "name": "$payload.name",
+                      "group": "$payload.group",
+                      "allowsVideo": "$payload.allowsVideo",
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "roleAccess": "$payload.roleAccess",
+                      "createdBy": "$actor.memberId",
+                      "createdAt": "$createdAt",
+                      "locked": false,
+                      "archivedAt": null,
+                      "participants": {},
+                      "participantCount": 0
+                    }
+                  },
+                  {
+                    "kind": "appendToArray",
+                    "path": "activity",
+                    "item": {
+                      "type": "media.room.create",
+                      "actorId": "$actor.memberId",
+                      "actorName": "$actor.displayName",
+                      "createdAt": "$createdAt"
+                    }
+                  }
+                ]
+              }
+            },
+            "views": {},
+            "publicView": {
+              "kind": "state"
+            }
+          },
           "config": {
             "defaultRooms": [
               {
@@ -8705,11 +8677,6 @@
           "type": "member.moderate"
         },
         {
-          "name": "memberRoleAssign",
-          "plugin": "primary",
-          "type": "member.role.assign"
-        },
-        {
           "name": "memberUnban",
           "plugin": "primary",
           "type": "member.unban"
@@ -8748,21 +8715,6 @@
           "name": "messageUnpin",
           "plugin": "primary",
           "type": "message.unpin"
-        },
-        {
-          "name": "roleArchive",
-          "plugin": "primary",
-          "type": "role.archive"
-        },
-        {
-          "name": "roleCreate",
-          "plugin": "primary",
-          "type": "role.create"
-        },
-        {
-          "name": "roleUpdate",
-          "plugin": "primary",
-          "type": "role.update"
         },
         {
           "name": "commentsAdd",
@@ -9185,6 +9137,164 @@
           }
         },
         {
+          "name": "roleCreate",
+          "plugin": "core",
+          "type": "access.role.define",
+          "payloadSchema": {
+            "required": {
+              "roleId": {
+                "type": "string",
+                "max": 120
+              }
+            },
+            "optional": {
+              "name": {
+                "type": "string",
+                "max": 120
+              },
+              "grants": {
+                "type": "array"
+              },
+              "description": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              },
+              "color": {
+                "type": "string",
+                "max": 40,
+                "nullable": true
+              },
+              "rank": {
+                "type": "number",
+                "min": 0,
+                "max": 100
+              },
+              "archivedAt": {
+                "type": "number",
+                "min": 0
+              },
+              "synthetic": {
+                "type": "boolean"
+              },
+              "when": {
+                "type": "object"
+              },
+              "gates": {
+                "type": "array"
+              },
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "memberRoleAssign",
+          "plugin": "core",
+          "type": "access.role.assign",
+          "payloadSchema": {
+            "required": {
+              "target": {
+                "type": "string",
+                "max": 240
+              },
+              "roleId": {
+                "type": "string",
+                "max": 120
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "memberRoleUnassign",
+          "plugin": "core",
+          "type": "access.role.unassign",
+          "payloadSchema": {
+            "required": {
+              "target": {
+                "type": "string",
+                "max": 240
+              },
+              "roleId": {
+                "type": "string",
+                "max": 120
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeRoleSet",
+          "plugin": "core",
+          "type": "scope.role.set",
+          "payloadSchema": {
+            "required": {
+              "scopeType": {
+                "type": "string",
+                "max": 80
+              },
+              "scopeId": {
+                "type": "string",
+                "max": 180
+              }
+            },
+            "optional": {
+              "target": {
+                "type": "string",
+                "max": 240,
+                "nullable": true
+              },
+              "role": {
+                "type": "enum",
+                "values": [
+                  "none",
+                  "viewer",
+                  "editor",
+                  "moderator",
+                  "admin",
+                  "owner"
+                ]
+              },
+              "defaultRole": {
+                "type": "enum",
+                "values": [
+                  "none",
+                  "viewer",
+                  "editor",
+                  "moderator",
+                  "admin",
+                  "owner"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "moderator"
+        },
+        {
           "name": "moderateMember",
           "plugin": "primary",
           "type": "member.moderate",
@@ -9376,7 +9486,7 @@
           }
         }
       },
-      "schemaHash": "sha256-9665ec0c91b078b1c1a7e79db0c5cee195eafa881964f27b41d998b06f226281"
+      "schemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
     },
     "model": {
       "kind": "matterhorn.primary-model.schema",
@@ -9398,7 +9508,6 @@
           "guests": {},
           "publicInvites": [],
           "joinRequests": {},
-          "memberRoles": {},
           "roleDefinitions": {
             "guest": {
               "id": "guest",
@@ -9412,7 +9521,7 @@
             "member": {
               "id": "member",
               "name": "Member",
-              "description": "Can send messages and join voice channels",
+              "description": "Can send messages and join collaborative scopes",
               "color": "#22c55e",
               "rank": 1,
               "systemRole": true,
@@ -9421,7 +9530,7 @@
             "moderator": {
               "id": "moderator",
               "name": "Moderator",
-              "description": "Can manage channels, messages, and voice channels",
+              "description": "Can manage messages and scoped resources",
               "color": "#38bdf8",
               "rank": 2,
               "systemRole": true,
@@ -9430,7 +9539,7 @@
             "admin": {
               "id": "admin",
               "name": "Admin",
-              "description": "Can create channels and manage roles",
+              "description": "Can delegate access and manage roles",
               "color": "#a78bfa",
               "rank": 3,
               "systemRole": true,
@@ -10120,204 +10229,6 @@
               "activity": "denied join request"
             }
           ]
-        },
-        "role.create": {
-          "authorize": {
-            "roles": [
-              "admin"
-            ]
-          },
-          "payload": {
-            "required": {
-              "roleId": {
-                "type": "string",
-                "max": 80
-              },
-              "name": {
-                "type": "string",
-                "max": 80
-              }
-            },
-            "optional": {
-              "description": {
-                "type": "string",
-                "max": 240,
-                "nullable": true
-              },
-              "color": {
-                "type": "string",
-                "max": 40,
-                "nullable": true
-              }
-            }
-          },
-          "effects": [
-            {
-              "kind": "createRecord",
-              "collection": "roleDefinitions",
-              "storage": "map",
-              "partition": "roleDefinitions",
-              "idField": "roleId",
-              "fields": {
-                "name": "$payload.name",
-                "description": {
-                  "$expr": "$payload.description",
-                  "fallback": null
-                },
-                "color": {
-                  "$expr": "$payload.color",
-                  "fallback": null
-                },
-                "rank": 1,
-                "systemRole": false,
-                "createdBy": "$actor.memberId",
-                "createdAt": "$createdAt",
-                "archivedAt": null
-              },
-              "activity": "created role"
-            }
-          ]
-        },
-        "role.update": {
-          "authorize": {
-            "roles": [
-              "admin"
-            ]
-          },
-          "payload": {
-            "required": {
-              "roleId": {
-                "type": "string",
-                "max": 80
-              }
-            },
-            "optional": {
-              "name": {
-                "type": "string",
-                "max": 80,
-                "nullable": true
-              },
-              "description": {
-                "type": "string",
-                "max": 240,
-                "nullable": true
-              },
-              "color": {
-                "type": "string",
-                "max": 40,
-                "nullable": true
-              }
-            }
-          },
-          "effects": [
-            {
-              "kind": "updateRecord",
-              "collection": "roleDefinitions",
-              "storage": "map",
-              "partition": "roleDefinitions",
-              "idField": "roleId",
-              "fields": {
-                "name": "$payload.name",
-                "description": "$payload.description",
-                "color": "$payload.color",
-                "updatedAt": "$createdAt",
-                "updatedBy": "$actor.memberId"
-              },
-              "activity": "updated role",
-              "recordLabel": "Role"
-            }
-          ]
-        },
-        "role.archive": {
-          "authorize": {
-            "roles": [
-              "admin"
-            ]
-          },
-          "payload": {
-            "required": {
-              "roleId": {
-                "type": "string",
-                "max": 80
-              }
-            }
-          },
-          "effects": [
-            {
-              "kind": "markRecord",
-              "collection": "roleDefinitions",
-              "storage": "map",
-              "partition": "roleDefinitions",
-              "idField": "roleId",
-              "fields": {
-                "archivedAt": "$createdAt",
-                "archivedBy": "$actor.memberId"
-              },
-              "activity": "archived role",
-              "recordLabel": "Role"
-            }
-          ]
-        },
-        "member.role.assign": {
-          "authorize": {
-            "roles": [
-              "admin"
-            ]
-          },
-          "payload": {
-            "required": {
-              "memberId": {
-                "type": "string",
-                "max": 120
-              }
-            },
-            "optional": {
-              "roleId": {
-                "type": "string",
-                "max": 80,
-                "nullable": true
-              },
-              "roleIds": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "max": 80
-                }
-              },
-              "displayName": {
-                "type": "string",
-                "max": 120,
-                "nullable": true
-              }
-            }
-          },
-          "effects": [
-            {
-              "kind": "createRecord",
-              "collection": "memberRoles",
-              "storage": "map",
-              "partition": "memberRoles",
-              "idField": "memberId",
-              "fields": {
-                "memberId": "$payload.memberId",
-                "roleId": {
-                  "$expr": "$payload.roleId",
-                  "fallback": null
-                },
-                "roleIds": {
-                  "$expr": "$payload.roleIds",
-                  "fallback": []
-                },
-                "displayName": {
-                  "$expr": "$payload.displayName",
-                  "fallback": null
-                },
-                "assignedBy": "$actor.memberId",
-                "assignedAt": "$createdAt"
-              },
-              "activity": "assigned role"
-            }
-          ]
         }
       },
       "views": {},
@@ -10366,15 +10277,6 @@
           },
           "storage": "map",
           "partition": "joinRequests"
-        },
-        "memberRoles": {
-          "readClass": "head",
-          "integrityClass": "signature",
-          "historyVisibility": {
-            "mode": "active-epoch-only"
-          },
-          "storage": "map",
-          "partition": "memberRoles"
         },
         "roleDefinitions": {
           "readClass": "head",
@@ -10433,10 +10335,6 @@
         "plugin": "primary",
         "type": "member.moderate"
       },
-      "memberRoleAssign": {
-        "plugin": "primary",
-        "type": "member.role.assign"
-      },
       "memberUnban": {
         "plugin": "primary",
         "type": "member.unban"
@@ -10468,18 +10366,6 @@
       "messageUnpin": {
         "plugin": "primary",
         "type": "message.unpin"
-      },
-      "roleArchive": {
-        "plugin": "primary",
-        "type": "role.archive"
-      },
-      "roleCreate": {
-        "plugin": "primary",
-        "type": "role.create"
-      },
-      "roleUpdate": {
-        "plugin": "primary",
-        "type": "role.update"
       },
       "commentsAdd": {
         "plugin": "comments",
@@ -10881,6 +10767,160 @@
             ]
           }
         }
+      },
+      "roleCreate": {
+        "plugin": "core",
+        "type": "access.role.define",
+        "payloadSchema": {
+          "required": {
+            "roleId": {
+              "type": "string",
+              "max": 120
+            }
+          },
+          "optional": {
+            "name": {
+              "type": "string",
+              "max": 120
+            },
+            "grants": {
+              "type": "array"
+            },
+            "description": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            },
+            "color": {
+              "type": "string",
+              "max": 40,
+              "nullable": true
+            },
+            "rank": {
+              "type": "number",
+              "min": 0,
+              "max": 100
+            },
+            "archivedAt": {
+              "type": "number",
+              "min": 0
+            },
+            "synthetic": {
+              "type": "boolean"
+            },
+            "when": {
+              "type": "object"
+            },
+            "gates": {
+              "type": "array"
+            },
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      "memberRoleAssign": {
+        "plugin": "core",
+        "type": "access.role.assign",
+        "payloadSchema": {
+          "required": {
+            "target": {
+              "type": "string",
+              "max": 240
+            },
+            "roleId": {
+              "type": "string",
+              "max": 120
+            }
+          },
+          "optional": {
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      "memberRoleUnassign": {
+        "plugin": "core",
+        "type": "access.role.unassign",
+        "payloadSchema": {
+          "required": {
+            "target": {
+              "type": "string",
+              "max": 240
+            },
+            "roleId": {
+              "type": "string",
+              "max": 120
+            }
+          },
+          "optional": {
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      "scopeRoleSet": {
+        "plugin": "core",
+        "type": "scope.role.set",
+        "payloadSchema": {
+          "required": {
+            "scopeType": {
+              "type": "string",
+              "max": 80
+            },
+            "scopeId": {
+              "type": "string",
+              "max": 180
+            }
+          },
+          "optional": {
+            "target": {
+              "type": "string",
+              "max": 240,
+              "nullable": true
+            },
+            "role": {
+              "type": "enum",
+              "values": [
+                "none",
+                "viewer",
+                "editor",
+                "moderator",
+                "admin",
+                "owner"
+              ]
+            },
+            "defaultRole": {
+              "type": "enum",
+              "values": [
+                "none",
+                "viewer",
+                "editor",
+                "moderator",
+                "admin",
+                "owner"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "moderator"
       },
       "moderateMember": {
         "plugin": "primary",

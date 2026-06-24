@@ -2,8 +2,22 @@ import type { ManagementTab } from "@entities/chat/model/managementTypes";
 import type { ChannelId, MemberId, RoleId, RoomId, RoomRoleAccess } from "@entities/chat/model/types";
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
 
+const DEFAULT_ROLE_GRANTS = [{ scopeType: "*", scopeId: "*", role: "viewer" }];
+const ARCHIVED_ROLE_GRANTS = [{ scopeType: "*", scopeId: "*", role: "none" }];
+
 export function managementActions(input: ChatActionHandlersInput) {
   const { dispatch } = input.live;
+
+  function scopedRole(roleId: string) {
+    return (input.live.state as any).scopedRoles?.roles?.[roleId] || {};
+  }
+
+  function assignedRoleIdsForMember(memberId: string): string[] {
+    const scoped = (input.live.state as any).scopedRoles?.assignments?.[memberId];
+    if (Array.isArray(scoped)) return scoped;
+    const legacy = input.live.state.memberRoles?.[memberId];
+    return [...new Set([legacy?.roleId, ...(legacy?.roleIds || [])].filter(Boolean))] as string[];
+  }
 
   async function createTextChannel(channel: { name: string; topic?: string; group?: string }) {
     await dispatch("channelCreate", channel);
@@ -31,24 +45,44 @@ export function managementActions(input: ChatActionHandlersInput) {
   }
 
   async function createRole(role: { roleId: string; name: string; description?: string; color?: string }) {
-    await dispatch("roleCreate", { ...role, roleId: role.roleId as RoleId });
+    await dispatch("roleCreate", { ...role, roleId: role.roleId as RoleId, synthetic: false, grants: DEFAULT_ROLE_GRANTS });
   }
 
   async function updateRole(roleId: string, role: { name?: string; description?: string; color?: string }) {
-    await dispatch("roleUpdate", { roleId: roleId as RoleId, ...role });
+    const current = scopedRole(roleId);
+    await dispatch("roleCreate", {
+      roleId: roleId as RoleId,
+      name: role.name || current.name || roleId,
+      description: role.description ?? current.description,
+      color: role.color ?? current.color,
+      synthetic: Boolean(current.synthetic),
+      grants: current.grants?.length ? current.grants : DEFAULT_ROLE_GRANTS,
+      ...(current.gates ? { gates: current.gates } : {}),
+      ...(current.when ? { when: current.when } : {})
+    });
   }
 
   async function archiveRole(roleId: string) {
-    await dispatch("roleArchive", { roleId: roleId as RoleId });
+    const current = scopedRole(roleId);
+    await dispatch("roleCreate", {
+      roleId: roleId as RoleId,
+      name: current.name || roleId,
+      description: current.description,
+      color: current.color,
+      grants: current.grants?.length ? current.grants : ARCHIVED_ROLE_GRANTS,
+      archivedAt: Date.now()
+    });
   }
 
-  async function assignMemberRoles(memberId: string, roleIds: string[], displayName?: string) {
-    await dispatch("memberRoleAssign", {
-      memberId: memberId as MemberId,
-      roleId: (roleIds[0] || "member") as RoleId,
-      roleIds: roleIds as RoleId[],
-      displayName
-    });
+  async function assignMemberRoles(memberId: string, roleIds: string[], _displayName?: string) {
+    const next = new Set(roleIds.filter(Boolean));
+    const current = new Set(assignedRoleIdsForMember(memberId));
+    for (const roleId of current) {
+      if (!next.has(roleId)) await dispatch("memberRoleUnassign", { target: memberId, roleId: roleId as RoleId });
+    }
+    for (const roleId of next) {
+      if (!current.has(roleId)) await dispatch("memberRoleAssign", { target: memberId, roleId: roleId as RoleId });
+    }
   }
 
   async function moderateMember(memberId: string, moderation: { chatDisabled?: boolean; nameLocked?: boolean }) {

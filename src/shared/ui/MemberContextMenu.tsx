@@ -28,6 +28,7 @@ const styles = stylex.create({
     display: "block",
     minWidth: 0,
     width: "100%",
+    overflow: "visible",
   },
 });
 

@@ -31,7 +31,7 @@ const styles = stylex.create({
     gridTemplateColumns: "40px minmax(0, 1fr)",
     columnGap: "12px",
     rowGap: 0,
-    padding: "7px 16px",
+    padding: "8px 16px",
     position: "relative",
   },
   content: {
@@ -67,12 +67,27 @@ const styles = stylex.create({
     fontWeight: 700,
   },
   actions: {
+    position: "absolute",
+    left: "68px",
+    top: "calc(100% - 14px)",
+    zIndex: 16,
     display: "flex",
     alignItems: "center",
     gap: "4px",
-    justifySelf: "start",
-    marginTop: "5px",
-    opacity: 0,
+    marginTop: 0,
+    padding: "2px",
+    borderRadius: "999px",
+    backgroundColor: tokens.surfaceDeep,
+    boxShadow: tokens.elevPanel,
+    "@media (max-width: 599px)": {
+      left: "62px",
+    },
+  },
+  actionsShroud: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 15,
+    backgroundColor: "transparent",
   },
 });
 
@@ -156,6 +171,8 @@ export function MessageRow({
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [forwardMenuOpen, setForwardMenuOpen] = useState(false);
   const [messageMenuPosition, setMessageMenuPosition] = useState<MessageMenuPosition | undefined>();
+  const [actionsActive, setActionsActive] = useState(false);
+  const [actionsSurfaceActive, setActionsSurfaceActive] = useState(false);
   const name = authorName(message, memberNamesById);
   const isDeleted = Boolean(message.deletedAt);
   const reactions = Object.entries(message.reactions || {}).filter(([, members]) => members.length > 0);
@@ -174,11 +191,23 @@ export function MessageRow({
   );
   const rowClassName =
     `msg${message.pinnedAt ? " pinned" : ""}${isDeleted ? " deleted" : ""}${mentionedCurrentUser ? " mentioned" : ""}`;
+  const showActions = actionsActive || reactionPickerOpen || forwardMenuOpen || Boolean(messageMenuPosition);
+  const actionsStyle: React.CSSProperties = {
+    ...stylex.props(styles.actions).style,
+    opacity: showActions ? 1 : 0,
+    pointerEvents: showActions ? "auto" : "none"
+  };
 
   function closeMenus() {
     setReactionPickerOpen(false);
     setForwardMenuOpen(false);
     setMessageMenuPosition(undefined);
+  }
+
+  function closeHoverActions() {
+    setActionsActive(false);
+    setActionsSurfaceActive(false);
+    closeMenus();
   }
 
   function openMessageMenuAt(x: number, y: number) {
@@ -211,6 +240,8 @@ export function MessageRow({
     if (!onReact) return;
     onRememberReaction(emoji);
     onReact(messageId, emoji);
+    setActionsActive(false);
+    setActionsSurfaceActive(false);
   }
 
   function forwardTo(target: MessageForwardTarget) {
@@ -282,6 +313,10 @@ export function MessageRow({
     if (item.disabled || !item.onSelect) return;
     setMessageMenuPosition(undefined);
     item.onSelect();
+    if (item.id !== "add-reaction" && item.id !== "forward") {
+      setActionsActive(false);
+      setActionsSurfaceActive(false);
+    }
   }
 
   return (
@@ -291,6 +326,12 @@ export function MessageRow({
       id={pinnedCopy ? undefined : messageAnchorId(message.id)}
       tabIndex={-1}
       key={instanceKey}
+      onMouseEnter={() => setActionsActive(true)}
+      onMouseLeave={() => setActionsActive(false)}
+      onFocus={() => setActionsActive(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setActionsActive(false);
+      }}
       onContextMenu={(event) => {
         if (!showMore) return;
         event.preventDefault();
@@ -352,7 +393,12 @@ export function MessageRow({
           </div>
         ) : null}
         {!isDeleted ? (
-          <div className={`msg-actions ${stylex.props(styles.actions).className}`} style={stylex.props(styles.actions).style} aria-label={`Actions for ${name}`}>
+          <div
+            className={`msg-actions ${stylex.props(styles.actions).className}`}
+            style={actionsStyle}
+            aria-label={`Actions for ${name}`}
+            onMouseEnter={() => setActionsSurfaceActive(true)}
+          >
             {canReact ? recentReactions.map((emoji) => (
               <button className="message-action-emoji" key={emoji} type="button" aria-label={`React with ${emoji}`} onClick={() => reactWith(message.id, emoji)}>
                 {emoji}

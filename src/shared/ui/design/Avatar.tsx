@@ -17,7 +17,7 @@ const styles = stylex.create({
     flex: "0 0 auto",
     verticalAlign: "middle",
     borderRadius: "999px",
-    overflow: "hidden",
+    overflow: "visible",
   },
   img: {
     borderRadius: "999px",

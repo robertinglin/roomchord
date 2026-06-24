@@ -19,7 +19,7 @@ export function emptyChatState(): ChatState {
     embeds: {},
     reactions: {},
     roleDefinitions: {},
-    memberRoles: {}
+    access: { version: 1, roleIds: [], scopes: {} }
   };
 }
 

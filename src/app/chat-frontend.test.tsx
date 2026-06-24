@@ -36,12 +36,12 @@ const state: ChatState = {
     lee: { memberId: "lee", name: "Lee", status: "online", activity: "available", updatedAt: 1 }
   },
   activity: [],
+  access: { version: 1, actorId: "alice", memberId: "alice", roleIds: ["admin"], scopes: {} },
   commentThreads: {},
   comments: {},
   embeds: {},
   reactions: {},
-  roleDefinitions: {},
-  memberRoles: {}
+  roleDefinitions: {}
 };
 
 class FakeMediaStreamTrack {
@@ -107,7 +107,10 @@ const testAppMetadata = {
       { name: "moderateMember", type: "member.moderate", authorize: { roles: ["admin"] } },
       { name: "removeInvite", type: "invite.remove", authorize: { roles: ["admin"] } },
       { name: "unbanMember", type: "member.unban", authorize: { roles: ["admin"] } },
-      { name: "roleCreate", type: "role.create", authorize: { roles: ["admin"] } }
+      { name: "roleCreate", type: "access.role.define", authorize: { roles: ["admin"] } },
+      { name: "memberRoleAssign", type: "access.role.assign", authorize: { roles: ["admin"] } },
+      { name: "memberRoleUnassign", type: "access.role.unassign", authorize: { roles: ["admin"] } },
+      { name: "scopeRoleSet", type: "scope.role.set", authorize: { roles: ["moderator"] } }
     ]
   }
 };
@@ -2452,11 +2455,12 @@ describe("ChatApp", () => {
     const sent: any[] = [];
     const roleState: ChatState = {
       ...state,
-      roleDefinitions: {
-        launch: { id: "launch", name: "Launch Lead", description: "Launch coordination", color: "#38bdf8", rank: 1, archivedAt: null }
-      },
-      memberRoles: {
-        lee: { memberId: "lee", roleIds: ["member"] }
+      scopedRoles: {
+        roles: {
+          launch: { id: "launch", name: "Launch Lead", description: "Launch coordination", color: "#38bdf8", rank: 1, grants: [{ scopeType: "*", scopeId: "*", role: "viewer" }] }
+        },
+        assignments: { lee: [] },
+        scopes: {}
       }
     };
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: roleState, operation }; }), roleState);
@@ -2470,7 +2474,22 @@ describe("ChatApp", () => {
     await user.click(within(manageDialog).getByRole("button", { name: "Save roles" }));
 
     await waitFor(() => expect(sent).toHaveLength(1));
-    expect(sent[0]).toMatchObject({ type: "memberRoleAssign", schemaAction: "memberRoleAssign", payload: { memberId: "lee", roleIds: ["member", "launch"] } });
+    expect(sent[0]).toMatchObject({ type: "access.role.assign", schemaAction: "memberRoleAssign", payload: { target: "lee", roleId: "launch" } });
+  });
+
+  it("renders presence when member role ids arrive as unresolved expression wrappers", async () => {
+    renderChat(undefined, {
+      ...state,
+      memberRoles: {
+        alice: {
+          memberId: "alice",
+          roleIds: { $expr: ["admin"], fallback: [] }
+        } as any
+      }
+    });
+
+    expect(await screen.findByRole("button", { name: "Alice (you)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Lee, online" })).toBeInTheDocument();
   });
 
   it("creates the direct-message thread only when the first message is sent", async () => {

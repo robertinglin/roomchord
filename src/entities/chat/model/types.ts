@@ -1,4 +1,5 @@
 import type { Chord } from "../../../../types";
+import type { MatterhornPublicAccessState, MatterhornRoleDefinition } from "matterhorn-sdk/browser";
 import type { MtnHomeData, MtnHomeOpenRoomDetail } from "matterhorn-sdk/browser";
 
 export type AvatarSource = { avatar?: string; avatarUrl?: string; profileImageUrl?: string };
@@ -43,8 +44,15 @@ export type ChatEmbed = Chord.Embed;
 export type CommentThread = Chord.CommentThread;
 export type ThreadComment = Chord.Comment;
 export type ScopedReaction = Chord.ScopedReaction;
-export type RoleDefinition = Chord.RoleDefinition;
-export type MemberRoleAssignment = Chord.MemberRole;
+export type RoleDefinition = MatterhornRoleDefinition & { id: RoleId; name: string; rank?: number | string; archivedAt?: number | null };
+export type MemberRoleAssignment = {
+  memberId?: string;
+  roleId?: string | null;
+  roleIds?: string[];
+  displayName?: string | null;
+  assignedBy?: string;
+  assignedAt?: number;
+};
 export type MemberModeration = {
   memberId?: string;
   nameLocked?: boolean | null;
@@ -67,7 +75,12 @@ export type JoinRequest = {
   decidedAt?: number | null;
 };
 
-export type ChatState = Chord.State;
+export type ChatState = Chord.State & {
+  access?: MatterhornPublicAccessState;
+  scopedRoles?: unknown;
+  memberRoles?: Record<string, MemberRoleAssignment>;
+  roleDefinitions?: Record<string, RoleDefinition>;
+};
 
 export type ChatProps = {
   envelope?: Chord.LaunchEnvelope;

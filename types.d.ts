@@ -28,6 +28,8 @@ export namespace Chord {
   export interface MediaFlags { audio?: boolean; video?: boolean; screen?: boolean; }
   export interface MessageEmbed { id?: EmbedId; url: string; provider?: string; kind?: string; title?: string; thumbnailUrl?: string; renderMode?: string; }
   export interface Member { id?: MemberId; memberId?: MemberId; name?: string; displayName?: string; role?: Role | (string & {}); status?: string; avatarUrl?: string; revokedAt?: number | null; bannedAt?: number | null; }
+  export type ScopedRole = "none" | "viewer" | "editor" | "moderator" | "admin" | "owner";
+
   /** From the mediaRooms plugin. */
   export interface MediaRoomParticipant { memberId: MemberId; name?: string; media?: MediaFlags; joinedAt?: number; }
   /** From the mediaRooms plugin. */
@@ -43,6 +45,11 @@ export namespace Chord {
 
   /** From the embeds plugin. */
   export interface Embed { id: EmbedId; scopeType: ScopeType; scopeId: string; url: string; provider?: string; kind?: string; title?: string; note: string | null; addedBy?: MemberId; addedByName?: string; addedAt: number; removedAt: number | null; }
+
+  /** From matterhorn.core scoped access. */
+  export interface CoreScopeAccess { scopeType: string; scopeId: string; role: ScopedRole; canView: boolean; canEdit: boolean; }
+  /** From matterhorn.core scoped access. */
+  export interface CoreAccessState { version?: number; actorId?: MemberId | string; memberId?: MemberId | string; roleIds?: string[]; scopes: Record<string, CoreScopeAccess>; }
 
   /** From the reactions plugin. */
   export interface ScopedReaction { scopeType: ScopeType; scopeId: string; reactions: Reactions; updatedAt?: number; }
@@ -99,18 +106,6 @@ export namespace Chord {
     status?: string;
   }
   /**
-   * From primary model collection `memberRoles`.
-   */
-  export interface MemberRole {
-    assignedAt: number;
-    assignedBy: MemberId;
-    displayName: null | string;
-    id: string;
-    memberId: MemberId;
-    roleId: RoleId | null;
-    roleIds: RoleId[];
-  }
-  /**
    * From primary model collection `messages`.
    */
   export interface Message {
@@ -142,20 +137,16 @@ export namespace Chord {
    * From primary model collection `roleDefinitions`.
    */
   export interface RoleDefinition {
-    archivedAt: null | number;
-    archivedBy?: MemberId;
-    color: null | string;
-    createdAt?: number;
-    createdBy?: MemberId;
-    description: null | string;
+    archivedAt: null;
+    color: string;
+    description: string;
     id: RoleId;
     name: string;
     rank: number;
     systemRole: boolean;
-    updatedAt?: number;
-    updatedBy?: MemberId;
   }
   export interface State {
+    access: CoreAccessState;
     activity: Activity[];
     channels: Channel[];
     comments: Record<CommentId, Comment>;
@@ -165,7 +156,6 @@ export namespace Chord {
     embeds: Record<EmbedId, Embed>;
     guests: Record<string, Guest>;
     joinRequests: Record<string, JoinRequest>;
-    memberRoles: Record<MemberId, MemberRole>;
     members: Record<MemberId, Member>;
     messages: Record<MessageId, Message>;
     presence: Record<MemberId, PresenceMember>;
@@ -232,14 +222,6 @@ export namespace Chord {
     memberModerate: { memberId: MemberId; nameLocked?: boolean; chatDisabled?: boolean };
     /**
      * Requires `admin` role.
-     * memberId: string, <= 120
-     * roleId: string, <= 80, nullable, omit to leave unchanged; null to clear
-     * roleIds: array
-     * displayName: string, <= 120, nullable, omit to leave unchanged; null to clear
-     */
-    memberRoleAssign: { memberId: MemberId; roleId?: RoleId | null; roleIds?: RoleId[]; displayName?: null | string };
-    /**
-     * Requires `admin` role.
      * memberId: string, <= 200
      */
     memberUnban: { memberId: MemberId };
@@ -287,27 +269,6 @@ export namespace Chord {
      * messageId: string, <= 200
      */
     messageUnpin: { messageId: MessageId };
-    /**
-     * Requires `admin` role.
-     * roleId: string, <= 80
-     */
-    roleArchive: { roleId: RoleId };
-    /**
-     * Requires `admin` role.
-     * roleId: string, <= 80
-     * name: string, <= 80
-     * description: string, <= 240, nullable, omit to leave unchanged; null to clear
-     * color: string, <= 40, nullable, omit to leave unchanged; null to clear
-     */
-    roleCreate: { roleId: RoleId; name: string; description?: null | string; color?: null | string };
-    /**
-     * Requires `admin` role.
-     * roleId: string, <= 80
-     * name: string, <= 80, nullable, omit to leave unchanged; null to clear
-     * description: string, <= 240, nullable, omit to leave unchanged; null to clear
-     * color: string, <= 40, nullable, omit to leave unchanged; null to clear
-     */
-    roleUpdate: { roleId: RoleId; name?: null | string; description?: null | string; color?: null | string };
     /**
      * Requires `member` role.
      * body: string
@@ -440,6 +401,45 @@ export namespace Chord {
     reactionToggle: { emoji: string } & ScopeRef;
     /**
      * Requires `admin` role.
+     * roleId: string, <= 120
+     * name: string, <= 120
+     * grants: array
+     * description: string, <= 500, nullable, omit to leave unchanged; null to clear
+     * color: string, <= 40, nullable, omit to leave unchanged; null to clear
+     * rank: number, >= 0, <= 100
+     * archivedAt: number, >= 0
+     * synthetic: boolean
+     * when: object
+     * gates: array
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    roleCreate: { roleId: RoleId; name?: string; grants?: unknown[]; description?: null | string; color?: null | string; rank?: number; archivedAt?: number; synthetic?: boolean; when?: { [key: string]: unknown }; gates?: unknown[]; reason?: null | string };
+    /**
+     * Requires `admin` role.
+     * target: string, <= 240
+     * roleId: string, <= 120
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    memberRoleAssign: { target: string; roleId: RoleId; reason?: null | string };
+    /**
+     * Requires `admin` role.
+     * target: string, <= 240
+     * roleId: string, <= 120
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    memberRoleUnassign: { target: string; roleId: RoleId; reason?: null | string };
+    /**
+     * Requires `moderator` role.
+     * scopeType: string, <= 80
+     * scopeId: string, <= 180
+     * target: string, <= 240, nullable, omit to leave unchanged; null to clear
+     * role: enum
+     * defaultRole: enum
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    scopeRoleSet: { target?: null | string; role?: "none" | "viewer" | "editor" | "moderator" | "admin" | "owner"; defaultRole?: "none" | "viewer" | "editor" | "moderator" | "admin" | "owner"; reason?: null | string } & ScopeRef;
+    /**
+     * Requires `admin` role.
      * memberId: string, <= 200
      * nameLocked: boolean
      * chatDisabled: boolean
@@ -496,7 +496,6 @@ export namespace Chord {
     joinDeny: "join.deny";
     memberBan: "member.ban";
     memberModerate: "member.moderate";
-    memberRoleAssign: "member.role.assign";
     memberUnban: "member.unban";
     messageDelete: "message.delete";
     messageEdit: "message.edit";
@@ -505,9 +504,6 @@ export namespace Chord {
     messageReply: "message.reply";
     messageSend: "message.send";
     messageUnpin: "message.unpin";
-    roleArchive: "role.archive";
-    roleCreate: "role.create";
-    roleUpdate: "role.update";
     commentsAdd: "comments.add";
     commentsDelete: "comments.delete";
     commentsEdit: "comments.edit";
@@ -527,6 +523,10 @@ export namespace Chord {
     embedAdd: "embed.add";
     embedRemove: "embed.remove";
     reactionToggle: "reaction.toggle";
+    roleCreate: "access.role.define";
+    memberRoleAssign: "access.role.assign";
+    memberRoleUnassign: "access.role.unassign";
+    scopeRoleSet: "scope.role.set";
     moderateMember: "member.moderate";
     banMember: "member.ban";
     unbanMember: "member.unban";
