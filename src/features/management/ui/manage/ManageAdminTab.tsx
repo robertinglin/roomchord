@@ -2,6 +2,8 @@ import React from "react";
 import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
 import { joinRequestsForState, memberModerationFor, publicInvitesForState } from "@entities/chat/model/state";
 import type { Actor, ChatState, MemberModeration, RoomMember } from "@entities/chat/model/types";
+import { panel, button, row, layout, misc } from "@features/management/ui/manage.styles";
+import * as stylex from "@stylexjs/stylex";
 
 type AdminMember = {
   id: string;
@@ -75,83 +77,101 @@ export function ManageAdminTab({
   const joinRequests = joinRequestsForState(state).filter((request) => request.status === "pending");
 
   return (
-    <div className="manage-section admin-control-panel">
-      <section className="admin-control-group" aria-label="Member moderation">
-        <div className="admin-control-heading">
-          <h3>Members</h3>
-          <small>{members.length} visible</small>
-        </div>
-        <div className="admin-control-list">
-          {members.map((member) => {
-            const self = member.id === actor.memberId;
-            const muted = Boolean(member.moderation?.chatDisabled);
-            const locked = Boolean(member.moderation?.nameLocked);
-            const banned = Boolean(member.moderation?.bannedAt);
-            return (
-              <article className="admin-control-row" data-testid="admin-member-row" key={member.id}>
-                <span className="admin-control-summary">
-                  <strong>{member.name}</strong>
-                  <small>{statusLabel(member)}</small>
-                </span>
-                <span className="admin-control-actions">
-                  <button data-testid="member-toggle-chat" type="button" disabled={!canManageMembers || self || banned} onClick={() => onModerateMember(member.id, { chatDisabled: !muted })}>
-                    {muted ? "Unmute chat" : "Mute chat"}
-                  </button>
-                  <button data-testid="member-toggle-profile-lock" type="button" disabled={!canManageMembers || self || banned} onClick={() => onModerateMember(member.id, { nameLocked: !locked })}>
-                    {locked ? "Unlock profile" : "Lock profile"}
-                  </button>
-                  {banned ? (
-                    <button data-testid="member-unban" type="button" disabled={!canManageMembers || self} onClick={() => onUnbanMember(member.id)}>Unban</button>
-                  ) : (
-                    <button data-testid="member-ban" type="button" disabled={!canManageMembers || self} onClick={() => onBanMember(member.id)}>Ban</button>
-                  )}
-                </span>
-              </article>
-            );
-          })}
-        </div>
+    <div {...stylex.props(layout.section)}>
+      <section {...stylex.props(panel.panel)} aria-label="Member moderation">
+        <header {...stylex.props(panel.head)}>
+          <h3 {...stylex.props(panel.h3)}>Members</h3>
+          <span {...stylex.props(panel.meta)}>{members.length} visible</span>
+        </header>
+        {members.length ? (
+          <div {...stylex.props(panel.bodyFlush)}>
+            <div {...stylex.props(layout.rowStack)}>
+              {members.map((member) => {
+                const self = member.id === actor.memberId;
+                const muted = Boolean(member.moderation?.chatDisabled);
+                const locked = Boolean(member.moderation?.nameLocked);
+                const banned = Boolean(member.moderation?.bannedAt);
+                return (
+                  <article {...stylex.props(row.row)} data-testid="admin-member-row" key={member.id}>
+                    <span {...stylex.props(row.rowMain)}>
+                      <span {...stylex.props(row.rowTitle)}>{member.name}</span>
+                      <span {...stylex.props(row.rowSub)}>{statusLabel(member)}</span>
+                    </span>
+                    <span {...stylex.props(row.rowEnd)}>
+                      <button data-testid="member-toggle-chat" type="button" disabled={!canManageMembers || self || banned} onClick={() => onModerateMember(member.id, { chatDisabled: !muted })} {...stylex.props(button.btn, button.secondary, button.sm)}>
+                        {muted ? "Unmute chat" : "Mute chat"}
+                      </button>
+                      <button data-testid="member-toggle-profile-lock" type="button" disabled={!canManageMembers || self || banned} onClick={() => onModerateMember(member.id, { nameLocked: !locked })} {...stylex.props(button.btn, button.secondary, button.sm)}>
+                        {locked ? "Unlock profile" : "Lock profile"}
+                      </button>
+                      {banned ? (
+                        <button data-testid="member-unban" type="button" disabled={!canManageMembers || self} onClick={() => onUnbanMember(member.id)} {...stylex.props(button.btn, button.secondary, button.sm)}>Unban</button>
+                      ) : (
+                        <button data-testid="member-ban" type="button" disabled={!canManageMembers || self} onClick={() => onBanMember(member.id)} {...stylex.props(button.btn, button.danger, button.sm)}>Ban</button>
+                      )}
+                    </span>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div {...stylex.props(panel.body)}><p {...stylex.props(misc.hint)}>No members to moderate.</p></div>
+        )}
       </section>
 
-      <section className="admin-control-group" aria-label="Invites">
-        <div className="admin-control-heading">
-          <h3>Invites</h3>
-          <small>{invites.length} records</small>
-        </div>
-        <div className="admin-control-list">
-          {invites.length ? invites.map((invite) => (
-            <article className="admin-control-row" data-testid="admin-invite-row" key={invite.id}>
-              <span className="admin-control-summary">
-                <strong>{invite.id}</strong>
-                <small>{invite.status || "active"}</small>
-              </span>
-              <span className="admin-control-actions">
-                {(invite.status || "active") === "active" ? <button data-testid="invite-disable" type="button" disabled={!canManageMembers} onClick={() => onDisableInvite(invite.id)}>Disable</button> : null}
-                {(invite.status || "active") !== "active" ? <button data-testid="invite-remove" type="button" disabled={!canManageMembers} onClick={() => onRemoveInvite(invite.id)}>Remove</button> : null}
-              </span>
-            </article>
-          )) : <p className="admin-empty">No invite records are published for this room.</p>}
-        </div>
+      <section {...stylex.props(panel.panel)} aria-label="Invites">
+        <header {...stylex.props(panel.head)}>
+          <h3 {...stylex.props(panel.h3)}>Invites</h3>
+          <span {...stylex.props(panel.meta)}>{invites.length} records</span>
+        </header>
+        {invites.length ? (
+          <div {...stylex.props(panel.bodyFlush)}>
+            <div {...stylex.props(layout.rowStack)}>
+              {invites.map((invite) => (
+                <article {...stylex.props(row.row)} data-testid="admin-invite-row" key={invite.id}>
+                  <span {...stylex.props(row.rowMain)}>
+                    <span {...stylex.props(row.rowTitle)}>{invite.id}</span>
+                    <span {...stylex.props(row.rowSub)}>{invite.status || "active"}</span>
+                  </span>
+                  <span {...stylex.props(row.rowEnd)}>
+                    {(invite.status || "active") === "active" ? <button data-testid="invite-disable" type="button" disabled={!canManageMembers} onClick={() => onDisableInvite(invite.id)} {...stylex.props(button.btn, button.secondary, button.sm)}>Disable</button> : null}
+                    {(invite.status || "active") !== "active" ? <button data-testid="invite-remove" type="button" disabled={!canManageMembers} onClick={() => onRemoveInvite(invite.id)} {...stylex.props(button.btn, button.danger, button.sm)}>Remove</button> : null}
+                  </span>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div {...stylex.props(panel.body)}><p {...stylex.props(misc.hint)}>No invite records are published for this room.</p></div>
+        )}
       </section>
 
-      <section className="admin-control-group" aria-label="Join requests">
-        <div className="admin-control-heading">
-          <h3>Join requests</h3>
-          <small>{joinRequests.length} pending</small>
-        </div>
-        <div className="admin-control-list">
-          {joinRequests.length ? joinRequests.map((request) => (
-            <article className="admin-control-row" data-testid="admin-join-request-row" key={request.id}>
-              <span className="admin-control-summary">
-                <strong>{request.profile?.name || request.profileId || request.id}</strong>
-                <small>{request.inviteId || "invite"}</small>
-              </span>
-              <span className="admin-control-actions">
-                <button data-testid="join-request-approve" type="button" disabled={!canManageMembers} onClick={() => onApproveJoinRequest(request.id)}>Approve</button>
-                <button data-testid="join-request-deny" type="button" disabled={!canManageMembers} onClick={() => onDenyJoinRequest(request.id)}>Deny</button>
-              </span>
-            </article>
-          )) : <p className="admin-empty">No pending join requests.</p>}
-        </div>
+      <section {...stylex.props(panel.panel)} aria-label="Join requests">
+        <header {...stylex.props(panel.head)}>
+          <h3 {...stylex.props(panel.h3)}>Join requests</h3>
+          <span {...stylex.props(panel.meta)}>{joinRequests.length} pending</span>
+        </header>
+        {joinRequests.length ? (
+          <div {...stylex.props(panel.bodyFlush)}>
+            <div {...stylex.props(layout.rowStack)}>
+              {joinRequests.map((request) => (
+                <article {...stylex.props(row.row)} data-testid="admin-join-request-row" key={request.id}>
+                  <span {...stylex.props(row.rowMain)}>
+                    <span {...stylex.props(row.rowTitle)}>{request.profile?.name || request.profileId || request.id}</span>
+                    <span {...stylex.props(row.rowSub)}>{request.inviteId || "invite"}</span>
+                  </span>
+                  <span {...stylex.props(row.rowEnd)}>
+                    <button data-testid="join-request-approve" type="button" disabled={!canManageMembers} onClick={() => onApproveJoinRequest(request.id)} {...stylex.props(button.btn, button.secondary, button.sm)}>Approve</button>
+                    <button data-testid="join-request-deny" type="button" disabled={!canManageMembers} onClick={() => onDenyJoinRequest(request.id)} {...stylex.props(button.btn, button.danger, button.sm)}>Deny</button>
+                  </span>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div {...stylex.props(panel.body)}><p {...stylex.props(misc.hint)}>No pending join requests.</p></div>
+        )}
       </section>
     </div>
   );

@@ -1,5 +1,8 @@
 import React from "react";
 import type { RoleDefinition, RoleId, RoomRoleAccess, RoomRoleAccessLevel } from "@entities/chat/model/types";
+import { row, field, layout } from "@features/management/ui/manage.styles";
+import { Checkbox } from "@features/management/ui/Controls";
+import * as stylex from "@stylexjs/stylex";
 
 function roomAccessValue(roleAccess: RoomRoleAccess | undefined, roleId: string): RoomRoleAccessLevel {
   return roleAccess?.[roleId as RoleId] || "hidden";
@@ -22,23 +25,27 @@ export function RoleAccessEditor({
   onChange: (value: RoomRoleAccess) => void;
 }) {
   return (
-    <div className="room-access-grid" aria-label="Voice channel role access">
+    <div {...stylex.props(layout.accessGrid)} aria-label="Voice channel role access">
       {roles.map((role) => (
-        <label className="room-access-row" key={role.id}>
-          <span>
-            <span className="role-dot" style={role.color ? { background: role.color } : undefined} aria-hidden="true" />
-            <strong>{role.name}</strong>
+        <div {...stylex.props(row.row)} key={role.id}>
+          <span {...stylex.props(row.rowLeadGrow)}>
+            <span {...stylex.props(row.roleDot)} style={role.color ? { backgroundColor: role.color } : undefined} aria-hidden="true" />
+            <span {...stylex.props(row.rowTitle)}>{role.name}</span>
           </span>
-          <select
-            aria-label={`${role.name} voice channel access`}
-            value={roomAccessValue(value, role.id)}
-            onChange={(event) => onChange(setRoleAccessValue(value, role.id, event.target.value as RoomRoleAccessLevel))}
-          >
-            <option value="hidden">Hidden</option>
-            <option value="readonly">Read only</option>
-            <option value="editor">Can join</option>
-          </select>
-        </label>
+          <span {...stylex.props(row.rowEnd)}>
+            <select
+              aria-label={`${role.name} voice channel access`}
+              value={roomAccessValue(value, role.id)}
+              onChange={(event) => onChange(setRoleAccessValue(value, role.id, event.target.value as RoomRoleAccessLevel))}
+              {...stylex.props(field.select)}
+              style={{ width: 128 }}
+            >
+              <option value="hidden">Hidden</option>
+              <option value="readonly">Read only</option>
+              <option value="editor">Can join</option>
+            </select>
+          </span>
+        </div>
       ))}
     </div>
   );
@@ -55,23 +62,45 @@ export function RoleCheckboxes({
 }) {
   const selected = new Set(selectedRoleIds);
   return (
-    <div className="role-checkbox-grid">
-      {roles.map((role) => (
-        <label className="role-checkbox" key={role.id}>
-          <input
-            type="checkbox"
-            checked={selected.has(role.id)}
-            onChange={(event) => {
+    <div {...stylex.props(layout.accessGrid)}>
+      {roles.map((role) => {
+        const checked = selected.has(role.id);
+        return (
+          <div
+            {...stylex.props(row.row, row.tap)}
+            role="checkbox"
+            aria-checked={checked}
+            aria-label={`${role.name} role tag`}
+            tabIndex={0}
+            key={role.id}
+            onClick={() => {
               const next = new Set(selected);
-              if (event.target.checked) next.add(role.id);
-              else next.delete(role.id);
+              if (checked) next.delete(role.id);
+              else next.add(role.id);
               onChange([...next]);
             }}
-          />
-          <span className="role-dot" style={role.color ? { background: role.color } : undefined} aria-hidden="true" />
-          <span>{role.name}</span>
-        </label>
-      ))}
+            onKeyDown={(event) => {
+              if (event.key === " " || event.key === "Enter") {
+                event.preventDefault();
+                const next = new Set(selected);
+                if (checked) next.delete(role.id);
+                else next.add(role.id);
+                onChange([...next]);
+              }
+            }}
+          >
+            <span {...stylex.props(row.rowLead)}>
+              <Checkbox checked={checked} onChange={() => undefined} aria-label={`${role.name} role tag`} />
+            </span>
+            <span {...stylex.props(row.rowMain)}>
+              <span {...stylex.props(row.rowTitle)}>
+                <span {...stylex.props(row.roleDot)} style={role.color ? { backgroundColor: role.color } : undefined} aria-hidden="true" />
+                {role.name}
+              </span>
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

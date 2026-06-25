@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node src/sdk-app.cjs)",
+      "Bash(node --test tests/relay-client-routing.test.cjs)",
+      "Bash(node --test packages/schema/test/*.test.cjs)",
+      "Bash(node --test packages/matterhorn-host-runtime/test/*.test.cjs)",
+      "Bash(python -c \"import json,sys; print\\(json.dumps\\(json.load\\(sys.stdin\\).get\\('scripts'\\),indent=1\\)\\)\")",
+      "Bash(pnpm run *)",
+      "Bash(cat packages/matterhorn-sdk/dist/browser/hashRoute.d.ts)",
+      "Bash(cat packages/matterhorn-sdk/dist/browser/roomLink.d.ts)",
+      "Bash(pnpm test *)",
+      "Bash(node scripts/smoke-package.cjs)"
+    ]
+  }
+}

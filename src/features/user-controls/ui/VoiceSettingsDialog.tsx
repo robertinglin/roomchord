@@ -1,15 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
-import { runVoiceProcessingPipelineDiagnostic, type VoicePipelineDiagnosticResult } from "matterhorn-sdk/browser/voicePipelineDiagnostics";
-import {
-  startVoiceProcessingRecordingTest,
-  stopVoiceProcessingRecordingForPlayback,
-  stopVoiceProcessingRecordingTest,
-  updateVoiceProcessingRecordingTestPlayback,
-  type VoiceProcessingRecordingTestSession
-} from "matterhorn-sdk/browser/voiceOutboundRecordingTest";
-import { pttKeyFromKeyboardEvent, voiceProcessingSettingsFromPreferences, type VoicePreferences } from "@entities/chat/model/localVoicePreferences";
-import { CloseIcon } from "@shared/ui/Icons";
-import { CleanupSettingsSection, GainSettingsSection, InputModeSettingsSection, VoiceTestSettingsSection } from "@features/user-controls/ui/voiceSettings/VoiceSettingsSections";
+import React from "react";
+import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
+import { VoiceSettingsPanel } from "@entities/chat/ui/VoiceSettingsPanel";
+import { Glyph } from "@shared/ui/design";
+import { shell, rail, content } from "@features/management/ui/manage.styles";
+import * as stylex from "@stylexjs/stylex";
 
 type Props = {
   preferences: VoicePreferences;
@@ -17,161 +11,56 @@ type Props = {
   onClose: () => void;
 };
 
-type VoiceTestPhase = "idle" | "recording" | "playback";
-
-function stopVoiceTestSession(session: VoiceProcessingRecordingTestSession | undefined) {
-  stopVoiceProcessingRecordingTest(session);
-}
-
 export function VoiceSettingsDialog({ preferences, onChange, onClose }: Props) {
-  const [recordingKey, setRecordingKey] = useState(false);
-  const [draftPreferences, setDraftPreferences] = useState(preferences);
-  const [testPhase, setTestPhase] = useState<VoiceTestPhase>("idle");
-  const [testError, setTestError] = useState<string | undefined>();
-  const [diagnosticRunning, setDiagnosticRunning] = useState(false);
-  const [diagnosticResult, setDiagnosticResult] = useState<VoicePipelineDiagnosticResult | undefined>();
-  const [diagnosticError, setDiagnosticError] = useState<string | undefined>();
-  const testSession = useRef<VoiceProcessingRecordingTestSession | undefined>(undefined);
-  const latestPreferences = useRef(preferences);
-
-  function update(partial: Partial<VoicePreferences>) {
-    const nextPreferences = { ...draftPreferences, ...partial };
-    setDraftPreferences(nextPreferences);
-    latestPreferences.current = nextPreferences;
-    setDiagnosticResult(undefined);
-    setDiagnosticError(undefined);
-    onChange(nextPreferences);
-    updateVoiceProcessingRecordingTestPlayback(testSession.current, voiceProcessingSettingsFromPreferences(nextPreferences), true);
-  }
-
-
-  useEffect(() => {
-    setDraftPreferences(preferences);
-    latestPreferences.current = preferences;
-  }, [preferences]);
-
-  useEffect(() => {
-    if (!recordingKey) return undefined;
-    const onKeyDown = (event: KeyboardEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      update({ pttKey: pttKeyFromKeyboardEvent(event) });
-      setRecordingKey(false);
-    };
-    window.addEventListener("keydown", onKeyDown, { capture: true, once: true });
-    return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [draftPreferences, recordingKey]);
-
-  useEffect(() => {
-    return () => {
-      stopVoiceTestSession(testSession.current);
-      testSession.current = undefined;
-    };
-  }, []);
-
-  async function startVoiceTestRecording() {
-    stopVoiceTestSession(testSession.current);
-    testSession.current = undefined;
-    setTestError(undefined);
-    setTestPhase("idle");
-    const testPreferences = latestPreferences.current;
-    const MediaRecorderCtor = globalThis.MediaRecorder;
-    if (typeof MediaRecorderCtor !== "function") {
-      setTestError("This browser cannot record raw microphone tests.");
-      return;
-    }
-    try {
-      testSession.current = await startVoiceProcessingRecordingTest(
-        voiceProcessingSettingsFromPreferences(testPreferences),
-        { mediaRecorder: MediaRecorderCtor }
-      );
-      setTestPhase("recording");
-    } catch {
-      stopVoiceTestSession(testSession.current);
-      testSession.current = undefined;
-      setTestPhase("idle");
-      setTestError("Could not start raw microphone recording test.");
-    }
-  }
-
-  async function stopVoiceTestRecording() {
-    const session = testSession.current;
-    if (!session || session.recorder.state === "inactive") return;
-    setTestError(undefined);
-    try {
-      setTestPhase("playback");
-      updateVoiceProcessingRecordingTestPlayback(session, voiceProcessingSettingsFromPreferences(latestPreferences.current), true);
-      await stopVoiceProcessingRecordingForPlayback(session);
-    } catch {
-      stopVoiceTest();
-      setTestError("Could not finish processed microphone test playback.");
-    }
-  }
-
-  function stopVoiceTest() {
-    stopVoiceTestSession(testSession.current);
-    testSession.current = undefined;
-    setTestPhase("idle");
-    setTestError(undefined);
-  }
-
-  async function runPipelineCheck() {
-    setDiagnosticRunning(true);
-    setDiagnosticResult(undefined);
-    setDiagnosticError(undefined);
-    try {
-      const result = await runVoiceProcessingPipelineDiagnostic(voiceProcessingSettingsFromPreferences(latestPreferences.current), { durationMs: 1_600 });
-      setDiagnosticResult(result);
-    } catch {
-      setDiagnosticError("Could not run the synthetic pipeline quality check in this browser.");
-    } finally {
-      setDiagnosticRunning(false);
-    }
-  }
-
-  const testTitle = testPhase === "recording" ? "Recording raw microphone" : testPhase === "playback" ? "Looping processed recording" : "Raw-to-processed audio test";
-  const testDescription = testPhase === "recording"
-    ? "Speak once; this records raw mic input with browser DSP disabled"
-    : testPhase === "playback"
-      ? "The fixed raw recording is looping through the live gain, VAD, PTT, and DTLN settings"
-      : "Record raw mic audio, stop, then hear the processing stack applied to that recording";
-  const testButtonLabel = testPhase === "recording" ? "Stop recording" : testPhase === "playback" ? "Stop playback" : "Start recording";
-  const testButtonAction = testPhase === "recording" ? stopVoiceTestRecording : testPhase === "playback" ? stopVoiceTest : () => void startVoiceTestRecording();
-
   return (
-    <div className="voice-settings-shroud" onMouseDown={onClose}>
-      <section className="voice-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="voice-settings-title" onMouseDown={(event) => event.stopPropagation()}>
-        <header className="voice-settings-header">
-          <span>
-            <h2 id="voice-settings-title">Voice settings</h2>
-            <small>Microphone processing for this device</small>
-          </span>
-          <button className="self-icon-button" type="button" aria-label="Close voice settings" onClick={onClose}>
-            <CloseIcon />
-          </button>
-        </header>
+    <div
+      {...stylex.props(shell.shroud)}
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
+    >
+      <section
+        {...stylex.props(shell.dialog)}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Voice settings"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <aside {...stylex.props(rail.rail)} aria-label="Device settings sections">
+          <div {...stylex.props(rail.head)}>
+            <div {...stylex.props(rail.mark)} aria-hidden="true">
+              <svg viewBox="0 0 24 18" fill="none" width={22} height={16} style={{ overflow: "visible" }}>
+                <path d="M2 9c2.5 0 2.5-6 5-6s2.5 12 5 12 2.5-6 5-6 2.5 0 5 0" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <span {...stylex.props(rail.id)}>
+              <strong {...stylex.props(rail.idTitle)}>Mosh</strong>
+              <small {...stylex.props(rail.idSub)}>Device settings</small>
+            </span>
+          </div>
+          <div {...stylex.props(rail.group, rail.groupFirst)}>
+            <div {...stylex.props(rail.groupLabel)}>Device</div>
+            <button type="button" {...stylex.props(rail.item, rail.itemActive)}>
+              <span {...stylex.props(rail.itemIconActive)}>
+                <Glyph size={18}><><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></></Glyph>
+              </span>
+              <span {...stylex.props(rail.itemLabel)}>Voice &amp; audio</span>
+            </button>
+          </div>
+        </aside>
 
-        <div className="voice-settings-body">
-          <GainSettingsSection preferences={draftPreferences} onUpdate={update} />
-          <InputModeSettingsSection
-            preferences={draftPreferences}
-            recordingKey={recordingKey}
-            onRecordKey={() => setRecordingKey(true)}
-            onUpdate={update}
-          />
-          <VoiceTestSettingsSection
-            diagnosticError={diagnosticError}
-            diagnosticResult={diagnosticResult}
-            diagnosticRunning={diagnosticRunning}
-            onRunDiagnostic={() => void runPipelineCheck()}
-            onToggleTest={testButtonAction}
-            testButtonLabel={testButtonLabel}
-            testDescription={testDescription}
-            testError={testError}
-            testTitle={testTitle}
-          />
-          <CleanupSettingsSection preferences={draftPreferences} onUpdate={update} />
-        </div>
+        <section {...stylex.props(content.content)}>
+          <header {...stylex.props(content.head)}>
+            <span {...stylex.props(content.title)}>
+              <h2 {...stylex.props(content.h2)}>Voice &amp; audio</h2>
+              <small {...stylex.props(content.desc)}>Microphone processing for this device.</small>
+            </span>
+            <button type="button" aria-label="Close voice settings" onClick={onClose} {...stylex.props(content.close)}>
+              <Glyph size={16}><><path d="M6 6 18 18" /><path d="M18 6 6 18" /></></Glyph>
+            </button>
+          </header>
+          <div {...stylex.props(content.body)}>
+            <VoiceSettingsPanel preferences={preferences} onChange={onChange} />
+          </div>
+        </section>
       </section>
     </div>
   );

@@ -24,11 +24,6 @@ export function messageActions(input: ChatActionHandlersInput) {
     if (view.actorChatDisabled) return;
     const embeds = messageEmbeds(body);
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
-    console.info("[mosh.notifications] channel message mention resolution", {
-      channelId,
-      mentionIds,
-      memberNamesById: view.memberNamesById
-    });
     await dispatch("messageSend", { channelId: channelId as ChannelId, body, embeds, mentionIds: mentionIds as MemberId[] });
     for (const embed of embeds) {
       if (embed.provider === "link") continue;
@@ -79,12 +74,6 @@ export function messageActions(input: ChatActionHandlersInput) {
     if (!view.currentChannelId) return;
     if (view.actorChatDisabled) return;
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
-    console.info("[mosh.notifications] reply mention resolution", {
-      channelId: view.currentChannelId,
-      replyToId,
-      mentionIds,
-      memberNamesById: view.memberNamesById
-    });
     await dispatch("messageReply", { channelId: view.currentChannelId as ChannelId, replyToId: replyToId as MessageId, body, mentionIds: mentionIds as MemberId[] });
   }
 

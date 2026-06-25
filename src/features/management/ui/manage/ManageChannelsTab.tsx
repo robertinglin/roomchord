@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { optionalChannelGroup } from "@entities/chat/model/channelGroups";
 import type { Channel } from "@entities/chat/model/types";
+import { Glyph, HashGlyph } from "@shared/ui/design";
+import { panel, field, button, row, layout, misc } from "@features/management/ui/manage.styles";
+import * as stylex from "@stylexjs/stylex";
 
 export function ManageChannelsTab({
   canCreateChannels,
@@ -51,59 +54,94 @@ export function ManageChannelsTab({
   }
 
   return (
-    <div className="manage-section">
+    <div {...stylex.props(layout.section)}>
       {canCreateChannels ? (
-        <form className="manage-form-grid" onSubmit={createChannel}>
-          <label>
-            <span>New channel</span>
-            <input aria-label="Channel name" value={channelName} onChange={(event) => setChannelName(event.target.value)} placeholder="channel-name" />
-          </label>
-          <label>
-            <span>Topic</span>
-            <input aria-label="Channel topic" value={channelTopic} onChange={(event) => setChannelTopic(event.target.value)} placeholder="Optional topic" />
-          </label>
-          <label>
-            <span>Group</span>
-            <input aria-label="Channel group" value={channelGroup} onChange={(event) => setChannelGroup(event.target.value)} placeholder="General" />
-          </label>
-          <button className="primary-action" type="submit" disabled={!channelName.trim()}>
-            Create channel
-          </button>
+        <form {...stylex.props(panel.panel)} onSubmit={createChannel}>
+          <header {...stylex.props(panel.head)}>
+            <h3 {...stylex.props(panel.h3)}>New channel</h3>
+          </header>
+          <div {...stylex.props(panel.body)}>
+            <label {...stylex.props(field.field)}>
+              <span {...stylex.props(field.label)}>Channel name</span>
+              <input className="etch" aria-label="Channel name" value={channelName} onChange={(event) => setChannelName(event.target.value)} placeholder="channel-name" {...stylex.props(field.input)} />
+            </label>
+            <label {...stylex.props(field.field)}>
+              <span {...stylex.props(field.label)}>Topic <span {...stylex.props(misc.textQuiet, misc.textSmall)} style={{ fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>— optional</span></span>
+              <input className="etch" aria-label="Channel topic" value={channelTopic} onChange={(event) => setChannelTopic(event.target.value)} placeholder="What's this channel for?" {...stylex.props(field.input)} />
+            </label>
+            <label {...stylex.props(field.field, field.fieldLast)}>
+              <span {...stylex.props(field.label)}>Group</span>
+              <input className="etch" aria-label="Channel group" value={channelGroup} onChange={(event) => setChannelGroup(event.target.value)} placeholder="General" {...stylex.props(field.input)} />
+            </label>
+            <div {...stylex.props(button.actions, button.actionsEnd)}>
+              <button type="submit" disabled={!channelName.trim()} {...stylex.props(button.btn, button.primary)}>
+                <Glyph size={15}><><path d="M12 5v14M5 12h14" /></></Glyph>
+                Create channel
+              </button>
+            </div>
+          </div>
         </form>
       ) : null}
-      <div className="manage-list">
-        {channels.map((channel) => (
-          <article className="manage-list-row" key={channel.id}>
-            <span>
-              <strong>#{channel.name}</strong>
-              <small>{[channel.group || "General", channel.topic || "No topic"].join(" · ")}</small>
-            </span>
-            <button className="secondary-action" type="button" onClick={() => openChannelEditor(channel)}>Manage</button>
-          </article>
-        ))}
-      </div>
-      {editingChannel ? (
-        <form className="manage-editor" onSubmit={saveChannel}>
-          <h3>#{editingChannel.name}</h3>
-          <label>
-            <span>Channel name</span>
-            <input aria-label="Manage channel name" value={editChannelName} onChange={(event) => setEditChannelName(event.target.value)} />
-          </label>
-          <label>
-            <span>Topic</span>
-            <input aria-label="Manage channel topic" value={editChannelTopic} onChange={(event) => setEditChannelTopic(event.target.value)} />
-          </label>
-          <label>
-            <span>Group</span>
-            <input aria-label="Manage channel group" value={editChannelGroup} onChange={(event) => setEditChannelGroup(event.target.value)} />
-          </label>
-          <div className="form-actions two-up-actions">
-            <button className="secondary-action" type="submit" disabled={!editChannelName.trim()}>Save settings</button>
-            <button className="ghost-action" type="button" onClick={() => setEditingChannelId(undefined)}>Cancel</button>
+
+      <section {...stylex.props(panel.panel)}>
+        <header {...stylex.props(panel.head)}>
+          <h3 {...stylex.props(panel.h3)}>Channels</h3>
+          <span {...stylex.props(panel.meta)}>{channels.length} channel{channels.length === 1 ? "" : "s"}</span>
+        </header>
+        {channels.length ? (
+          <div {...stylex.props(panel.bodyFlush)}>
+            <div {...stylex.props(layout.rowStack)}>
+            {channels.map((channel) => (
+              <div {...stylex.props(row.row)} key={channel.id}>
+                <span {...stylex.props(row.rowLeadGrow)}>
+                  <span {...stylex.props(row.rowLeadIcon)}><HashGlyph size={18} /></span>
+                  <span {...stylex.props(row.rowMain)}>
+                    <span {...stylex.props(row.rowTitle)}>#{channel.name}</span>
+                    <span {...stylex.props(row.rowSub)}>{[channel.group || "General", channel.topic || "No topic"].join(" · ")}</span>
+                  </span>
+                </span>
+                <span {...stylex.props(row.rowEnd)}>
+                  <button type="button" className="btn ghost" onClick={() => openChannelEditor(channel)} {...stylex.props(button.btn, button.ghost, button.sm)}>Manage</button>
+                </span>
+              </div>
+            ))}
+            </div>
           </div>
-          <button className="danger-action full-width" type="button" onClick={() => { onArchiveChannel(editingChannel.id); setEditingChannelId(undefined); }}>
-            Archive channel
-          </button>
+        ) : (
+          <div {...stylex.props(panel.body)}><p {...stylex.props(misc.hint)}>No channels yet.</p></div>
+        )}
+      </section>
+
+      {editingChannel ? (
+        <form {...stylex.props(panel.panel)} onSubmit={saveChannel}>
+          <header {...stylex.props(panel.head)}>
+            <h3 {...stylex.props(panel.h3)}>#{editingChannel.name}</h3>
+          </header>
+          <div {...stylex.props(panel.body)}>
+            <label {...stylex.props(field.field)}>
+              <span {...stylex.props(field.label)}>Channel name</span>
+              <input aria-label="Manage channel name" value={editChannelName} onChange={(event) => setEditChannelName(event.target.value)} {...stylex.props(field.input)} />
+            </label>
+            <label {...stylex.props(field.field)}>
+              <span {...stylex.props(field.label)}>Topic</span>
+              <input aria-label="Manage channel topic" value={editChannelTopic} onChange={(event) => setEditChannelTopic(event.target.value)} {...stylex.props(field.input)} />
+            </label>
+            <label {...stylex.props(field.field, field.fieldLast)}>
+              <span {...stylex.props(field.label)}>Group</span>
+              <input aria-label="Manage channel group" value={editChannelGroup} onChange={(event) => setEditChannelGroup(event.target.value)} {...stylex.props(field.input)} />
+            </label>
+            <div {...stylex.props(button.actions)}>
+              <button type="submit" disabled={!editChannelName.trim()} {...stylex.props(button.btn, button.primary)}>Save settings</button>
+              <button type="button" onClick={() => setEditingChannelId(undefined)} {...stylex.props(button.btn, button.ghost)}>Cancel</button>
+            </div>
+            <button
+              type="button"
+              onClick={() => { onArchiveChannel(editingChannel.id); setEditingChannelId(undefined); }}
+              {...stylex.props(button.btn, button.danger, button.sm, button.fullWidth)}
+            >
+              Archive channel
+            </button>
+          </div>
         </form>
       ) : null}
     </div>

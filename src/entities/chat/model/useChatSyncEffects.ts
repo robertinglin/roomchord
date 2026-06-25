@@ -128,24 +128,12 @@ export function useChatSyncEffects(input: ChatSyncEffectsInput) {
       const latestMessage = Object.values(state.directMessages || {})
         .filter((message) => message.threadId === currentThreadId && !message.deletedAt)
         .reduce((current, message) => Number(message.createdAt || 0) > Number(current?.createdAt || 0) ? message : current, undefined as Message | undefined);
-      console.info("[mosh.read-cursors] dm route-visible decision", {
-        threadId: currentThreadId,
-        messageCount: Object.values(state.directMessages || {}).filter((message) => message.threadId === currentThreadId && !message.deletedAt).length,
-        latestMessageId: latestMessage?.id,
-        latestMessageCreatedAt: latestMessage?.createdAt,
-        hasNotifications: true
-      });
       if (latestMessage) {
         void notifications.markRead(directThreadReadTopic(currentThreadId), {
           createdAt: Number(latestMessage.createdAt || 0),
           operationId: String(latestMessage.id)
         }, { source: "route-visible" });
       }
-    } else {
-      console.info("[mosh.read-cursors] dm route-visible decision", {
-        threadId: currentThreadId,
-        hasNotifications: false
-      });
     }
   }, [currentThreadId, showingDm, state, ui, input.live]);
 }

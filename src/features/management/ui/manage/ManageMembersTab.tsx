@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { roleNames, type MemberOption } from "@entities/chat/model/roles";
+import { roleNames, primaryRoleFor, roleChipFor, presenceStatus, type MemberOption } from "@entities/chat/model/roles";
 import type { ChatState, RoleDefinition } from "@entities/chat/model/types";
 import { RoleCheckboxes } from "@features/management/ui/manage/RoleFields";
+import { Avatar, RoleChip } from "@shared/ui/design";
+import { panel, button, row, layout, misc } from "@features/management/ui/manage.styles";
+import * as stylex from "@stylexjs/stylex";
 
 export function ManageMembersTab({
   canManageRoles,
@@ -38,23 +41,61 @@ export function ManageMembersTab({
   }
 
   return (
-    <div className="manage-section">
-      <div className="member-role-layout">
-        <div className="manage-list">
-          {members.map((member) => (
-            <button className={`member-role-picker${selectedMember?.id === member.id ? " active" : ""}`} type="button" key={member.id} onClick={() => setSelectedMemberId(member.id)}>
-              <strong>{member.name}</strong>
-              <small>{roleNames(member.roleIds, roleDefinitions).join(", ") || "No role tags"}</small>
-            </button>
-          ))}
-        </div>
+    <div {...stylex.props(layout.section)}>
+      <div {...stylex.props(layout.split)}>
+        <section {...stylex.props(panel.panel)}>
+          <header {...stylex.props(panel.head)}>
+            <h3 {...stylex.props(panel.h3)}>Members</h3>
+            <span {...stylex.props(panel.meta)}>{members.length} visible</span>
+          </header>
+          {members.length ? (
+            <div {...stylex.props(panel.bodyFlush)}>
+              <div {...stylex.props(layout.rowStack)}>
+                {members.map((member) => {
+                  const isActive = selectedMember?.id === member.id;
+                  const chip = roleChipFor(primaryRoleFor(member.roleIds, member.baseRole, roleDefinitions), roleDefinitions);
+                  return (
+                    <div
+                      key={member.id}
+                      {...stylex.props(row.row, row.tap, isActive && row.sel)}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedMemberId(member.id)}
+                      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedMemberId(member.id); } }}
+                    >
+                      <span {...stylex.props(row.rowLead)}>
+                        <Avatar src={member.avatar} name={member.name} size="md" status={presenceStatus(member.status)} alt={member.name} />
+                      </span>
+                      <span {...stylex.props(row.rowMain)}>
+                        <span {...stylex.props(row.rowTitle)}>{member.name}</span>
+                        <span {...stylex.props(row.rowSub)}>{roleNames(member.roleIds, roleDefinitions).join(", ") || "No role tags"}</span>
+                      </span>
+                      {chip ? (
+                        <span {...stylex.props(row.rowEnd)}>
+                          <RoleChip label={chip.label} color={chip.color} />
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div {...stylex.props(panel.body)}><p {...stylex.props(misc.hint)}>No members to show.</p></div>
+          )}
+        </section>
+
         {selectedMember ? (
-          <form className="manage-editor" onSubmit={saveMemberRoles}>
-            <h3>Role tags for {selectedMember.name}</h3>
-            <RoleCheckboxes roles={roles} selectedRoleIds={selectedRoleIds} onChange={setSelectedRoleIds} />
-            <button className="secondary-action full-width" type="submit" disabled={!canManageRoles}>
-              Save roles
-            </button>
+          <form {...stylex.props(panel.panel)} onSubmit={saveMemberRoles}>
+            <header {...stylex.props(panel.head)}>
+              <h3 {...stylex.props(panel.h3)}>Role tags for {selectedMember.name}</h3>
+            </header>
+            <div {...stylex.props(panel.body)}>
+              <RoleCheckboxes roles={roles} selectedRoleIds={selectedRoleIds} onChange={setSelectedRoleIds} />
+              <div {...stylex.props(button.actions, button.actionsEnd)}>
+                <button type="submit" disabled={!canManageRoles} {...stylex.props(button.btn, button.primary)}>Save roles</button>
+              </div>
+            </div>
           </form>
         ) : null}
       </div>

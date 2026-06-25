@@ -160,6 +160,10 @@ export function ChatSidebar({
           onDismissReconnect={ui.dismissReconnect}
           onStopShare={(shareId) => { void actions.stopScreenShare(shareId); }}
           onUpdateVoicePreferences={ui.updateVoicePreferences}
+          onOpenVoiceSettingsPanel={() => {
+            actions.openManageDialog("audio");
+            handleNavigate();
+          }}
           onVoiceSettingsOpenChange={ui.setVoiceSettingsOpen}
           onUpdateStatus={actions.updatePresence}
         />

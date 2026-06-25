@@ -20,7 +20,46 @@ export type MemberOption = {
   name: string;
   baseRole?: string;
   roleIds: string[];
+  avatar?: string;
+  status?: string;
 };
+
+/** Design-system presence status mapped from raw presence strings. */
+export type MemberPresence = "on" | "idle" | "dnd" | "off";
+
+export function presenceStatus(raw?: string): MemberPresence {
+  if (raw === "online") return "on";
+  if (raw === "idle") return "idle";
+  if (raw === "dnd") return "dnd";
+  return "off";
+}
+
+/** Avatar URL from any member/presence/actor source (mirrors PresencePanel.avatarFor). */
+function avatarFor(member?: RoomMember, presence?: Presence, actor?: Actor) {
+  return presence?.profileImageUrl || presence?.avatarUrl || presence?.avatar || member?.profileImageUrl || member?.avatarUrl || member?.avatar || actor?.profileImageUrl || actor?.avatarUrl || actor?.avatar;
+}
+
+const ROLE_COLOR_IDS = new Set(["owner", "admin", "moderator", "mod", "member", "guest"]);
+
+/** Resolve a role chip's {label,color} from role definitions, falling back to tokens. */
+export function roleChipFor(roleId: string | undefined, input?: RoleDefinitionsInput): { label: string; color?: string } | undefined {
+  if (!roleId) return undefined;
+  const label = roleLabel(roleId, input);
+  const defs = roleDefinitions(input);
+  const definition = Object.values(defs).find((role) => role.id === roleId);
+  const color = definition?.color;
+  return { label, color };
+}
+
+/** Primary role id for chip rendering: first assigned role id with a definition, else the base role. */
+export function primaryRoleFor(roleIds: string[], baseRole?: string, input?: RoleDefinitionsInput): string | undefined {
+  const defs = roleDefinitions(input);
+  const knownIds = new Set(Object.keys(defs));
+  for (const id of roleIds) {
+    if (knownIds.has(id)) return id;
+  }
+  return baseRole && ROLE_COLOR_IDS.has(baseRole) ? baseRole : roleIds[0] || baseRole;
+}
 
 export function cleanRoleId(name: string) {
   return name.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "custom-role";
@@ -60,22 +99,27 @@ export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMemb
     if (member.revokedAt || member.bannedAt) continue;
     const id = memberIdFromEntry(key, member);
     if (!id) continue;
-    members.set(id, { id, name: matterhornDisplayName({ member, fallbackId: id }), baseRole: member.role });
+    members.set(id, { id, name: matterhornDisplayName({ member, fallbackId: id }), baseRole: member.role, avatar: avatarFor(member), status: member.status });
   }
   for (const [key, item] of Object.entries(presence || {})) {
     const id = memberIdFromEntry(key, item);
     if (!id) continue;
     const current = members.get(id);
+    const visible = item.visible === false ? false : true;
     members.set(id, {
       id,
       name: matterhornDisplayName({ presence: item, fallback: current?.name, fallbackId: id }),
-      baseRole: current?.baseRole
+      baseRole: current?.baseRole,
+      avatar: avatarFor(roomMembers?.[id], item, actor.memberId === id ? actor : undefined) || current?.avatar,
+      status: visible ? (item.status || current?.status || "online") : current?.status || "offline"
     });
   }
   members.set(actor.memberId, {
     id: actor.memberId,
     name: matterhornDisplayName({ actor, fallback: members.get(actor.memberId)?.name, fallbackId: actor.memberId }),
-    baseRole: actor.role
+    baseRole: actor.role,
+    avatar: avatarFor(roomMembers?.[actor.memberId], presence?.[actor.memberId], actor) || members.get(actor.memberId)?.avatar,
+    status: "online"
   });
   return [...members.values()]
     .map((member) => ({ ...member, roleIds: assignedRoleIds(member.id, member.baseRole, state) }))

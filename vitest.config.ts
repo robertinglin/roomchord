@@ -5,7 +5,7 @@ import path from "node:path";
 
 export default defineConfig({
   root: path.resolve(__dirname),
-  plugins: [react(), styleX({ fileName: "stylex.css" })],
+  plugins: [react(), styleX({ runtimeInjection: true })],
   resolve: {
     alias: {
       "@app": path.resolve(__dirname, "src", "app"),

@@ -27,6 +27,7 @@ export type UserControlsProps = {
   onDismissReconnect: () => void;
   onStopShare: (shareId: string) => void;
   onUpdateVoicePreferences: (preferences: VoicePreferences) => void;
+  onOpenVoiceSettingsPanel?: () => void;
   onVoiceSettingsOpenChange?: (open: boolean) => void;
   onUpdateStatus: (status: string, activity: string) => void;
   hideVoicePanel?: boolean;
@@ -64,6 +65,7 @@ export function UserControls({
   onDismissReconnect,
   onStopShare,
   onUpdateVoicePreferences,
+  onOpenVoiceSettingsPanel,
   onVoiceSettingsOpenChange,
   onUpdateStatus,
   hideVoicePanel = false
@@ -135,6 +137,10 @@ export function UserControls({
   }
 
   function openVoiceSettings() {
+    if (onOpenVoiceSettingsPanel) {
+      onOpenVoiceSettingsPanel();
+      return;
+    }
     if (!settingsOpen) {
       const preferences = latestVoicePreferences.current;
       mediaBeforeSettings.current = activeMedia ? { ...activeMedia } : mediaForVoicePreferences(preferences, false);

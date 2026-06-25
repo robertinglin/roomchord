@@ -10,7 +10,7 @@ export default defineConfig({
   define: {
     "process.env.NODE_ENV": JSON.stringify("production")
   },
-  plugins: [react(), styleX({ fileName: "stylex.css" }), matterhorn()],
+  plugins: [react(), styleX({ runtimeInjection: true }), matterhorn()],
   resolve: {
     alias: {
       "@app": path.resolve(__dirname, "src", "app"),

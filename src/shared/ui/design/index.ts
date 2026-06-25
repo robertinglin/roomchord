@@ -16,6 +16,7 @@ export { Wordmark } from "./Wordmark";
 export { Avatar } from "./Avatar";
 export type { PresenceStatus, AvatarSize } from "./Avatar";
 export { Badge } from "./Badge";
+export { RoleChip } from "./RoleChip";
 
 // Sidebar atoms
 export { SidebarHead } from "./SidebarHead";
