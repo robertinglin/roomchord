@@ -3,11 +3,6 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
-const {
-  createLiveExampleBackend,
-  currentAppPackHash,
-  operationFromDraft
-} = require("../shared/liveBackend.cjs");
 const sdkApp = require("../mosh.cjs");
 const app = sdkApp.toMatterhornExports();
 
@@ -21,6 +16,10 @@ function primaryOperation(type) {
 
 async function testingApi() {
   return import("matterhorn-sdk/testing");
+}
+
+async function runtimeTestingApi() {
+  return import("matterhorn-sdk/testing/runtime");
 }
 
 function assertCleanMoshTypes(types) {
@@ -180,29 +179,78 @@ test("Chat schema starts with default text channel and configured voice room", (
   });
 });
 
-test("Chat live backend replays persisted operations and refreshes stale app hashes", async () => {
-  const roomId = "room_schema_upgrade";
-  const operation = operationFromDraft(app, roomId, {
-    id: "persisted_upgrade_message",
-    type: "message.send",
-    payload: { channelId: "general", body: "Persisted message", embeds: [] }
-  }, 1, 1000);
-  operation.appPackHash = "sha256-old-chat-schema";
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "matterhorn-mosh-schema-"));
-  const dataFile = path.join(dataDir, "chat.json");
-  fs.writeFileSync(dataFile, JSON.stringify({ version: 1, operations: [operation] }, null, 2));
-
-  const backend = await createLiveExampleBackend({
-    appRoot: path.join(__dirname, "."),
-    roomId,
-    dataFile,
-    seedDemo: false
+test("Chat runtime room applies primary message operations through Matterhorn", async () => {
+  const { createRuntimeTestRoom, testActor } = await runtimeTestingApi();
+  let time = 2000;
+  const room = await createRuntimeTestRoom(sdkApp, {
+    roomId: "mosh_runtime_messages",
+    now: () => time += 1
   });
-  const state = await backend.getState();
-  const saved = JSON.parse(fs.readFileSync(dataFile, "utf8"));
+  const admin = room.as(testActor("admin", { role: "admin", displayName: "Admin" }));
+  const member = room.as(testActor("mina", { role: "member", displayName: "Mina" }));
 
-  assert.equal(state.messages.message_persisted_upgrade_message.body, "Persisted message");
-  assert.equal(saved.operations.every((item) => item.appPackHash === currentAppPackHash(app)), true);
+  await admin.actions.channelCreate({ name: "launch", topic: "Planning", group: "Team" });
+  await member.actions.messageSend({ channelId: "general", body: "Ready", embeds: [] });
+  const state = await room.state();
+  const operations = await room.operations();
+  const channel = state.channels.find((item) => item.name === "launch");
+  const message = Object.values(state.messages).find((item) => item.body === "Ready");
+
+  assert.equal(channel.topic, "Planning");
+  assert.equal(channel.createdBy, "admin");
+  assert.equal(message.authorId, "mina");
+  assert.equal(operations.length, 2);
+  assert.equal(operations[1].schemaAction, "messageSend");
+  assert.equal(operations[1].pluginId, app.hostPlugin.id);
+  assert.equal(message.createdAt, operations[1].createdAt);
+});
+
+test("Chat runtime room applies shared media-room plugin operations", async () => {
+  const { createRuntimeTestRoom, testActor } = await runtimeTestingApi();
+  let time = 3000;
+  const room = await createRuntimeTestRoom(sdkApp, {
+    roomId: "mosh_runtime_media",
+    now: () => time += 1
+  });
+  const admin = room.as(testActor("admin", { role: "admin", displayName: "Admin" }));
+  const member = room.as(testActor("mina", { role: "member", displayName: "Mina" }));
+
+  await admin.actions.mediaRoomCreate({ name: "Standup", group: "Ops", allowsVideo: true });
+  const roomState = await room.roomState();
+  const mediaState = roomState.plugins["gg.matterhorn.examples.plugins.media-rooms"];
+  const created = Object.values(mediaState.rooms).find((item) => item.name === "Standup");
+
+  assert.ok(mediaState.rooms.general_voice, "default configured voice room should be installed by the real plugin");
+  assert.equal(created.group, "Ops");
+  assert.equal(created.createdBy, "admin");
+  assert.equal(created.allowsVideo, true);
+  assert.equal(created.participants && Object.keys(created.participants).length, 0);
+
+  await member.actions.mediaRoomJoin({ roomId: created.id, media: { audio: true, video: false, screen: false } });
+  const joinedState = await room.roomState();
+  const joinedRoom = joinedState.plugins["gg.matterhorn.examples.plugins.media-rooms"].rooms[created.id];
+
+  assert.equal(joinedRoom.participants.mina.memberId, "mina");
+  assert.equal(joinedRoom.participants.mina.media.audio, true);
+  assert.equal(joinedRoom.participants.mina.media.video, false);
+});
+
+test("Chat runtime room rejects actions using Matterhorn role checks", async () => {
+  const { createRuntimeTestRoom, testActor } = await runtimeTestingApi();
+  const room = await createRuntimeTestRoom(sdkApp, {
+    roomId: "mosh_runtime_roles",
+    now: () => 4000
+  });
+  const guest = room.as(testActor("guest", { role: "guest", displayName: "Guest" }));
+
+  await assert.rejects(
+    () => guest.actions.messageSend({ channelId: "general", body: "Nope", embeds: [] }),
+    /requires member|not authorized|unauthorized/i
+  );
+  await assert.rejects(
+    () => guest.actions.mediaRoomCreate({ name: "Private", allowsVideo: true }),
+    /requires moderator|not authorized|unauthorized/i
+  );
 });
 
 test("Chat generated player actions dispatch composition descriptors", async () => {

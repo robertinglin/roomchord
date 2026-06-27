@@ -24,9 +24,7 @@
     "build": "pnpm run build:frontend",
     "check": "pnpm run check:frontend && pnpm run check:fsd",
     "test:frontend": "vitest run --config vitest.config.ts src/app/chat-frontend.test.tsx src/features/messages/ui/MessageFeed.test.tsx",
-    "dev:backend": "node shared/liveBackend.cjs --app . --port 43732",
-    "dev": "node shared/runLiveExample.cjs .",
-    "start:backend": "node shared/liveBackend.cjs --app . --port 43732"
+    "dev": "matterhorn ./mosh.cjs mosh_live_room --serve dev"
   },
   "dependencies": {
     "@stylexjs/stylex": "^0.19.0",
