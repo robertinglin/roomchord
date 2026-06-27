@@ -98,11 +98,14 @@ const testAppMetadata = {
   composition: {
     actions: [
       { name: "channelCreate", type: "channel.create", authorize: { roles: ["admin"] } },
+      { name: "channelRename", type: "channel.rename", authorize: { roles: ["moderator", "admin"] } },
+      { name: "channelArchive", type: "channel.archive", authorize: { roles: ["moderator", "admin"] } },
       { name: "approveJoinRequest", type: "join.approve", authorize: { roles: ["admin"] } },
       { name: "banMember", type: "member.ban", authorize: { roles: ["admin"] } },
       { name: "denyJoinRequest", type: "join.deny", authorize: { roles: ["admin"] } },
       { name: "disableInvite", type: "invite.disable", authorize: { roles: ["admin"] } },
       { name: "mediaRoomCreate", type: "media.room.create", authorize: { roles: ["moderator"] } },
+      { name: "mediaRoomUpdate", type: "media.room.update", authorize: { roles: ["moderator", "admin"] } },
       { name: "messagePin", type: "message.pin", authorize: { roles: ["moderator"] } },
       { name: "moderateMember", type: "member.moderate", authorize: { roles: ["admin"] } },
       { name: "removeInvite", type: "invite.remove", authorize: { roles: ["admin"] } },
@@ -685,7 +688,9 @@ describe("ChatApp", () => {
     try {
       expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
       expect(screen.getByRole("heading", { name: /Mosh/ })).toBeInTheDocument();
-      expect(document.getElementById("matterhorn-mosh-styles")?.textContent).toContain(".shell");
+      const injectedStyles = document.getElementById("matterhorn-mosh-styles")?.textContent || "";
+      expect(injectedStyles).toContain(":root");
+      expect(injectedStyles).toContain(".message-body");
     } finally {
       await act(async () => unmount());
       target.remove();

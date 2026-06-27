@@ -47,7 +47,7 @@ export function Sidebar({
   const sidebar = stylex.props(sectionShell.sidebar, open && sectionShell.sidebarOpen);
   const scroll = stylex.props(sectionShell.sidebarScroll);
   return (
-    <aside className={`sidebar ${sidebar.className}`} style={sidebar.style} aria-label="Room navigation">
+    <aside className={sidebar.className} style={sidebar.style} aria-label="Room navigation">
       <SidebarHead
         appName={appName}
         statusLabel={statusLabel}
@@ -58,7 +58,7 @@ export function Sidebar({
         closeButton={closeButton}
       />
       {showSearch && (
-        <div className={`sb-scroll ${scroll.className}`} style={scroll.style}>
+        <div className={scroll.className} style={scroll.style}>
           <SearchInput
             placeholder={searchPlaceholder}
             value={searchValue}
@@ -67,7 +67,7 @@ export function Sidebar({
           {groups}
         </div>
       )}
-      {!showSearch && <div className={`sb-scroll ${scroll.className}`} style={scroll.style}>{groups}</div>}
+      {!showSearch && <div className={scroll.className} style={scroll.style}>{groups}</div>}
       {user}
     </aside>
   );

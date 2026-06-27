@@ -75,10 +75,9 @@ export function ChatHeader({
   memberAvatars?: string[];
   mobileToggle?: React.ReactNode;
 }) {
-  const toggle = stylex.props(styles.mobileToggle);
   return (
     <header {...stylex.props(styles.head)}>
-      {mobileToggle ? <span className={`mobile-toggle ${toggle.className}`} style={toggle.style}>{mobileToggle}</span> : null}
+      {mobileToggle ? <span {...stylex.props(styles.mobileToggle)}>{mobileToggle}</span> : null}
       {icon && <span {...stylex.props(styles.chanIcon)}>{icon}</span>}
       <h2 {...stylex.props(styles.title)}>{title}</h2>
       {topic && <span {...stylex.props(styles.topic)}>{topic}</span>}

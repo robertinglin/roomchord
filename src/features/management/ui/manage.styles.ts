@@ -235,6 +235,82 @@ export const panel = stylex.create({
   bodyFlush: { padding: "8px" },
 });
 
+/* ───────────────────────────── modal ───────────────────────────── */
+
+const modalPop = stylex.keyframes({
+  "0%": { opacity: 0, transform: "translateY(10px) scale(.98)" },
+  "100%": { opacity: 1, transform: "none" },
+});
+
+export const modal = stylex.create({
+  scrim: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 80,
+    display: "grid",
+    placeItems: "center",
+    padding: "24px",
+    backgroundColor: "rgb(0 0 0 / 0.58)",
+    backdropFilter: "blur(3px)",
+  },
+  dialog: {
+    width: "min(540px, 100%)",
+    maxHeight: "calc(100vh - 48px)",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    borderRadius: "14px",
+    backgroundColor: tokens.surface,
+    boxShadow: tokens.elevPanel,
+    animationName: modalPop,
+    animationDuration: "200ms",
+    animationTimingFunction: "cubic-bezier(.2,.85,.25,1)",
+  },
+  head: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "13px",
+    padding: "20px 22px 17px",
+    borderBottom: `1px solid ${tokens.borderSoft}`,
+  },
+  mhIc: {
+    width: "38px",
+    height: "38px",
+    flex: "0 0 auto",
+    display: "grid",
+    placeItems: "center",
+    borderRadius: "10px",
+    color: tokens.accent,
+    backgroundColor: tokens.accentSoft,
+  },
+  titleWrap: { minWidth: 0, flex: 1 },
+  title: {
+    margin: 0,
+    fontFamily: tokens.fontDisplay,
+    fontSize: "18px",
+    fontWeight: 700,
+    lineHeight: 1.15,
+  },
+  description: {
+    margin: "3px 0 0",
+    color: tokens.muted,
+    fontSize: "13px",
+  },
+  body: {
+    overflowY: "auto",
+    padding: "20px 22px",
+  },
+  foot: {
+    flex: "0 0 auto",
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "10px",
+    padding: "15px 22px",
+    borderTop: `1px solid ${tokens.borderSoft}`,
+    backgroundColor: "#1b1e22",
+  },
+});
+
 /* ───────────────────────────── section label ───────────────────────────── */
 
 export const section = stylex.create({
@@ -373,6 +449,7 @@ export const button = stylex.create({
   },
   sm: { height: "32px", padding: "0 13px", fontSize: "13px" },
   fullWidth: { width: "100%" },
+  pushLeft: { marginRight: "auto" },
   disabled: { opacity: 0.45, cursor: "not-allowed" },
   actions: {
     display: "flex",

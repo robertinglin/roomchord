@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import * as stylex from "@stylexjs/stylex";
 import type { CallMediaSettings, SfuCallState } from "matterhorn-sdk/browser/types";
 import { mediaWithVoicePreferences, type VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { MediaRoom, ScreenShare } from "@entities/chat/model/types";
@@ -6,6 +7,7 @@ import { VoiceSettingsDialog } from "@features/user-controls/ui/VoiceSettingsDia
 import { ReconnectPrompt } from "@features/user-controls/ui/userControls/ReconnectPrompt";
 import { SelfAccountRow } from "@features/user-controls/ui/userControls/SelfAccountRow";
 import { StatusMenu } from "@features/user-controls/ui/userControls/StatusMenu";
+import { tokens } from "../../../shared/ui/theme.stylex";
 import { VoiceControlPanel } from "@shared/ui/VoiceControlPanel";
 
 export type UserControlsProps = {
@@ -32,6 +34,20 @@ export type UserControlsProps = {
   onUpdateStatus: (status: string, activity: string) => void;
   hideVoicePanel?: boolean;
 };
+
+const styles = stylex.create({
+  controls: {
+    flex: "0 0 auto",
+    backgroundColor: tokens.surface,
+    borderTop: "1px solid oklch(0.11 0.006 250 / 0.72)",
+  },
+  statusShroud: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 29,
+    backgroundColor: "transparent",
+  },
+});
 
 function activeScreenShare(screenShares: ScreenShare[], roomId?: string) {
   if (!roomId) return undefined;
@@ -179,10 +195,10 @@ export function UserControls({
   }
 
   return (
-    <footer className="user-controls" aria-label="User controls">
+    <footer {...stylex.props(styles.controls)} aria-label="User controls">
       {statusMenuOpen ? (
         <>
-          <span className="context-menu-shroud" role="presentation" onMouseDown={() => setStatusMenuOpen(false)} />
+          <span {...stylex.props(styles.statusShroud)} role="presentation" onMouseDown={() => setStatusMenuOpen(false)} />
           <StatusMenu onSetStatus={setStatus} />
         </>
       ) : null}

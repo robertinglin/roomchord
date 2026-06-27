@@ -608,6 +608,31 @@ const app = defineApp({
   },
   model: chat.withOperations(operations),
   actions: {
+    channelCreate: {
+      plugin: "primary",
+      type: "channel.create",
+      requiredRole: "admin",
+    },
+    channelRename: {
+      plugin: "primary",
+      type: "channel.rename",
+      requiredRole: "moderator",
+    },
+    channelArchive: {
+      plugin: "primary",
+      type: "channel.archive",
+      requiredRole: "moderator",
+    },
+    mediaRoomCreate: {
+      plugin: "mediaRooms",
+      type: "media.room.create",
+      requiredRole: "moderator",
+    },
+    mediaRoomUpdate: {
+      plugin: "mediaRooms",
+      type: "media.room.update",
+      requiredRole: "moderator",
+    },
     ...permissions.roleManagementActions({
       defineName: "roleCreate",
       assignName: "memberRoleAssign",

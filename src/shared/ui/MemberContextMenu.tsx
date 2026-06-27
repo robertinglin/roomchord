@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { createPortal } from "react-dom";
+import { tokens } from "./theme.stylex";
 
 export type MemberContextMenuAction = {
   disabled?: boolean;
@@ -29,6 +30,96 @@ const styles = stylex.create({
     minWidth: 0,
     width: "100%",
     overflow: "visible",
+  },
+  shroud: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 19,
+    backgroundColor: "transparent",
+  },
+  menu: {
+    position: "fixed",
+    zIndex: 20,
+    width: "224px",
+    display: "grid",
+    gap: "4px",
+    padding: "8px",
+    borderRadius: tokens.radiusPanel,
+    backgroundColor: tokens.surfaceDeep,
+    boxShadow: tokens.elevPanel,
+  },
+  header: {
+    minWidth: 0,
+    padding: "8px",
+    color: tokens.quiet,
+    fontSize: "11px",
+    fontWeight: 800,
+    textTransform: "uppercase",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  item: {
+    minHeight: "36px",
+    padding: "0 8px",
+    border: 0,
+    borderRadius: tokens.radiusItem,
+    color: tokens.muted,
+    backgroundColor: "transparent",
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto",
+    alignItems: "center",
+    gap: "8px",
+    textAlign: "left",
+    fontWeight: 700,
+    cursor: "pointer",
+    ":hover": {
+      color: tokens.fg,
+      backgroundColor: tokens.panelHover,
+    },
+    ":focus": {
+      color: tokens.fg,
+      backgroundColor: tokens.panelHover,
+      outline: "none",
+    },
+    ":disabled": {
+      cursor: "default",
+      opacity: 0.45,
+    },
+  },
+  sectionedItem: {
+    marginTop: "4px",
+    paddingTop: "4px",
+    borderTop: `1px solid ${tokens.borderSoft}`,
+  },
+  dangerItem: {
+    color: tokens.danger,
+  },
+  itemCopy: {
+    minWidth: 0,
+    display: "grid",
+    gap: "2px",
+  },
+  itemLabel: {
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    fontSize: "13px",
+  },
+  itemMeta: {
+    minWidth: 0,
+    color: tokens.quiet,
+    fontSize: "11px",
+    fontWeight: 600,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  icon: {
+    color: tokens.quiet,
+    fontSize: "15px",
+    fontWeight: 900,
   },
 });
 
@@ -122,30 +213,30 @@ export function MemberContextMenu({
       {children}
       {position ? createPortal(
         <>
-          <div className="context-menu-shroud" role="presentation" onMouseDown={() => setPosition(undefined)} />
+          <div {...stylex.props(styles.shroud)} role="presentation" onMouseDown={() => setPosition(undefined)} />
           <div
-            className="member-context-menu rich-context-menu"
+            {...stylex.props(styles.menu)}
             role="menu"
             style={{ left: position.x, top: position.y }}
             onMouseDown={(event) => event.stopPropagation()}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="context-menu-header">{memberName}</div>
+            <div {...stylex.props(styles.header)}>{memberName}</div>
             {menuItems.map((item) => (
               <button
                 aria-label={item.ariaLabel}
-                className={`${item.sectionBefore ? "sectioned" : ""}${item.variant === "danger" ? " danger" : ""}`}
+                {...stylex.props(styles.item, item.sectionBefore && styles.sectionedItem, item.variant === "danger" && styles.dangerItem)}
                 disabled={item.disabled}
                 type="button"
                 role="menuitem"
                 onClick={() => selectItem(item)}
                 key={item.id}
               >
-                <span>
-                  <strong>{item.label}</strong>
-                  {item.meta ? <small>{item.meta}</small> : null}
+                <span {...stylex.props(styles.itemCopy)}>
+                  <strong {...stylex.props(styles.itemLabel)}>{item.label}</strong>
+                  {item.meta ? <small {...stylex.props(styles.itemMeta)}>{item.meta}</small> : null}
                 </span>
-                {item.icon ? <span className="context-menu-icon">{item.icon}</span> : null}
+                {item.icon ? <span {...stylex.props(styles.icon)}>{item.icon}</span> : null}
               </button>
             ))}
           </div>

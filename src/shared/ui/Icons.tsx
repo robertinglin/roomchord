@@ -300,7 +300,7 @@ export function GearIcon(props: IconProps) {
 
 export function StatusIcon({ status, className }: IconProps & { status: "online" | "busy" | "away" | "offline" }) {
   return (
-    <svg className={className || `status-menu-icon ${status}`} viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+    <svg className={className || "ui-icon ico"} viewBox="0 0 12 12" aria-hidden="true" focusable="false">
       <circle cx="6" cy="6" r="4" />
       {status === "away" ? <path d="M6 2a4 4 0 0 0 4 4 4 4 0 1 1-4-4Z" /> : null}
       {status === "offline" ? <circle cx="6" cy="6" r="2.2" /> : null}

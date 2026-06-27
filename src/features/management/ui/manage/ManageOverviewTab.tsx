@@ -69,7 +69,6 @@ export function ManageOverviewTab({
           <label {...stylex.props(field.field)}>
             <span {...stylex.props(field.label)}>Room name</span>
             <input
-              className="etch"
               aria-label="Room name"
               value={draftName}
               maxLength={40}
@@ -80,7 +79,6 @@ export function ManageOverviewTab({
           <label {...stylex.props(field.field, field.fieldLast)}>
             <span {...stylex.props(field.label)}>Topic</span>
             <input
-              className="etch"
               aria-label="Room topic"
               value={draftTopic}
               placeholder="What is this room about?"
@@ -91,7 +89,6 @@ export function ManageOverviewTab({
           <div {...stylex.props(button.actions, button.actionsEnd)}>
             <button
               type="button"
-              className="btn ghost"
               onClick={() => { setDraftName(roomName); setDraftTopic(""); }}
               {...stylex.props(button.btn, button.ghost, button.sm)}
             >
@@ -99,7 +96,6 @@ export function ManageOverviewTab({
             </button>
             <button
               type="button"
-              className="btn primary"
               disabled
               title="Room renaming isn't available yet"
               aria-disabled="true"
@@ -152,7 +148,7 @@ export function ManageOverviewTab({
                 <span {...stylex.props(row.rowSub)}>Open the admin tab to action them.</span>
               </span>
               <span {...stylex.props(row.rowEnd)}>
-                <button type="button" className="btn ghost" {...stylex.props(button.btn, button.ghost, button.sm)}>Review</button>
+                <button type="button" {...stylex.props(button.btn, button.ghost, button.sm)}>Review</button>
               </span>
             </div>
           </div>

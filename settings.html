@@ -252,6 +252,36 @@ kbd{font-family:var(--font-mono);font-size:12px;padding:3px 8px;border-radius:5p
   box-shadow:inset 0 0 0 1px oklch(0.68 0.18 25 / 0.25);padding:18px;margin-top:18px}
 .danger-zone .sec-label{color:oklch(0.74 0.1 25)}
 
+/* ════════════ CREATE-CHANNEL MODAL (centered, standalone) ════════════ */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,0.58);backdrop-filter:blur(3px);
+  display:none;place-items:center;padding:24px;z-index:200;animation:fade 150ms ease}
+.scrim.open{display:grid}
+.modal{width:min(540px,100%);max-height:calc(100vh - 48px);display:flex;flex-direction:column;
+  background:var(--surface);border-radius:14px;box-shadow:var(--elev-panel);overflow:hidden;
+  animation:pop 200ms cubic-bezier(.2,.85,.25,1)}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+.modal-head{display:flex;align-items:flex-start;gap:13px;padding:20px 22px 17px;border-bottom:1px solid var(--border-soft)}
+.modal-head .mh-ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent);flex:0 0 auto}
+.modal-head .mh-ic .ico{width:20px;height:20px}
+.modal-head h3{font-size:18px;font-weight:700;line-height:1.15}
+.modal-head p{margin:3px 0 0;font-size:13px;color:var(--muted)}
+.modal-head .c-close{margin-left:auto}
+.modal-body{padding:20px 22px;overflow-y:auto}
+.modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:15px 22px;
+  border-top:1px solid var(--border-soft);background:var(--surface-deep);flex:0 0 auto}
+
+/* segmented type control */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:9px;
+  background:var(--field-bg);box-shadow:var(--elev-ctrl)}
+.seg button{height:38px;border-radius:6px;font-weight:600;font-size:14px;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:background 130ms,color 130ms}
+.seg button .ico{width:16px;height:16px;color:var(--quiet)}
+.seg button.on{background:var(--panel-active);color:var(--fg);box-shadow:var(--elev-ctrl)}
+.seg button.on .ico{color:var(--accent)}
+.seg.locked{pointer-events:none}
+.seg.locked button:not(.on){opacity:.4}
+
 /* mobile tab strip (hidden on desktop) */
 .tabstrip{display:none}
 
@@ -393,28 +423,10 @@ kbd{font-family:var(--font-mono);font-size:12px;padding:3px 8px;border-radius:5p
       <!-- ───────── CHANNELS ───────── -->
       <div class="page" id="page-channels">
         <div class="panel">
-          <div class="panel-head"><h3>New channel</h3></div>
-          <div class="panel-body">
-            <div class="field">
-              <label for="cn">Channel name</label>
-              <input class="input etch" id="cn" placeholder="channel-name">
-            </div>
-            <div class="field">
-              <label for="ct">Topic <span style="color:var(--quiet);font-weight:500;text-transform:none;letter-spacing:0">— optional</span></label>
-              <input class="input etch" id="ct" placeholder="What's this channel for?">
-            </div>
-            <div class="field">
-              <label for="cg">Group</label>
-              <select class="select etch" id="cg"><option>General</option><option>Project</option><option>Off-topic</option></select>
-            </div>
-            <div class="btn-row end">
-              <button class="btn primary"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Create channel</button>
-            </div>
+          <div class="panel-head">
+            <h3>Channels</h3><span class="meta">1 channel</span>
+            <button class="btn primary sm" data-new="text"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New channel</button>
           </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head"><h3>Channels</h3><span class="meta">1 channel</span></div>
           <div class="panel-body flush">
             <div class="row">
               <div class="row-lead" style="color:var(--quiet)"><svg class="ico" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1Z"/><path d="M16 9a3 3 0 0 1 0 6"/></svg></div>
@@ -423,7 +435,7 @@ kbd{font-family:var(--font-mono);font-size:12px;padding:3px 8px;border-radius:5p
                 <div class="row-sub">General · Room coordination</div>
               </div>
               <div class="row-end">
-                <button class="btn ghost sm">Manage</button>
+                <button class="btn ghost sm" data-manage="general">Manage</button>
               </div>
             </div>
           </div>
@@ -433,38 +445,11 @@ kbd{font-family:var(--font-mono);font-size:12px;padding:3px 8px;border-radius:5p
       <!-- ───────── VOICE CHANNELS ───────── -->
       <div class="page" id="page-voice">
         <div class="panel">
-          <div class="panel-head"><h3>New voice channel</h3></div>
-          <div class="panel-body">
-            <div class="field">
-              <label for="vn">Voice channel name</label>
-              <input class="input etch" id="vn" placeholder="Design review">
-            </div>
-            <div class="field">
-              <label for="vg">Group</label>
-              <select class="select etch" id="vg"><option>General</option><option>Project</option></select>
-            </div>
-            <div class="opt" style="border-top:1px solid var(--border-soft);margin-top:4px">
-              <div class="opt-main">
-                <div class="opt-title">Allow camera</div>
-                <div class="opt-desc">Members may share video in this channel.</div>
-              </div>
-              <div class="opt-end">
-                <label class="switch"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></label>
-              </div>
-            </div>
-
-            <p class="sec-label" style="margin-top:18px">Role visibility</p>
-            <div id="voiceRoles"></div>
-
-            <div class="btn-row end">
-              <button class="btn primary"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Create voice channel</button>
-            </div>
+          <div class="panel-head">
+            <h3>Voice channels</h3><span class="meta">0 channels</span>
+            <button class="btn primary sm" data-new="voice"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New voice channel</button>
           </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head"><h3>Voice channels</h3><span class="meta">0 channels</span></div>
-          <div class="panel-body"><div class="hint">No voice channels yet. Create one above — visibility per role is set at creation.</div></div>
+          <div class="panel-body"><div class="hint">No voice channels yet. Create one to set its category, camera permission, user limit, and per-role access.</div></div>
         </div>
       </div>
 
@@ -682,6 +667,76 @@ kbd{font-family:var(--font-mono);font-size:12px;padding:3px 8px;border-radius:5p
   </section>
 </div>
 
+<!-- ════════ CREATE CHANNEL — standalone centered modal ════════ -->
+<div class="scrim" id="ccScrim" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ccTitle">
+    <div class="modal-head">
+      <div class="mh-ic" id="ccIcon"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1Z"/><path d="M16 9a3 3 0 0 1 0 6"/></svg></div>
+      <div style="min-width:0">
+        <h3 id="ccTitle">Create channel</h3>
+        <p id="ccDesc">Add a text channel to the Mosh room.</p>
+      </div>
+      <button class="c-close" id="ccClose" title="Close" aria-label="Close dialog">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="field">
+        <label>Channel type</label>
+        <div class="seg" id="ccSeg">
+          <button data-type="text" class="on"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1Z"/><path d="M16 9a3 3 0 0 1 0 6"/></svg>Text</button>
+          <button data-type="voice"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Voice</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="ccCat">Category</label>
+        <select class="select etch" id="ccCat">
+          <option>General</option><option>Project</option><option>Off-topic</option>
+          <option value="__new">＋ Create new category…</option>
+        </select>
+        <input class="input etch" id="ccCatNew" placeholder="New category name" style="display:none;margin-top:9px">
+      </div>
+
+      <div class="field">
+        <label for="ccName" id="ccNameLbl">Channel name</label>
+        <input class="input etch" id="ccName" placeholder="channel-name">
+      </div>
+
+      <div class="field" id="ccTopicField">
+        <label for="ccTopic">Topic <span style="color:var(--quiet);font-weight:500;text-transform:none;letter-spacing:0">— optional</span></label>
+        <input class="input etch" id="ccTopic" placeholder="What's this channel for?">
+      </div>
+
+      <div id="ccVoiceOpts" style="display:none">
+        <div class="opt" style="padding-top:2px">
+          <div class="opt-main"><div class="opt-title">Allow camera</div><div class="opt-desc">Members may share video in this channel.</div></div>
+          <div class="opt-end"><label class="switch"><input type="checkbox" checked><span class="track"></span><span class="knob"></span></label></div>
+        </div>
+        <div class="opt" style="padding-bottom:4px">
+          <div class="opt-main"><div class="opt-title">User limit</div><div class="opt-desc">Max members connected at once. 0 means no limit.</div></div>
+          <div class="opt-end"><input class="input etch" type="number" min="0" max="99" value="0" style="width:84px;text-align:center"></div>
+        </div>
+      </div>
+
+      <div class="opt" style="border-top:1px solid var(--border-soft)">
+        <div class="opt-main"><div class="opt-title">Private channel</div><div class="opt-desc">Hidden from the room by default — only roles you grant access to can see it.</div></div>
+        <div class="opt-end"><label class="switch"><input type="checkbox" id="ccPrivate"><span class="track"></span><span class="knob"></span></label></div>
+      </div>
+
+      <p class="sec-label" style="margin-top:16px" id="ccAccessLbl">Role access</p>
+      <div id="ccRoles"></div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn danger" id="ccDelete" style="margin-right:auto;display:none">Delete channel</button>
+      <button class="btn ghost" id="ccCancel">Cancel</button>
+      <button class="btn primary" id="ccCreate"><svg class="ico" id="ccCreateIcon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span id="ccCreateLbl">Create channel</span></button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ── data ── */
 const ROLES = [
@@ -705,18 +760,6 @@ const PAGES = {
   audio:   {t:'Voice & audio',d:'Microphone processing for this device.'},
 };
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-
-/* ── render: voice role visibility ── */
-$('#voiceRoles').innerHTML = ROLES.map(r=>`
-  <div class="row">
-    <div class="row-lead"><span class="rdot" style="background:${r.color}"></span></div>
-    <div class="row-main"><div class="row-title">${r.name}</div></div>
-    <div class="row-end">
-      <select class="select etch" style="width:128px">
-        <option>Hidden</option><option>Visible</option><option>Join only</option>
-      </select>
-    </div>
-  </div>`).join('');
 
 /* ── render: roles list ── */
 $('#rolesList').innerHTML = ROLES.map(r=>`
@@ -805,6 +848,112 @@ $('#recBtn').onclick=()=>{
     ? '<svg class="ico" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>Stop recording'
     : '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg>Start recording';
   $('#recBtn').style.color = recording ? 'oklch(0.78 0.12 25)' : '';
+};
+
+/* ══════════ CREATE CHANNEL MODAL ══════════ */
+const HASH_SVG='<svg class="ico" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1Z"/><path d="M16 9a3 3 0 0 1 0 6"/></svg>';
+const MIC_SVG ='<svg class="ico" viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+const scrim=$('#ccScrim');
+let ccType='text';
+
+function ccRenderRoles(){
+  const isVoice = ccType==='voice';
+  const opts = isVoice ? ['Speak & listen','Listen only','No access']
+                       : ['Post & read','Read only','No access'];
+  $('#ccRoles').innerHTML = ROLES.map(r=>{
+    const def = r.key==='guest' ? opts[1] : opts[0];
+    return `<label class="row" style="margin-top:8px">
+      <div class="row-lead"><span class="rdot" style="background:${r.color}"></span></div>
+      <div class="row-main"><div class="row-title">${r.name}</div></div>
+      <div class="row-end"><select class="select etch" style="width:158px">
+        ${opts.map(o=>`<option ${o===def?'selected':''}>${o}</option>`).join('')}
+      </select></div>
+    </label>`;
+  }).join('');
+}
+/* existing channels — the manage targets */
+const CHANNELS = {
+  general: {type:'text', name:'general', topic:'Room coordination', cat:'General', private:false},
+};
+const PLUS_ICON='<path d="M12 5v14M5 12h14"/>';
+const CHECK_ICON='<path d="m5 12 5 5 9-11"/>';
+let ccMode='create';
+
+/* type-dependent fields (shared by create + edit) */
+function ccSetType(t){
+  ccType=t;
+  const isVoice = t==='voice';
+  $$('#ccSeg button').forEach(b=>b.classList.toggle('on', b.dataset.type===t));
+  $('#ccIcon').innerHTML = isVoice ? MIC_SVG : HASH_SVG;
+  $('#ccNameLbl').textContent = isVoice ? 'Voice channel name' : 'Channel name';
+  $('#ccName').placeholder    = isVoice ? 'Design review' : 'channel-name';
+  $('#ccTopicField').style.display = isVoice ? 'none' : '';
+  $('#ccVoiceOpts').style.display  = isVoice ? '' : 'none';
+  $('#ccAccessLbl').textContent = isVoice ? 'Who can connect' : 'Role access';
+  ccRenderRoles();
+}
+function ccSetCat(name){
+  const sel=$('#ccCat'); sel.value=name;
+  if(sel.selectedIndex<0 || sel.value==='__new') sel.selectedIndex=0;
+  $('#ccCatNew').style.display='none';
+}
+function ccShow(){
+  scrim.classList.add('open'); scrim.setAttribute('aria-hidden','false');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>$('#ccName').focus(), 70);
+}
+/* CREATE — blank, type switchable */
+function openCC(type){
+  ccMode='create';
+  ccSetType(type || 'text');
+  const isVoice = (type==='voice');
+  $('#ccSeg').classList.remove('locked');
+  $('#ccTitle').textContent = isVoice ? 'Create voice channel' : 'Create channel';
+  $('#ccDesc').textContent  = isVoice ? 'Add a voice room to the Mosh room.' : 'Add a text channel to the Mosh room.';
+  $('#ccCreateIcon').innerHTML = PLUS_ICON;
+  $('#ccCreateLbl').textContent = isVoice ? 'Create voice channel' : 'Create channel';
+  $('#ccDelete').style.display='none';
+  $('#ccCat').selectedIndex = 0; $('#ccCatNew').style.display='none';
+  $('#ccName').value=''; if($('#ccTopic')) $('#ccTopic').value='';
+  $('#ccPrivate').checked=false;
+  ccShow();
+}
+/* MANAGE — prefilled, type locked (you don't convert text↔voice on an existing channel) */
+function openEdit(ch){
+  ccMode='edit';
+  ccSetType(ch.type);
+  const isVoice = ch.type==='voice';
+  $('#ccSeg').classList.add('locked');
+  $('#ccTitle').textContent = isVoice ? ('Manage '+ch.name) : ('Manage #'+ch.name);
+  $('#ccDesc').textContent  = 'Edit its name, category, and per-role access — or delete it.';
+  $('#ccCreateIcon').innerHTML = CHECK_ICON;
+  $('#ccCreateLbl').textContent = 'Save changes';
+  $('#ccDelete').style.display='';
+  $('#ccDelete').textContent = isVoice ? 'Delete voice channel' : 'Delete channel';
+  ccSetCat(ch.cat);
+  $('#ccName').value = ch.name;
+  if(!isVoice && $('#ccTopic')) $('#ccTopic').value = ch.topic || '';
+  $('#ccPrivate').checked = !!ch.private;
+  ccShow();
+}
+function closeCC(){
+  scrim.classList.remove('open'); scrim.setAttribute('aria-hidden','true');
+  document.body.style.overflow='';
+}
+/* launchers */
+$$('[data-new]').forEach(b=>b.onclick=()=>openCC(b.dataset.new));
+$$('[data-manage]').forEach(b=>b.onclick=()=>{ const ch=CHANNELS[b.dataset.manage]; if(ch) openEdit(ch); });
+$$('#ccSeg button').forEach(b=>b.onclick=()=>{ if(ccMode!=='edit') ccSetType(b.dataset.type); });
+$('#ccClose').onclick=closeCC;
+$('#ccCancel').onclick=closeCC;
+$('#ccCreate').onclick=closeCC;  /* prototype: confirm + close */
+$('#ccDelete').onclick=closeCC;  /* prototype: confirm delete + close */
+scrim.addEventListener('click', e=>{ if(e.target===scrim) closeCC(); });
+window.addEventListener('keydown', e=>{ if(e.key==='Escape' && scrim.classList.contains('open')) closeCC(); });
+$('#ccCat').onchange=function(){
+  const isNew=this.value==='__new';
+  $('#ccCatNew').style.display = isNew ? '' : 'none';
+  if(isNew) $('#ccCatNew').focus();
 };
 </script>
 </body>

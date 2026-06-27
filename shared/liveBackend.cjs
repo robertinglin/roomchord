@@ -27,7 +27,9 @@ function loadTestingApi() {
 
 function loadMatterhornExampleApp(appRoot = process.cwd()) {
   const resolved = path.resolve(appRoot);
-  const entry = path.join(resolved, "../mosh.cjs");
+  const entry = fs.existsSync(path.join(resolved, "mosh.cjs"))
+    ? path.join(resolved, "mosh.cjs")
+    : path.join(resolved, "../mosh.cjs");
   if (!fs.existsSync(entry)) throw new Error(`Matterhorn example app entry not found: ${entry}`);
   return { appRoot: resolved, app: require(entry).toMatterhornExports() };
 }
@@ -160,7 +162,76 @@ function defaultMediaRooms(app) {
   return (plugin?.config?.defaultRooms || []).map((room) => ({ ...clone(room), roleAccess: room.roleAccess || {}, participants: {} }));
 }
 
+function optionalField(target, payload, key) {
+  if (Object.prototype.hasOwnProperty.call(payload, key)) target[key] = payload[key];
+}
+
+function applyChannelProjection(primary, operation) {
+  const payload = operation.payload || operation.input || {};
+  if (operation.schemaAction === "channelRename") {
+    const channel = (primary.channels || []).find((item) => item?.id === payload.channelId);
+    if (!channel) return;
+    optionalField(channel, payload, "name");
+    optionalField(channel, payload, "topic");
+    optionalField(channel, payload, "group");
+    channel.updatedAt = operation.createdAt;
+  }
+  if (operation.schemaAction === "channelArchive") {
+    const channel = (primary.channels || []).find((item) => item?.id === payload.channelId);
+    if (channel) channel.archivedAt = operation.createdAt;
+  }
+}
+
+function newMediaRoomId(operation, payload) {
+  return payload.roomId || payload.id || `media_room_${operation.id || operation.seq || Date.now()}`;
+}
+
+function applyMediaRoomProjection(rooms, operation) {
+  const payload = operation.payload || operation.input || {};
+  if (operation.schemaAction === "mediaRoomCreate") {
+    rooms.push({
+      id: newMediaRoomId(operation, payload),
+      name: payload.name,
+      group: payload.group || null,
+      allowsVideo: payload.allowsVideo !== false,
+      locked: Boolean(payload.locked),
+      roleAccess: payload.roleAccess || {},
+      participants: {},
+      scopeType: payload.scopeType,
+      scopeId: payload.scopeId,
+      createdAt: operation.createdAt,
+      createdBy: operation.actor?.memberId
+    });
+  }
+  if (operation.schemaAction === "mediaRoomUpdate") {
+    const room = rooms.find((item) => item?.id === payload.roomId);
+    if (!room) return;
+    optionalField(room, payload, "name");
+    optionalField(room, payload, "group");
+    optionalField(room, payload, "allowsVideo");
+    optionalField(room, payload, "locked");
+    optionalField(room, payload, "spotlightMemberId");
+    optionalField(room, payload, "roleAccess");
+    room.updatedAt = operation.createdAt;
+  }
+  if (operation.schemaAction === "mediaRoomArchive") {
+    const room = rooms.find((item) => item?.id === payload.roomId);
+    if (room) room.archivedAt = operation.createdAt;
+  }
+}
+
+function applyLocalProjections(app, primary, operations = []) {
+  const projectedPrimary = clone(primary) || {};
+  const rooms = defaultMediaRooms(app);
+  for (const operation of operations) {
+    applyChannelProjection(projectedPrimary, operation);
+    applyMediaRoomProjection(rooms, operation);
+  }
+  return { primary: projectedPrimary, rooms: rooms.filter((room) => !room.archivedAt) };
+}
+
 function projectStateForFrontend(app, primary = {}, actor = actorFromRequest()) {
+  const rooms = Array.isArray(primary.rooms) ? clone(primary.rooms) : defaultMediaRooms(app);
   const projected = {
     ...clone(primary),
     comments: {},
@@ -172,7 +243,7 @@ function projectStateForFrontend(app, primary = {}, actor = actorFromRequest()) 
     members: {},
     presence: {},
     reactions: {},
-    rooms: defaultMediaRooms(app),
+    rooms,
     screenShares: {}
   };
   return permissions.filterStateForActor(projected, actor, {
@@ -249,7 +320,8 @@ async function createLiveExampleBackend(options = {}) {
   let seq = operations.reduce((max, operation) => Math.max(max, Number(operation.seq) || 0), 0);
 
   async function projectedState(actor = actorFromRequest()) {
-    return projectStateForFrontend(app, room.state, actor);
+    const projected = applyLocalProjections(app, room.state, operations);
+    return projectStateForFrontend(app, { ...projected.primary, rooms: projected.rooms }, actor);
   }
 
   async function handleDraftOperation(draft = {}) {

@@ -67,24 +67,23 @@ export function ManageRolesTab({
           <div {...stylex.props(panel.body)}>
             <label {...stylex.props(field.field)}>
               <span {...stylex.props(field.label)}>Role name</span>
-              <input className="etch" aria-label="Role name" value={roleName} onChange={(event) => setRoleName(event.target.value)} placeholder="Launch Lead" {...stylex.props(field.input)} />
+              <input aria-label="Role name" value={roleName} onChange={(event) => setRoleName(event.target.value)} placeholder="Launch Lead" {...stylex.props(field.input)} />
             </label>
             <label {...stylex.props(field.field)}>
               <span {...stylex.props(field.label)}>Description</span>
-              <input className="etch" aria-label="Role description" value={roleDescription} onChange={(event) => setRoleDescription(event.target.value)} placeholder="Coordinates launch threads" {...stylex.props(field.input)} />
+              <input aria-label="Role description" value={roleDescription} onChange={(event) => setRoleDescription(event.target.value)} placeholder="Coordinates launch threads" {...stylex.props(field.input)} />
             </label>
             <label {...stylex.props(field.field, field.fieldLast)}>
               <span {...stylex.props(field.label)}>Colour</span>
               <span {...stylex.props(field.colorRow)}>
                 <input
-                  className="etch"
                   aria-label="Role color swatch"
                   type="color"
                   value={/^#[0-9a-f]{6}$/i.test(roleColor) ? roleColor : "#38bdf8"}
                   onChange={(event) => setRoleColor(event.target.value)}
                   {...stylex.props(field.colorSwatch)}
                 />
-                <input className="etch" aria-label="Role color" value={roleColor} onChange={(event) => setRoleColor(event.target.value)} placeholder="#38bdf8" {...stylex.props(field.input, field.colorHex)} />
+                <input aria-label="Role color" value={roleColor} onChange={(event) => setRoleColor(event.target.value)} placeholder="#38bdf8" {...stylex.props(field.input, field.colorHex)} />
               </span>
             </label>
             <div {...stylex.props(button.actions, button.actionsEnd)}>
@@ -116,7 +115,7 @@ export function ManageRolesTab({
                   </span>
                   {canManageRoles ? (
                     <span {...stylex.props(row.rowEnd)}>
-                      <button type="button" className="btn ghost" onClick={() => openRoleEditor(role)} {...stylex.props(button.btn, button.ghost, button.sm)}>Manage</button>
+                      <button type="button" onClick={() => openRoleEditor(role)} {...stylex.props(button.btn, button.ghost, button.sm)}>Manage</button>
                     </span>
                   ) : null}
                 </div>

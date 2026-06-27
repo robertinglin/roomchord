@@ -17,14 +17,14 @@
     "matterhornVersion": ">=0.1 <0.2",
     "hostPack": {
       "url": "workspace:matterhorn-mosh#hostPack",
-      "integrity": "sha256-af5739c5622420651f60763584ad8b562a4bf418a1e940175ed139af91dc301e"
+      "integrity": "sha256-fce134c4a40b40fe843eeeb07b89c12ae7cb4872759b8ea96f267b5c0a08b168"
     },
     "playerPacks": [
       {
         "id": "gg.matterhorn.mosh.player",
         "name": "Mosh Player",
         "url": "workspace:matterhorn-mosh#playerPack",
-        "integrity": "sha256-32f317d8a261c0ff1f42ba498159a3ed4148b81835c766f717e8c1de1e49320b",
+        "integrity": "sha256-eaa1fa147ef4cfbb74fa4c45cc202b36d143b3b90297174e6b1ee277b10eff99",
         "recommendedFor": {
           "devices": [
             "desktop",
@@ -42,7 +42,7 @@
       "operationSchemaHash": "sha256-383daaa322dc414ba17e68f96c5fc4561fb247e55ddaee5c65eaebed641b946e",
       "stateSchemaHash": "sha256-ac391b0efaf006b5120d00f48ed1067a8d767ee9113351332eb61630de666bbf",
       "pluginGraphHash": "sha256-b45cacb8a1f9637fa523f4fd71cbd218ca44da5e2b5ed8ad26d61d204fe65f23",
-      "compositionSchemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
+      "compositionSchemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
     },
     "composition": {
       "kind": "matterhorn.app-composition.schema",
@@ -893,6 +893,10 @@
                 "activity": []
               }
             },
+            "nonReplayableOperations": [
+              "media.room.join",
+              "media.room.leave"
+            ],
             "operations": {
               "media.room.create": {
                 "payload": {
@@ -969,6 +973,115 @@
                     }
                   }
                 ]
+              },
+              "media.room.update": {
+                "payload": {
+                  "required": {
+                    "roomId": {
+                      "type": "string",
+                      "max": 200
+                    }
+                  },
+                  "optional": {
+                    "locked": {
+                      "type": "boolean"
+                    },
+                    "allowsVideo": {
+                      "type": "boolean"
+                    },
+                    "spotlightMemberId": {
+                      "type": "string",
+                      "max": 120
+                    },
+                    "name": {
+                      "type": "string",
+                      "max": 100
+                    },
+                    "group": {
+                      "type": "string",
+                      "max": 80,
+                      "nullable": true,
+                      "nonEmpty": false
+                    },
+                    "roleAccess": {
+                      "type": "record",
+                      "values": {
+                        "type": "enum",
+                        "values": [
+                          "editor",
+                          "readonly"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "authorize": {
+                  "roles": [
+                    "moderator"
+                  ]
+                },
+                "effects": [
+                  {
+                    "kind": "updateRecord",
+                    "collection": "rooms",
+                    "id": "$payload.roomId",
+                    "fields": {
+                      "locked": "$payload.locked",
+                      "allowsVideo": "$payload.allowsVideo",
+                      "spotlightMemberId": "$payload.spotlightMemberId",
+                      "name": "$payload.name",
+                      "group": "$payload.group",
+                      "roleAccess": "$payload.roleAccess",
+                      "updatedAt": "$createdAt"
+                    }
+                  },
+                  {
+                    "kind": "appendToArray",
+                    "path": "activity",
+                    "item": {
+                      "type": "media.room.update",
+                      "actorId": "$actor.memberId",
+                      "actorName": "$actor.displayName",
+                      "createdAt": "$createdAt"
+                    }
+                  }
+                ]
+              },
+              "media.room.archive": {
+                "payload": {
+                  "required": {
+                    "roomId": {
+                      "type": "string",
+                      "max": 200
+                    }
+                  }
+                },
+                "authorize": {
+                  "roles": [
+                    "moderator"
+                  ]
+                },
+                "effects": [
+                  {
+                    "kind": "markRecord",
+                    "collection": "rooms",
+                    "id": "$payload.roomId",
+                    "fields": {
+                      "archivedAt": "$createdAt",
+                      "participants": {}
+                    }
+                  },
+                  {
+                    "kind": "appendToArray",
+                    "path": "activity",
+                    "item": {
+                      "type": "media.room.archive",
+                      "actorId": "$actor.memberId",
+                      "actorName": "$actor.displayName",
+                      "createdAt": "$createdAt"
+                    }
+                  }
+                ]
               }
             },
             "views": {},
@@ -1014,7 +1127,8 @@
           "plugin": "primary",
           "kind": "collection",
           "query": "channelSummary",
-          "collection": "channels"
+          "collection": "channels",
+          "path": "channels"
         },
         {
           "name": "roomDirectory",
@@ -1031,17 +1145,20 @@
         {
           "name": "channelArchive",
           "plugin": "primary",
-          "type": "channel.archive"
+          "type": "channel.archive",
+          "requiredRole": "moderator"
         },
         {
           "name": "channelCreate",
           "plugin": "primary",
-          "type": "channel.create"
+          "type": "channel.create",
+          "requiredRole": "admin"
         },
         {
           "name": "channelRename",
           "plugin": "primary",
-          "type": "channel.rename"
+          "type": "channel.rename",
+          "requiredRole": "moderator"
         },
         {
           "name": "inviteDisable",
@@ -1293,49 +1410,7 @@
           "name": "mediaRoomCreate",
           "plugin": "mediaRooms",
           "type": "media.room.create",
-          "payloadSchema": {
-            "required": {
-              "name": {
-                "type": "string",
-                "max": 100
-              }
-            },
-            "optional": {
-              "allowsVideo": {
-                "type": "boolean",
-                "default": true
-              },
-              "group": {
-                "type": "string",
-                "max": 80,
-                "nullable": true,
-                "nonEmpty": false
-              },
-              "scopeType": {
-                "type": "string",
-                "max": 80
-              },
-              "scopeId": {
-                "type": "string",
-                "max": 160
-              },
-              "roleAccess": {
-                "type": "record",
-                "values": {
-                  "type": "enum",
-                  "values": [
-                    "editor",
-                    "readonly"
-                  ]
-                }
-              }
-            },
-            "authorize": {
-              "roles": [
-                "moderator"
-              ]
-            }
-          }
+          "requiredRole": "moderator"
         },
         {
           "name": "mediaRoomJoin",
@@ -1398,51 +1473,7 @@
           "name": "mediaRoomUpdate",
           "plugin": "mediaRooms",
           "type": "media.room.update",
-          "payloadSchema": {
-            "required": {
-              "roomId": {
-                "type": "string",
-                "max": 200
-              }
-            },
-            "optional": {
-              "locked": {
-                "type": "boolean"
-              },
-              "allowsVideo": {
-                "type": "boolean"
-              },
-              "spotlightMemberId": {
-                "type": "string",
-                "max": 120
-              },
-              "name": {
-                "type": "string",
-                "max": 100
-              },
-              "group": {
-                "type": "string",
-                "max": 80,
-                "nullable": true,
-                "nonEmpty": false
-              },
-              "roleAccess": {
-                "type": "record",
-                "values": {
-                  "type": "enum",
-                  "values": [
-                    "editor",
-                    "readonly"
-                  ]
-                }
-              }
-            },
-            "authorize": {
-              "roles": [
-                "moderator"
-              ]
-            }
-          }
+          "requiredRole": "moderator"
         },
         {
           "name": "screenshareStart",
@@ -1883,7 +1914,7 @@
           }
         }
       },
-      "schemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
+      "schemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
     },
     "capabilities": {
       "required": [
@@ -1972,7 +2003,7 @@
       ]
     },
     "composition": {
-      "schemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f",
+      "schemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834",
       "primaryPlugin": {
         "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
@@ -2814,6 +2845,10 @@
                 "activity": []
               }
             },
+            "nonReplayableOperations": [
+              "media.room.join",
+              "media.room.leave"
+            ],
             "operations": {
               "media.room.create": {
                 "payload": {
@@ -2890,6 +2925,115 @@
                     }
                   }
                 ]
+              },
+              "media.room.update": {
+                "payload": {
+                  "required": {
+                    "roomId": {
+                      "type": "string",
+                      "max": 200
+                    }
+                  },
+                  "optional": {
+                    "locked": {
+                      "type": "boolean"
+                    },
+                    "allowsVideo": {
+                      "type": "boolean"
+                    },
+                    "spotlightMemberId": {
+                      "type": "string",
+                      "max": 120
+                    },
+                    "name": {
+                      "type": "string",
+                      "max": 100
+                    },
+                    "group": {
+                      "type": "string",
+                      "max": 80,
+                      "nullable": true,
+                      "nonEmpty": false
+                    },
+                    "roleAccess": {
+                      "type": "record",
+                      "values": {
+                        "type": "enum",
+                        "values": [
+                          "editor",
+                          "readonly"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "authorize": {
+                  "roles": [
+                    "moderator"
+                  ]
+                },
+                "effects": [
+                  {
+                    "kind": "updateRecord",
+                    "collection": "rooms",
+                    "id": "$payload.roomId",
+                    "fields": {
+                      "locked": "$payload.locked",
+                      "allowsVideo": "$payload.allowsVideo",
+                      "spotlightMemberId": "$payload.spotlightMemberId",
+                      "name": "$payload.name",
+                      "group": "$payload.group",
+                      "roleAccess": "$payload.roleAccess",
+                      "updatedAt": "$createdAt"
+                    }
+                  },
+                  {
+                    "kind": "appendToArray",
+                    "path": "activity",
+                    "item": {
+                      "type": "media.room.update",
+                      "actorId": "$actor.memberId",
+                      "actorName": "$actor.displayName",
+                      "createdAt": "$createdAt"
+                    }
+                  }
+                ]
+              },
+              "media.room.archive": {
+                "payload": {
+                  "required": {
+                    "roomId": {
+                      "type": "string",
+                      "max": 200
+                    }
+                  }
+                },
+                "authorize": {
+                  "roles": [
+                    "moderator"
+                  ]
+                },
+                "effects": [
+                  {
+                    "kind": "markRecord",
+                    "collection": "rooms",
+                    "id": "$payload.roomId",
+                    "fields": {
+                      "archivedAt": "$createdAt",
+                      "participants": {}
+                    }
+                  },
+                  {
+                    "kind": "appendToArray",
+                    "path": "activity",
+                    "item": {
+                      "type": "media.room.archive",
+                      "actorId": "$actor.memberId",
+                      "actorName": "$actor.displayName",
+                      "createdAt": "$createdAt"
+                    }
+                  }
+                ]
               }
             },
             "views": {},
@@ -2936,7 +3080,8 @@
           "plugin": "primary",
           "kind": "collection",
           "query": "channelSummary",
-          "collection": "channels"
+          "collection": "channels",
+          "path": "channels"
         },
         {
           "name": "roomDirectory",
@@ -2953,17 +3098,20 @@
         {
           "name": "channelArchive",
           "plugin": "primary",
-          "type": "channel.archive"
+          "type": "channel.archive",
+          "requiredRole": "moderator"
         },
         {
           "name": "channelCreate",
           "plugin": "primary",
-          "type": "channel.create"
+          "type": "channel.create",
+          "requiredRole": "admin"
         },
         {
           "name": "channelRename",
           "plugin": "primary",
-          "type": "channel.rename"
+          "type": "channel.rename",
+          "requiredRole": "moderator"
         },
         {
           "name": "inviteDisable",
@@ -3215,49 +3363,7 @@
           "name": "mediaRoomCreate",
           "plugin": "mediaRooms",
           "type": "media.room.create",
-          "payloadSchema": {
-            "required": {
-              "name": {
-                "type": "string",
-                "max": 100
-              }
-            },
-            "optional": {
-              "allowsVideo": {
-                "type": "boolean",
-                "default": true
-              },
-              "group": {
-                "type": "string",
-                "max": 80,
-                "nullable": true,
-                "nonEmpty": false
-              },
-              "scopeType": {
-                "type": "string",
-                "max": 80
-              },
-              "scopeId": {
-                "type": "string",
-                "max": 160
-              },
-              "roleAccess": {
-                "type": "record",
-                "values": {
-                  "type": "enum",
-                  "values": [
-                    "editor",
-                    "readonly"
-                  ]
-                }
-              }
-            },
-            "authorize": {
-              "roles": [
-                "moderator"
-              ]
-            }
-          }
+          "requiredRole": "moderator"
         },
         {
           "name": "mediaRoomJoin",
@@ -3320,51 +3426,7 @@
           "name": "mediaRoomUpdate",
           "plugin": "mediaRooms",
           "type": "media.room.update",
-          "payloadSchema": {
-            "required": {
-              "roomId": {
-                "type": "string",
-                "max": 200
-              }
-            },
-            "optional": {
-              "locked": {
-                "type": "boolean"
-              },
-              "allowsVideo": {
-                "type": "boolean"
-              },
-              "spotlightMemberId": {
-                "type": "string",
-                "max": 120
-              },
-              "name": {
-                "type": "string",
-                "max": 100
-              },
-              "group": {
-                "type": "string",
-                "max": 80,
-                "nullable": true,
-                "nonEmpty": false
-              },
-              "roleAccess": {
-                "type": "record",
-                "values": {
-                  "type": "enum",
-                  "values": [
-                    "editor",
-                    "readonly"
-                  ]
-                }
-              }
-            },
-            "authorize": {
-              "roles": [
-                "moderator"
-              ]
-            }
-          }
+          "requiredRole": "moderator"
         },
         {
           "name": "screenshareStart",
@@ -4645,6 +4707,10 @@
                   "activity": []
                 }
               },
+              "nonReplayableOperations": [
+                "media.room.join",
+                "media.room.leave"
+              ],
               "operations": {
                 "media.room.create": {
                   "payload": {
@@ -4721,6 +4787,115 @@
                       }
                     }
                   ]
+                },
+                "media.room.update": {
+                  "payload": {
+                    "required": {
+                      "roomId": {
+                        "type": "string",
+                        "max": 200
+                      }
+                    },
+                    "optional": {
+                      "locked": {
+                        "type": "boolean"
+                      },
+                      "allowsVideo": {
+                        "type": "boolean"
+                      },
+                      "spotlightMemberId": {
+                        "type": "string",
+                        "max": 120
+                      },
+                      "name": {
+                        "type": "string",
+                        "max": 100
+                      },
+                      "group": {
+                        "type": "string",
+                        "max": 80,
+                        "nullable": true,
+                        "nonEmpty": false
+                      },
+                      "roleAccess": {
+                        "type": "record",
+                        "values": {
+                          "type": "enum",
+                          "values": [
+                            "editor",
+                            "readonly"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "authorize": {
+                    "roles": [
+                      "moderator"
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "kind": "updateRecord",
+                      "collection": "rooms",
+                      "id": "$payload.roomId",
+                      "fields": {
+                        "locked": "$payload.locked",
+                        "allowsVideo": "$payload.allowsVideo",
+                        "spotlightMemberId": "$payload.spotlightMemberId",
+                        "name": "$payload.name",
+                        "group": "$payload.group",
+                        "roleAccess": "$payload.roleAccess",
+                        "updatedAt": "$createdAt"
+                      }
+                    },
+                    {
+                      "kind": "appendToArray",
+                      "path": "activity",
+                      "item": {
+                        "type": "media.room.update",
+                        "actorId": "$actor.memberId",
+                        "actorName": "$actor.displayName",
+                        "createdAt": "$createdAt"
+                      }
+                    }
+                  ]
+                },
+                "media.room.archive": {
+                  "payload": {
+                    "required": {
+                      "roomId": {
+                        "type": "string",
+                        "max": 200
+                      }
+                    }
+                  },
+                  "authorize": {
+                    "roles": [
+                      "moderator"
+                    ]
+                  },
+                  "effects": [
+                    {
+                      "kind": "markRecord",
+                      "collection": "rooms",
+                      "id": "$payload.roomId",
+                      "fields": {
+                        "archivedAt": "$createdAt",
+                        "participants": {}
+                      }
+                    },
+                    {
+                      "kind": "appendToArray",
+                      "path": "activity",
+                      "item": {
+                        "type": "media.room.archive",
+                        "actorId": "$actor.memberId",
+                        "actorName": "$actor.displayName",
+                        "createdAt": "$createdAt"
+                      }
+                    }
+                  ]
                 }
               },
               "views": {},
@@ -4766,7 +4941,8 @@
             "plugin": "primary",
             "kind": "collection",
             "query": "channelSummary",
-            "collection": "channels"
+            "collection": "channels",
+            "path": "channels"
           },
           {
             "name": "roomDirectory",
@@ -4783,17 +4959,20 @@
           {
             "name": "channelArchive",
             "plugin": "primary",
-            "type": "channel.archive"
+            "type": "channel.archive",
+            "requiredRole": "moderator"
           },
           {
             "name": "channelCreate",
             "plugin": "primary",
-            "type": "channel.create"
+            "type": "channel.create",
+            "requiredRole": "admin"
           },
           {
             "name": "channelRename",
             "plugin": "primary",
-            "type": "channel.rename"
+            "type": "channel.rename",
+            "requiredRole": "moderator"
           },
           {
             "name": "inviteDisable",
@@ -5045,49 +5224,7 @@
             "name": "mediaRoomCreate",
             "plugin": "mediaRooms",
             "type": "media.room.create",
-            "payloadSchema": {
-              "required": {
-                "name": {
-                  "type": "string",
-                  "max": 100
-                }
-              },
-              "optional": {
-                "allowsVideo": {
-                  "type": "boolean",
-                  "default": true
-                },
-                "group": {
-                  "type": "string",
-                  "max": 80,
-                  "nullable": true,
-                  "nonEmpty": false
-                },
-                "scopeType": {
-                  "type": "string",
-                  "max": 80
-                },
-                "scopeId": {
-                  "type": "string",
-                  "max": 160
-                },
-                "roleAccess": {
-                  "type": "record",
-                  "values": {
-                    "type": "enum",
-                    "values": [
-                      "editor",
-                      "readonly"
-                    ]
-                  }
-                }
-              },
-              "authorize": {
-                "roles": [
-                  "moderator"
-                ]
-              }
-            }
+            "requiredRole": "moderator"
           },
           {
             "name": "mediaRoomJoin",
@@ -5150,51 +5287,7 @@
             "name": "mediaRoomUpdate",
             "plugin": "mediaRooms",
             "type": "media.room.update",
-            "payloadSchema": {
-              "required": {
-                "roomId": {
-                  "type": "string",
-                  "max": 200
-                }
-              },
-              "optional": {
-                "locked": {
-                  "type": "boolean"
-                },
-                "allowsVideo": {
-                  "type": "boolean"
-                },
-                "spotlightMemberId": {
-                  "type": "string",
-                  "max": 120
-                },
-                "name": {
-                  "type": "string",
-                  "max": 100
-                },
-                "group": {
-                  "type": "string",
-                  "max": 80,
-                  "nullable": true,
-                  "nonEmpty": false
-                },
-                "roleAccess": {
-                  "type": "record",
-                  "values": {
-                    "type": "enum",
-                    "values": [
-                      "editor",
-                      "readonly"
-                    ]
-                  }
-                }
-              },
-              "authorize": {
-                "roles": [
-                  "moderator"
-                ]
-              }
-            }
+            "requiredRole": "moderator"
           },
           {
             "name": "screenshareStart",
@@ -5635,7 +5728,7 @@
             }
           }
         },
-        "schemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
+        "schemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
       }
     },
     {
@@ -5716,7 +5809,7 @@
             "gg.matterhorn.examples.plugins.screen-share",
             "gg.matterhorn.mosh.plugin"
           ],
-          "compositionSchemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
+          "compositionSchemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
         }
       ],
       "recommendedFor": {
@@ -6654,6 +6747,10 @@
               "activity": []
             }
           },
+          "nonReplayableOperations": [
+            "media.room.join",
+            "media.room.leave"
+          ],
           "operations": {
             "media.room.create": {
               "payload": {
@@ -6730,6 +6827,115 @@
                   }
                 }
               ]
+            },
+            "media.room.update": {
+              "payload": {
+                "required": {
+                  "roomId": {
+                    "type": "string",
+                    "max": 200
+                  }
+                },
+                "optional": {
+                  "locked": {
+                    "type": "boolean"
+                  },
+                  "allowsVideo": {
+                    "type": "boolean"
+                  },
+                  "spotlightMemberId": {
+                    "type": "string",
+                    "max": 120
+                  },
+                  "name": {
+                    "type": "string",
+                    "max": 100
+                  },
+                  "group": {
+                    "type": "string",
+                    "max": 80,
+                    "nullable": true,
+                    "nonEmpty": false
+                  },
+                  "roleAccess": {
+                    "type": "record",
+                    "values": {
+                      "type": "enum",
+                      "values": [
+                        "editor",
+                        "readonly"
+                      ]
+                    }
+                  }
+                }
+              },
+              "authorize": {
+                "roles": [
+                  "moderator"
+                ]
+              },
+              "effects": [
+                {
+                  "kind": "updateRecord",
+                  "collection": "rooms",
+                  "id": "$payload.roomId",
+                  "fields": {
+                    "locked": "$payload.locked",
+                    "allowsVideo": "$payload.allowsVideo",
+                    "spotlightMemberId": "$payload.spotlightMemberId",
+                    "name": "$payload.name",
+                    "group": "$payload.group",
+                    "roleAccess": "$payload.roleAccess",
+                    "updatedAt": "$createdAt"
+                  }
+                },
+                {
+                  "kind": "appendToArray",
+                  "path": "activity",
+                  "item": {
+                    "type": "media.room.update",
+                    "actorId": "$actor.memberId",
+                    "actorName": "$actor.displayName",
+                    "createdAt": "$createdAt"
+                  }
+                }
+              ]
+            },
+            "media.room.archive": {
+              "payload": {
+                "required": {
+                  "roomId": {
+                    "type": "string",
+                    "max": 200
+                  }
+                }
+              },
+              "authorize": {
+                "roles": [
+                  "moderator"
+                ]
+              },
+              "effects": [
+                {
+                  "kind": "markRecord",
+                  "collection": "rooms",
+                  "id": "$payload.roomId",
+                  "fields": {
+                    "archivedAt": "$createdAt",
+                    "participants": {}
+                  }
+                },
+                {
+                  "kind": "appendToArray",
+                  "path": "activity",
+                  "item": {
+                    "type": "media.room.archive",
+                    "actorId": "$actor.memberId",
+                    "actorName": "$actor.displayName",
+                    "createdAt": "$createdAt"
+                  }
+                }
+              ]
             }
           },
           "views": {},
@@ -6775,7 +6981,8 @@
         "plugin": "primary",
         "kind": "collection",
         "query": "channelSummary",
-        "collection": "channels"
+        "collection": "channels",
+        "path": "channels"
       },
       {
         "name": "roomDirectory",
@@ -6792,17 +6999,20 @@
       {
         "name": "channelArchive",
         "plugin": "primary",
-        "type": "channel.archive"
+        "type": "channel.archive",
+        "requiredRole": "moderator"
       },
       {
         "name": "channelCreate",
         "plugin": "primary",
-        "type": "channel.create"
+        "type": "channel.create",
+        "requiredRole": "admin"
       },
       {
         "name": "channelRename",
         "plugin": "primary",
-        "type": "channel.rename"
+        "type": "channel.rename",
+        "requiredRole": "moderator"
       },
       {
         "name": "inviteDisable",
@@ -7054,49 +7264,7 @@
         "name": "mediaRoomCreate",
         "plugin": "mediaRooms",
         "type": "media.room.create",
-        "payloadSchema": {
-          "required": {
-            "name": {
-              "type": "string",
-              "max": 100
-            }
-          },
-          "optional": {
-            "allowsVideo": {
-              "type": "boolean",
-              "default": true
-            },
-            "group": {
-              "type": "string",
-              "max": 80,
-              "nullable": true,
-              "nonEmpty": false
-            },
-            "scopeType": {
-              "type": "string",
-              "max": 80
-            },
-            "scopeId": {
-              "type": "string",
-              "max": 160
-            },
-            "roleAccess": {
-              "type": "record",
-              "values": {
-                "type": "enum",
-                "values": [
-                  "editor",
-                  "readonly"
-                ]
-              }
-            }
-          },
-          "authorize": {
-            "roles": [
-              "moderator"
-            ]
-          }
-        }
+        "requiredRole": "moderator"
       },
       {
         "name": "mediaRoomJoin",
@@ -7159,51 +7327,7 @@
         "name": "mediaRoomUpdate",
         "plugin": "mediaRooms",
         "type": "media.room.update",
-        "payloadSchema": {
-          "required": {
-            "roomId": {
-              "type": "string",
-              "max": 200
-            }
-          },
-          "optional": {
-            "locked": {
-              "type": "boolean"
-            },
-            "allowsVideo": {
-              "type": "boolean"
-            },
-            "spotlightMemberId": {
-              "type": "string",
-              "max": 120
-            },
-            "name": {
-              "type": "string",
-              "max": 100
-            },
-            "group": {
-              "type": "string",
-              "max": 80,
-              "nullable": true,
-              "nonEmpty": false
-            },
-            "roleAccess": {
-              "type": "record",
-              "values": {
-                "type": "enum",
-                "values": [
-                  "editor",
-                  "readonly"
-                ]
-              }
-            }
-          },
-          "authorize": {
-            "roles": [
-              "moderator"
-            ]
-          }
-        }
+        "requiredRole": "moderator"
       },
       {
         "name": "screenshareStart",
@@ -7644,7 +7768,7 @@
         }
       }
     },
-    "schemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
+    "schemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
   },
   "artifacts": {
     "composition": {
@@ -8496,6 +8620,10 @@
                 "activity": []
               }
             },
+            "nonReplayableOperations": [
+              "media.room.join",
+              "media.room.leave"
+            ],
             "operations": {
               "media.room.create": {
                 "payload": {
@@ -8572,6 +8700,115 @@
                     }
                   }
                 ]
+              },
+              "media.room.update": {
+                "payload": {
+                  "required": {
+                    "roomId": {
+                      "type": "string",
+                      "max": 200
+                    }
+                  },
+                  "optional": {
+                    "locked": {
+                      "type": "boolean"
+                    },
+                    "allowsVideo": {
+                      "type": "boolean"
+                    },
+                    "spotlightMemberId": {
+                      "type": "string",
+                      "max": 120
+                    },
+                    "name": {
+                      "type": "string",
+                      "max": 100
+                    },
+                    "group": {
+                      "type": "string",
+                      "max": 80,
+                      "nullable": true,
+                      "nonEmpty": false
+                    },
+                    "roleAccess": {
+                      "type": "record",
+                      "values": {
+                        "type": "enum",
+                        "values": [
+                          "editor",
+                          "readonly"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "authorize": {
+                  "roles": [
+                    "moderator"
+                  ]
+                },
+                "effects": [
+                  {
+                    "kind": "updateRecord",
+                    "collection": "rooms",
+                    "id": "$payload.roomId",
+                    "fields": {
+                      "locked": "$payload.locked",
+                      "allowsVideo": "$payload.allowsVideo",
+                      "spotlightMemberId": "$payload.spotlightMemberId",
+                      "name": "$payload.name",
+                      "group": "$payload.group",
+                      "roleAccess": "$payload.roleAccess",
+                      "updatedAt": "$createdAt"
+                    }
+                  },
+                  {
+                    "kind": "appendToArray",
+                    "path": "activity",
+                    "item": {
+                      "type": "media.room.update",
+                      "actorId": "$actor.memberId",
+                      "actorName": "$actor.displayName",
+                      "createdAt": "$createdAt"
+                    }
+                  }
+                ]
+              },
+              "media.room.archive": {
+                "payload": {
+                  "required": {
+                    "roomId": {
+                      "type": "string",
+                      "max": 200
+                    }
+                  }
+                },
+                "authorize": {
+                  "roles": [
+                    "moderator"
+                  ]
+                },
+                "effects": [
+                  {
+                    "kind": "markRecord",
+                    "collection": "rooms",
+                    "id": "$payload.roomId",
+                    "fields": {
+                      "archivedAt": "$createdAt",
+                      "participants": {}
+                    }
+                  },
+                  {
+                    "kind": "appendToArray",
+                    "path": "activity",
+                    "item": {
+                      "type": "media.room.archive",
+                      "actorId": "$actor.memberId",
+                      "actorName": "$actor.displayName",
+                      "createdAt": "$createdAt"
+                    }
+                  }
+                ]
               }
             },
             "views": {},
@@ -8617,7 +8854,8 @@
           "plugin": "primary",
           "kind": "collection",
           "query": "channelSummary",
-          "collection": "channels"
+          "collection": "channels",
+          "path": "channels"
         },
         {
           "name": "roomDirectory",
@@ -8634,17 +8872,20 @@
         {
           "name": "channelArchive",
           "plugin": "primary",
-          "type": "channel.archive"
+          "type": "channel.archive",
+          "requiredRole": "moderator"
         },
         {
           "name": "channelCreate",
           "plugin": "primary",
-          "type": "channel.create"
+          "type": "channel.create",
+          "requiredRole": "admin"
         },
         {
           "name": "channelRename",
           "plugin": "primary",
-          "type": "channel.rename"
+          "type": "channel.rename",
+          "requiredRole": "moderator"
         },
         {
           "name": "inviteDisable",
@@ -8896,49 +9137,7 @@
           "name": "mediaRoomCreate",
           "plugin": "mediaRooms",
           "type": "media.room.create",
-          "payloadSchema": {
-            "required": {
-              "name": {
-                "type": "string",
-                "max": 100
-              }
-            },
-            "optional": {
-              "allowsVideo": {
-                "type": "boolean",
-                "default": true
-              },
-              "group": {
-                "type": "string",
-                "max": 80,
-                "nullable": true,
-                "nonEmpty": false
-              },
-              "scopeType": {
-                "type": "string",
-                "max": 80
-              },
-              "scopeId": {
-                "type": "string",
-                "max": 160
-              },
-              "roleAccess": {
-                "type": "record",
-                "values": {
-                  "type": "enum",
-                  "values": [
-                    "editor",
-                    "readonly"
-                  ]
-                }
-              }
-            },
-            "authorize": {
-              "roles": [
-                "moderator"
-              ]
-            }
-          }
+          "requiredRole": "moderator"
         },
         {
           "name": "mediaRoomJoin",
@@ -9001,51 +9200,7 @@
           "name": "mediaRoomUpdate",
           "plugin": "mediaRooms",
           "type": "media.room.update",
-          "payloadSchema": {
-            "required": {
-              "roomId": {
-                "type": "string",
-                "max": 200
-              }
-            },
-            "optional": {
-              "locked": {
-                "type": "boolean"
-              },
-              "allowsVideo": {
-                "type": "boolean"
-              },
-              "spotlightMemberId": {
-                "type": "string",
-                "max": 120
-              },
-              "name": {
-                "type": "string",
-                "max": 100
-              },
-              "group": {
-                "type": "string",
-                "max": 80,
-                "nullable": true,
-                "nonEmpty": false
-              },
-              "roleAccess": {
-                "type": "record",
-                "values": {
-                  "type": "enum",
-                  "values": [
-                    "editor",
-                    "readonly"
-                  ]
-                }
-              }
-            },
-            "authorize": {
-              "roles": [
-                "moderator"
-              ]
-            }
-          }
+          "requiredRole": "moderator"
         },
         {
           "name": "screenshareStart",
@@ -9486,7 +9641,7 @@
           }
         }
       },
-      "schemaHash": "sha256-77a414cf3fa82c795e42bc2e25bed9c6b210d7d73e3c4ee8ad675a7668f2a52f"
+      "schemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
     },
     "model": {
       "kind": "matterhorn.primary-model.schema",
@@ -10301,15 +10456,18 @@
     "actions": {
       "channelArchive": {
         "plugin": "primary",
-        "type": "channel.archive"
+        "type": "channel.archive",
+        "requiredRole": "moderator"
       },
       "channelCreate": {
         "plugin": "primary",
-        "type": "channel.create"
+        "type": "channel.create",
+        "requiredRole": "admin"
       },
       "channelRename": {
         "plugin": "primary",
-        "type": "channel.rename"
+        "type": "channel.rename",
+        "requiredRole": "moderator"
       },
       "inviteDisable": {
         "plugin": "primary",
@@ -10536,49 +10694,7 @@
       "mediaRoomCreate": {
         "plugin": "mediaRooms",
         "type": "media.room.create",
-        "payloadSchema": {
-          "required": {
-            "name": {
-              "type": "string",
-              "max": 100
-            }
-          },
-          "optional": {
-            "allowsVideo": {
-              "type": "boolean",
-              "default": true
-            },
-            "group": {
-              "type": "string",
-              "max": 80,
-              "nullable": true,
-              "nonEmpty": false
-            },
-            "scopeType": {
-              "type": "string",
-              "max": 80
-            },
-            "scopeId": {
-              "type": "string",
-              "max": 160
-            },
-            "roleAccess": {
-              "type": "record",
-              "values": {
-                "type": "enum",
-                "values": [
-                  "editor",
-                  "readonly"
-                ]
-              }
-            }
-          },
-          "authorize": {
-            "roles": [
-              "moderator"
-            ]
-          }
-        }
+        "requiredRole": "moderator"
       },
       "mediaRoomJoin": {
         "plugin": "mediaRooms",
@@ -10638,51 +10754,7 @@
       "mediaRoomUpdate": {
         "plugin": "mediaRooms",
         "type": "media.room.update",
-        "payloadSchema": {
-          "required": {
-            "roomId": {
-              "type": "string",
-              "max": 200
-            }
-          },
-          "optional": {
-            "locked": {
-              "type": "boolean"
-            },
-            "allowsVideo": {
-              "type": "boolean"
-            },
-            "spotlightMemberId": {
-              "type": "string",
-              "max": 120
-            },
-            "name": {
-              "type": "string",
-              "max": 100
-            },
-            "group": {
-              "type": "string",
-              "max": 80,
-              "nullable": true,
-              "nonEmpty": false
-            },
-            "roleAccess": {
-              "type": "record",
-              "values": {
-                "type": "enum",
-                "values": [
-                  "editor",
-                  "readonly"
-                ]
-              }
-            }
-          },
-          "authorize": {
-            "roles": [
-              "moderator"
-            ]
-          }
-        }
+        "requiredRole": "moderator"
       },
       "screenshareStart": {
         "plugin": "screenShare",

@@ -46,7 +46,7 @@ export function ChatShell({ launchHome, onOpenLaunchHomeRoom }: Pick<ChatProps, 
 
   return (
     <main
-      className={`shell${sidebarOpen ? " mobile-sidebar-open" : ""} ${shell.className}`}
+      className={shell.className}
       style={shell.style}
     >
       <ChatSidebar
@@ -56,7 +56,7 @@ export function ChatShell({ launchHome, onOpenLaunchHomeRoom }: Pick<ChatProps, 
         onOpenLaunchHomeRoom={onOpenLaunchHomeRoom}
       />
       <div
-        className={`sb-backdrop ${backdrop.className}`}
+        className={backdrop.className}
         style={backdrop.style}
         role="presentation"
         onClick={() => ui.closeSidebar()}
