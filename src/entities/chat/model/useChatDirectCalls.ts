@@ -3,7 +3,6 @@ import { DirectCallOrchestrator } from "matterhorn-sdk/browser/directCalls";
 import { MeshRoomCallController } from "matterhorn-sdk/browser/meshRoomCalls";
 import type { CallMediaSettings, CallMode, DirectCallState, PeerJsMediaConnection, RoomParticipant } from "matterhorn-sdk/browser/types";
 import { mediaBridgeFromHost } from "@entities/chat/api/callBridge";
-import { logMatterhornCall } from "@entities/chat/model/callLogger";
 import { avatarForActor } from "@entities/chat/model/chatViewModel";
 import type { Actor, AvatarSource, ChatState, MemberModeration, RoomMember } from "@entities/chat/model/types";
 import type { MatterhornRoom } from "matterhorn-sdk/client";
@@ -39,14 +38,6 @@ function callRoutesForState(state: ChatState): Record<string, MemberCallRoute> {
 
 function participantForRoute(memberId: string, route: MemberCallRoute | undefined, state: ChatState): RoomParticipant | undefined {
   if (!route?.callClientId || !route.callPubkey) {
-    logMatterhornCall("direct.participant.missing-route", {
-      memberId,
-      hasRoute: Boolean(route),
-      callClientId: route?.callClientId,
-      hasCallPubkey: Boolean(route?.callPubkey),
-      peerId: route?.peerId,
-      peerAddress: route?.peerAddress
-    });
     return undefined;
   }
   const member = state.members?.[memberId as keyof typeof state.members] as RoomMember | undefined;
@@ -104,17 +95,8 @@ export function useChatDirectCalls(input: Input) {
 
   useEffect(() => {
     if (!bridge) {
-      logMatterhornCall("direct.bridge.unavailable", { roomName: input.roomName, actorId: actorMemberId });
       return undefined;
     }
-    logMatterhornCall("direct.bridge.ready", {
-      roomName: input.roomName,
-      actorId: actorMemberId,
-      clientId,
-      hasPeer: Boolean(bridge.getMediaPeer?.()?.id),
-      peerId: bridge.getMediaPeer?.()?.id,
-      peerAddress: bridge.getMediaPeerAddress?.()
-    });
     const profile = { id: clientId, name: actorDisplayName, avatar: actorProfileAvatar };
     const direct = new DirectCallOrchestrator({
       roomName: input.roomName,
@@ -122,7 +104,6 @@ export function useChatDirectCalls(input: Input) {
       getPeer: () => bridge.getMediaPeer?.(),
       getPeerAddress: () => bridge.getMediaPeerAddress?.(),
       sendSignal: (targetClientId, targetPeerId, signal, auth) => {
-        logMatterhornCall("direct.signal.send", { roomName: input.roomName, clientId, targetClientId, targetPeerId, signalType: signal.type, sessionId: signal.sessionId, hasAuth: Boolean(auth) });
         return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
       },
       subscribeRelayMessage: bridge.subscribeRelayMessage,
@@ -134,40 +115,23 @@ export function useChatDirectCalls(input: Input) {
         getPeerAddress: () => bridge.getMediaPeerAddress?.(),
         createPeer: bridge.createMediaPeer,
         sendSignal: (targetClientId, targetPeerId, signal, auth) => {
-          logMatterhornCall("direct.mesh.signal.send", { roomName: input.roomName, clientId, targetClientId, targetPeerId, signalType: signal.type, sessionId: signal.sessionId, hasAuth: Boolean(auth) });
           return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
         },
         onState,
         onError: (message, code) => {
-          logMatterhornCall("direct.mesh.error", { roomName: input.roomName, clientId, message, code });
           onError(message, code);
         }
       }),
       onCallState: (nextState) => {
-        logMatterhornCall("direct.state", {
-          roomName: input.roomName,
-          clientId,
-          status: nextState.status,
-          directRoomId: nextState.directRoomId,
-          sessionId: nextState.sessionId,
-          remoteClientId: nextState.remoteClientId,
-          invitedMemberIds: nextState.invitedMemberIds,
-          roomStatus: nextState.room?.status,
-          roomPeers: nextState.room?.peers,
-          remoteStreams: nextState.room?.remoteStreams.length
-        });
         setState(nextState);
       },
       onError: (message, code) => {
-        logMatterhornCall("direct.error", { roomName: input.roomName, clientId, message, code });
         setError(message);
       }
     });
     directRef.current = direct;
     const onCall = (call: PeerJsMediaConnection) => {
-      logMatterhornCall("direct.peer-call.received", { roomName: input.roomName, clientId, peer: call.peer, metadata: call.metadata });
       const handled = direct.handleMediaCall(call);
-      logMatterhornCall("direct.peer-call.handled", { roomName: input.roomName, clientId, peer: call.peer, handled });
     };
     const peer = bridge.getMediaPeer?.();
     peer?.on("call", onCall);
@@ -184,7 +148,6 @@ export function useChatDirectCalls(input: Input) {
     if (!bridge || !direct) return;
     const peerId = bridge.getMediaPeer?.()?.id;
     if (!peerId) {
-      logMatterhornCall("direct.route.publish.blocked.no-peer", { roomName: input.roomName, actorMemberId, clientId });
       return;
     }
     const peerAddress = bridge.getMediaPeerAddress?.() || "";
@@ -197,15 +160,12 @@ export function useChatDirectCalls(input: Input) {
       && current?.peerAddress === peerAddress
       && current?.callPubkey === callPubkey
     ) {
-      logMatterhornCall("direct.route.publish.skip.current", { roomName: input.roomName, actorMemberId, clientId, peerId, peerAddress });
       return;
     }
     if (publishedKeyRef.current === nextKey) {
-      logMatterhornCall("direct.route.publish.skip.pending", { roomName: input.roomName, actorMemberId, clientId, peerId, peerAddress });
       return;
     }
     publishedKeyRef.current = nextKey;
-    logMatterhornCall("direct.route.publish", { roomName: input.roomName, actorMemberId, clientId, peerId, peerAddress, hasCallPubkey: Boolean(callPubkey) });
     void input.live.actions.updateMemberCall({
       clientId,
       peerId,
@@ -215,7 +175,6 @@ export function useChatDirectCalls(input: Input) {
       avatar: actorProfileAvatar
     }).catch((publishError: unknown) => {
       publishedKeyRef.current = "";
-      logMatterhornCall("direct.route.publish.failed", { roomName: input.roomName, actorMemberId, clientId, message: publishError instanceof Error ? publishError.message : String(publishError) });
       setError(publishError instanceof Error ? publishError.message : "Could not publish call route.");
     });
   }, [actorDisplayName, actorMemberId, actorProfileAvatar, bridge, clientId, input.live.actions, input.state]);
@@ -231,32 +190,26 @@ export function useChatDirectCalls(input: Input) {
     setError("");
     publishLocalCallRoute();
     const route = getParticipantRef.current(memberId);
-    logMatterhornCall("direct.call-member", { roomName: input.roomName, clientId, memberId, mode, hasRoute: Boolean(route), route });
     const directRoomId = directRef.current?.startDirectCall(memberId, mode);
-    logMatterhornCall("direct.call-member.started", { roomName: input.roomName, clientId, memberId, mode, directRoomId });
     return Boolean(directRoomId);
   }, [publishLocalCallRoute]);
 
   const acceptCall = useCallback(() => {
     if (state.status !== "incoming" || !state.directRoomId) return;
     setError("");
-    logMatterhornCall("direct.accept-click", { roomName: input.roomName, clientId, directRoomId: state.directRoomId, sessionId: state.sessionId, remoteClientId: state.remoteClientId });
     directRef.current?.acceptInvite(state.directRoomId, { audio: true, video: false });
   }, [state]);
 
   const declineCall = useCallback(() => {
     if (state.status !== "incoming" || !state.directRoomId) return;
-    logMatterhornCall("direct.decline-click", { roomName: input.roomName, clientId, directRoomId: state.directRoomId, sessionId: state.sessionId, remoteClientId: state.remoteClientId });
     directRef.current?.declineInvite(state.directRoomId);
   }, [state]);
 
   const endCall = useCallback(() => {
-    logMatterhornCall("direct.end-click", { roomName: input.roomName, clientId, status: state.status, directRoomId: state.directRoomId, sessionId: state.sessionId, remoteClientId: state.remoteClientId });
     directRef.current?.endDirectCall();
   }, [state]);
 
   const updateMedia = useCallback((media: CallMediaSettings) => {
-    logMatterhornCall("direct.update-media", { roomName: input.roomName, clientId, status: state.status, directRoomId: state.directRoomId, sessionId: state.sessionId, media });
     directRef.current?.updateMedia(media);
   }, [state]);
 

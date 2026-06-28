@@ -5,7 +5,6 @@ import { mediaStreamForTrackRole, mediaTrackRole, normalizeCallMediaSettings, pu
 import type { CallMediaSettings, PeerJsMediaConnection, SfuCallState, ScreenPreviewSnapshot } from "matterhorn-sdk/browser/types";
 import type { MatterhornEphemeralToken, MatterhornEphemeralTokenHandle } from "matterhorn-sdk/browser/liveRoomConnector";
 import { mediaBridgeFromHost } from "@entities/chat/api/callBridge";
-import { logMatterhornCall } from "@entities/chat/model/callLogger";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { Actor, MediaRoom } from "@entities/chat/model/types";
 import type { MatterhornMedia } from "matterhorn-sdk/client";
@@ -112,18 +111,8 @@ export function useChatMediaRooms(input: Input) {
 
   useEffect(() => {
     if (!bridge) {
-      logMatterhornCall("media.bridge.unavailable", { roomName: input.roomName, actorId: input.live.actor.memberId });
       return undefined;
     }
-    logMatterhornCall("media.bridge.ready", {
-      roomName: input.roomName,
-      actorId: input.live.actor.memberId,
-      clientId,
-      hasPeer: Boolean(bridge.getMediaPeer?.()?.id),
-      peerId: bridge.getMediaPeer?.()?.id,
-      peerAddress: bridge.getMediaPeerAddress?.(),
-      sfu: bridge.getRelaySfuInfo?.()
-    });
     const profile = { id: clientId, name: input.live.actor.displayName || input.live.actor.memberId, avatar: actorAvatar(input.live.actor) };
     const sfu = new SfuCallController({
       roomName: input.roomName,
@@ -134,12 +123,10 @@ export function useChatMediaRooms(input: Input) {
       encryptRoomPayload: bridge.encryptRoomPayload,
       decryptRoomPayload: bridge.decryptRoomPayload,
       sendSignal: (targetClientId, targetPeerId, signal, auth) => {
-        logMatterhornCall("media.sfu.signal.send", { roomName: input.roomName, clientId, targetClientId, targetPeerId, signalType: signal.type, sessionId: signal.sessionId, hasAuth: Boolean(auth) });
         return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
       },
       onState: setSfuState,
       onError: (message, code) => {
-        logMatterhornCall("media.sfu.error", { roomName: input.roomName, clientId, message, code });
         setError(message);
       }
     });
@@ -150,12 +137,10 @@ export function useChatMediaRooms(input: Input) {
       getPeerAddress: () => bridge.getMediaPeerAddress?.(),
       createPeer: bridge.createMediaPeer,
       sendSignal: (targetClientId, targetPeerId, signal, auth) => {
-        logMatterhornCall("media.mesh.signal.send", { roomName: input.roomName, clientId, targetClientId, targetPeerId, signalType: signal.type, sessionId: signal.sessionId, hasAuth: Boolean(auth) });
         return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
       },
       onState: setMeshState,
       onError: (message, code) => {
-        logMatterhornCall("media.mesh.error", { roomName: input.roomName, clientId, message, code });
         setError(message);
       }
     });
@@ -164,30 +149,17 @@ export function useChatMediaRooms(input: Input) {
     sfu.setRelaySfu(bridge.getRelaySfuInfo?.());
 
     const onCall = (call: PeerJsMediaConnection) => {
-      logMatterhornCall("media.peer-call.received", { roomName: input.roomName, clientId, peer: call.peer, metadata: call.metadata });
       if (mesh.handleMediaCall(call)) {
-        logMatterhornCall("media.peer-call.handled.mesh", { roomName: input.roomName, clientId, peer: call.peer });
         return;
       }
       const handledBySfu = sfu.handleMediaCall(call);
-      logMatterhornCall("media.peer-call.handled.sfu", { roomName: input.roomName, clientId, peer: call.peer, handled: handledBySfu });
     };
     const peer = bridge.getMediaPeer?.();
     peer?.on("call", onCall);
     const unsubscribe = bridge.subscribeRelayMessage?.((message) => {
       const signal = typeof message === "object" && message ? (message as { signal?: { type?: string; sessionId?: string }; type?: string; sourceClientId?: string; targetClientId?: string }).signal : undefined;
-      logMatterhornCall("media.relay-message", {
-        roomName: input.roomName,
-        clientId,
-        type: typeof message === "object" && message ? (message as { type?: string }).type : typeof message,
-        sourceClientId: typeof message === "object" && message ? (message as { sourceClientId?: string }).sourceClientId : undefined,
-        targetClientId: typeof message === "object" && message ? (message as { targetClientId?: string }).targetClientId : undefined,
-        signalType: signal?.type,
-        sessionId: signal?.sessionId
-      });
       const handledByMesh = mesh.handlePeerSignal(message);
       const handledBySfu = sfu.handleRelayMessage(message);
-      logMatterhornCall("media.relay-message.handled", { roomName: input.roomName, clientId, handledByMesh, handledBySfu });
     });
 
     return () => {
@@ -239,16 +211,6 @@ export function useChatMediaRooms(input: Input) {
         avatar: meshParticipant.avatar
       } : {})
     };
-    logMatterhornCall("media.voice-token.claim", {
-      roomName: input.roomName,
-      clientId,
-      roomId: room.id,
-      media: announcedMedia,
-      transport: payload.transport,
-      peerId: meshParticipant?.peerId,
-      peerAddress: meshParticipant?.peerAddress,
-      hasCallPubkey: Boolean(meshParticipant?.callPubkey)
-    });
     if (voiceTokenRef.current?.token()?.scope === room.id) {
       voiceTokenRef.current.update(payload);
       return;
@@ -262,7 +224,6 @@ export function useChatMediaRooms(input: Input) {
   }
 
   function releaseVoiceToken() {
-    logMatterhornCall("media.voice-token.release", { roomName: input.roomName, clientId, scope: voiceTokenRef.current?.token()?.scope });
     voiceTokenRef.current?.release();
     voiceTokenRef.current = undefined;
   }
@@ -306,9 +267,7 @@ export function useChatMediaRooms(input: Input) {
     }
     if (currentState.mediaRoomId && currentState.mediaRoomId !== room.id) releaseVoiceToken();
     activeRoomRef.current = room;
-    logMatterhornCall("media.room.join", { roomName: input.roomName, clientId, roomId: room.id, media: nextMedia, currentStatus: currentState.status, currentMediaRoomId: currentState.mediaRoomId, relayHasSfu: relayHasSfu() });
     if (!bridge) {
-      logMatterhornCall("media.room.join.blocked.no-bridge", { roomName: input.roomName, clientId, roomId: room.id });
       return false;
     }
     sfuRef.current?.setRelaySfu(bridge.getRelaySfuInfo?.());
@@ -327,9 +286,7 @@ export function useChatMediaRooms(input: Input) {
     const nextMedia = normalizeCallMediaSettings(media);
     nextMedia.video = Boolean(room.allowsVideo !== false && nextMedia.video);
     activeRoomRef.current = room;
-    logMatterhornCall("media.room.update", { roomName: input.roomName, clientId, roomId: room.id, media: nextMedia, meshRoomId: meshState.mediaRoomId, sfuRoomId: sfuState.mediaRoomId, relayHasSfu: relayHasSfu() });
     if (!bridge) {
-      logMatterhornCall("media.room.update.blocked.no-bridge", { roomName: input.roomName, clientId, roomId: room.id });
       return false;
     }
     if (sfuState.mediaRoomId === room.id) {
@@ -372,7 +329,6 @@ export function useChatMediaRooms(input: Input) {
   }, [sfuState, meshState]);
 
   const leaveRoom = useCallback(() => {
-    logMatterhornCall("media.room.leave", { roomName: input.roomName, clientId, activeRoomId: activeRoomRef.current?.id, meshRoomId: meshState.mediaRoomId, sfuRoomId: sfuState.mediaRoomId });
     voiceTokenRef.current?.release();
     voiceTokenRef.current = undefined;
     activeRoomRef.current = undefined;
