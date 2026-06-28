@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { Actor, Channel, ChatState, MediaRoom } from "@entities/chat/model/types";
+import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import { activeRoles, memberOptions } from "@entities/chat/model/roles";
 import { joinRequestsForState } from "@entities/chat/model/state";
 import { Glyph } from "@shared/ui/design";
@@ -27,6 +28,8 @@ type Props = {
   canManageMembers: boolean;
   initialTab?: ManagementTab;
   initialMemberId?: string;
+  memberPreferences: Record<string, MemberPreference>;
+  profileOnly?: boolean;
   voicePreferences: VoicePreferences;
   onClose: () => void;
   onCreateChannel: (input: { name: string; topic?: string; group?: string }) => void;
@@ -45,12 +48,33 @@ type Props = {
   onDisableInvite: (inviteId: string) => void;
   onModerateMember: (memberId: string, input: { chatDisabled?: boolean; nameLocked?: boolean }) => void;
   onRemoveInvite: (inviteId: string) => void;
+  onSetMemberBlock: (memberId: string, blocked: boolean) => void;
+  onSetMemberIgnore: (memberId: string, ignored: boolean) => void;
+  onSetMemberNickname: (memberId: string, nickname: string | null) => void;
+  onSetMemberNote: (memberId: string, note: string | null) => void;
   onUnbanMember: (memberId: string) => void;
   onUpdateVoicePreferences: (preferences: VoicePreferences) => void;
 };
 
-const ROOM_TABS = MANAGEMENT_TABS.filter((item) => item.id !== "audio");
-const DEVICE_TABS = MANAGEMENT_TABS.filter((item) => item.id === "audio");
+function allowedTabs(input: {
+  canCreateChannels: boolean;
+  canManageAnything: boolean;
+  canManageMembers: boolean;
+  canManageRoles: boolean;
+  canManageRooms: boolean;
+  includeAudio: boolean;
+}) {
+  return MANAGEMENT_TABS.filter((item) => {
+    if (item.id === "overview") return input.canManageAnything;
+    if (item.id === "channels") return input.canCreateChannels;
+    if (item.id === "voice") return input.canManageRooms;
+    if (item.id === "roles") return input.canManageRoles;
+    if (item.id === "members") return input.canManageRoles;
+    if (item.id === "admin") return input.canManageMembers;
+    if (item.id === "audio") return input.includeAudio;
+    return false;
+  });
+}
 
 function activeChannels(channels: Channel[]) {
   return channels.filter((channel) => !channel.archivedAt);
@@ -97,6 +121,8 @@ export function ManageOverviewDialog({
   canManageMembers,
   initialTab,
   initialMemberId,
+  memberPreferences,
+  profileOnly,
   voicePreferences,
   onClose,
   onCreateChannel,
@@ -115,25 +141,48 @@ export function ManageOverviewDialog({
   onDisableInvite,
   onModerateMember,
   onRemoveInvite,
+  onSetMemberBlock,
+  onSetMemberIgnore,
+  onSetMemberNickname,
+  onSetMemberNote,
   onUnbanMember,
   onUpdateVoicePreferences
 }: Props) {
   const roles = useMemo(() => activeRoles(state), [state]);
   const channels = useMemo(() => activeChannels(state.channels || []), [state.channels]);
   const rooms = useMemo(() => activeRooms(state.rooms || []), [state.rooms]);
-  const members = useMemo(() => memberOptions(actor, state.members || {}, state.presence || {}, state), [actor, state]);
+  const members = useMemo(() => memberOptions(actor, state.members || {}, state.presence || {}, state, memberPreferences), [actor, memberPreferences, state]);
   const pendingAdminCount = useMemo(() => joinRequestsForState(state).filter((request) => request.status === "pending").length, [state]);
-  const [tab, setTab] = useState<ManagementTab>(initialTab || "overview");
+  const canManageAnything = canCreateChannels || canManageRooms || canManageRoles || canManageMembers;
+  const tabs = useMemo(() => allowedTabs({
+    canCreateChannels,
+    canManageAnything,
+    canManageMembers,
+    canManageRoles,
+    canManageRooms,
+    includeAudio: initialTab === "audio"
+  }), [canCreateChannels, canManageAnything, canManageMembers, canManageRoles, canManageRooms, initialTab]);
+  const roomTabs = tabs.filter((item) => item.id !== "audio");
+  const deviceTabs = tabs.filter((item) => item.id === "audio");
+  const fallbackTab = tabs[0]?.id || "overview";
+  const [tab, setTab] = useState<ManagementTab>(initialTab || fallbackTab);
 
   useEffect(() => {
-    setTab(initialTab || "overview");
-  }, [initialTab]);
+    if (profileOnly) {
+      setTab("members");
+      return;
+    }
+    const next = initialTab && tabs.some((item) => item.id === initialTab) ? initialTab : fallbackTab;
+    setTab(next);
+  }, [fallbackTab, initialTab, profileOnly, tabs]);
 
   useEffect(() => {
     if (initialMemberId) setTab("members");
   }, [initialMemberId]);
 
   const activeTab = MANAGEMENT_TABS.find((item) => item.id === tab) || MANAGEMENT_TABS[0];
+  const title = profileOnly ? "Member profile" : activeTab.label;
+  const description = profileOnly ? "Only visible to you." : tabDescription(tab);
 
   return (
     <div
@@ -141,69 +190,75 @@ export function ManageOverviewDialog({
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}
     >
       <section
-        {...stylex.props(shell.dialog)}
+        {...stylex.props(shell.dialog, profileOnly && shell.profileDialog)}
         role="dialog"
         aria-modal="true"
         aria-label="Manage"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <aside {...stylex.props(rail.rail)} aria-label="Room settings sections">
-          <div {...stylex.props(rail.head)}>
-            <div {...stylex.props(rail.mark)} aria-hidden="true">
-              <svg viewBox="0 0 24 18" fill="none" width={22} height={16} style={{ overflow: "visible" }}>
-                <path d="M2 9c2.5 0 2.5-6 5-6s2.5 12 5 12 2.5-6 5-6 2.5 0 5 0" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+        {!profileOnly ? (
+          <aside {...stylex.props(rail.rail)} aria-label="Room settings sections">
+            <div {...stylex.props(rail.head)}>
+              <div {...stylex.props(rail.mark)} aria-hidden="true">
+                <svg viewBox="0 0 24 18" fill="none" width={22} height={16} style={{ overflow: "visible" }}>
+                  <path d="M2 9c2.5 0 2.5-6 5-6s2.5 12 5 12 2.5-6 5-6 2.5 0 5 0" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <span {...stylex.props(rail.id)}>
+                <strong {...stylex.props(rail.idTitle)}>{roomName}</strong>
+                <small {...stylex.props(rail.idSub)}>Room settings</small>
+              </span>
             </div>
-            <span {...stylex.props(rail.id)}>
-              <strong {...stylex.props(rail.idTitle)}>{roomName}</strong>
-              <small {...stylex.props(rail.idSub)}>Room settings</small>
-            </span>
-          </div>
 
-          <div {...stylex.props(rail.group, rail.groupFirst)}>
-            <div {...stylex.props(rail.groupLabel)}>Room</div>
-            {ROOM_TABS.map((item) => (
-              <button
-                type="button"
-                key={item.id}
-                onClick={() => setTab(item.id)}
-                {...stylex.props(rail.item, tab === item.id && rail.itemActive)}
-              >
-                <span {...stylex.props(tab === item.id ? rail.itemIconActive : rail.itemIcon)}>
-                  <Glyph size={18}>{tabIcon(item.id)}</Glyph>
-                </span>
-                <span {...stylex.props(rail.itemLabel)}>{item.label}</span>
-                {item.id === "channels" ? <small {...stylex.props(rail.itemCount)}>{channels.length}</small> : null}
-                {item.id === "voice" ? <small {...stylex.props(rail.itemCount)}>{rooms.length}</small> : null}
-                {item.id === "roles" ? <small {...stylex.props(rail.itemCount)}>{roles.length}</small> : null}
-                {item.id === "members" ? <small {...stylex.props(rail.itemCount)}>{members.length}</small> : null}
-              </button>
-            ))}
-          </div>
+            {roomTabs.length ? (
+              <div {...stylex.props(rail.group, rail.groupFirst)}>
+                <div {...stylex.props(rail.groupLabel)}>Room</div>
+                {roomTabs.map((item) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    onClick={() => setTab(item.id)}
+                    {...stylex.props(rail.item, tab === item.id && rail.itemActive)}
+                  >
+                    <span {...stylex.props(tab === item.id ? rail.itemIconActive : rail.itemIcon)}>
+                      <Glyph size={18}>{tabIcon(item.id)}</Glyph>
+                    </span>
+                    <span {...stylex.props(rail.itemLabel)}>{item.label}</span>
+                    {item.id === "channels" ? <small {...stylex.props(rail.itemCount)}>{channels.length}</small> : null}
+                    {item.id === "voice" ? <small {...stylex.props(rail.itemCount)}>{rooms.length}</small> : null}
+                    {item.id === "roles" ? <small {...stylex.props(rail.itemCount)}>{roles.length}</small> : null}
+                    {item.id === "members" ? <small {...stylex.props(rail.itemCount)}>{members.length}</small> : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
-          <div {...stylex.props(rail.group)}>
-            <div {...stylex.props(rail.groupLabel)}>Device</div>
-            {DEVICE_TABS.map((item) => (
-              <button
-                type="button"
-                key={item.id}
-                onClick={() => setTab(item.id)}
-                {...stylex.props(rail.item, tab === item.id && rail.itemActive)}
-              >
-                <span {...stylex.props(tab === item.id ? rail.itemIconActive : rail.itemIcon)}>
-                  <Glyph size={18}>{tabIcon(item.id)}</Glyph>
-                </span>
-                <span {...stylex.props(rail.itemLabel)}>{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </aside>
+            {deviceTabs.length ? (
+              <div {...stylex.props(rail.group)}>
+                <div {...stylex.props(rail.groupLabel)}>Device</div>
+                {deviceTabs.map((item) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    onClick={() => setTab(item.id)}
+                    {...stylex.props(rail.item, tab === item.id && rail.itemActive)}
+                  >
+                    <span {...stylex.props(tab === item.id ? rail.itemIconActive : rail.itemIcon)}>
+                      <Glyph size={18}>{tabIcon(item.id)}</Glyph>
+                    </span>
+                    <span {...stylex.props(rail.itemLabel)}>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </aside>
+        ) : null}
 
         <section {...stylex.props(content.content)}>
           <header {...stylex.props(content.head)}>
             <span {...stylex.props(content.title)}>
-              <h2 {...stylex.props(content.h2)}>{activeTab.label}</h2>
-              <small {...stylex.props(content.desc)}>{tabDescription(tab)}</small>
+              <h2 {...stylex.props(content.h2)}>{title}</h2>
+              <small {...stylex.props(content.desc)}>{description}</small>
             </span>
             <button
               type="button"
@@ -261,10 +316,16 @@ export function ManageOverviewDialog({
               <ManageMembersTab
                 canManageRoles={canManageRoles}
                 initialMemberId={initialMemberId}
+                memberPreferences={memberPreferences}
                 members={members}
+                profileOnly={profileOnly}
                 roleDefinitions={state.roleDefinitions}
                 roles={roles}
                 onAssignMemberRoles={onAssignMemberRoles}
+                onSetMemberBlock={onSetMemberBlock}
+                onSetMemberIgnore={onSetMemberIgnore}
+                onSetMemberNickname={onSetMemberNickname}
+                onSetMemberNote={onSetMemberNote}
               />
             ) : null}
             {tab === "admin" ? (

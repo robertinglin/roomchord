@@ -5,6 +5,7 @@ const DIRECT_MESSAGE_PROTOCOL = "matterhorn.direct.v1";
 export function emptyChatState(): ChatState {
   return {
     channels: [],
+    callRoutes: {},
     messages: {},
     guests: {},
     publicInvites: [],

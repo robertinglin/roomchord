@@ -87,6 +87,9 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
     const current = participants.get(remote.clientId);
     participants.set(remote.clientId, {
       avatar: remote.avatar || initialFor(remote.name),
+      connecting: false,
+      connectionError: undefined,
+      connectionPhase: "streaming",
       deafened: current?.deafened,
       id: remote.clientId,
       memberId: current?.memberId,
@@ -97,6 +100,28 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
       screenPreview: current?.screenPreview,
       screenStream: current?.screenStream,
       stream: remote.stream
+    });
+  }
+  for (const peer of sfu.mediaRoomId === room.id ? sfu.peers || [] : []) {
+    if (peer.clientId === actorId) continue;
+    const current = participants.get(peer.clientId);
+    const isStreaming = peer.phase === "streaming" && Boolean(current?.stream);
+    participants.set(peer.clientId, {
+      avatar: current?.avatar || peer.avatar || initialFor(peer.name || peer.clientId),
+      connecting: !isStreaming && peer.phase !== "failed",
+      connectionError: peer.error,
+      connectionPhase: peer.phase,
+      deafened: current?.deafened,
+      id: peer.clientId,
+      isLocal: current?.isLocal,
+      memberId: current?.memberId,
+      media: current?.media,
+      mediaTracks: current?.mediaTracks,
+      muted: current?.muted,
+      name: current?.name || peer.name || peer.clientId,
+      screenPreview: current?.screenPreview,
+      screenStream: current?.screenStream,
+      stream: current?.stream
     });
   }
   for (const remote of sfu.mediaRoomId === room.id ? sfu.remoteScreenStreams || [] : []) {

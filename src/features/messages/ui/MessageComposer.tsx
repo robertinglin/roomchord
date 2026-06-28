@@ -4,6 +4,7 @@ import type { Message } from "@entities/chat/model/types";
 import { InlineEmojiPicker } from "@features/messages/ui/InlineEmojiPicker";
 import { authorName, previewText } from "@features/messages/model/messageDisplay";
 import { mentionToken } from "@entities/chat/model/mentions";
+import type { PendingComposerText } from "@entities/chat/model/chatUiStore";
 import { Button, ExternalLinkGlyph, SendGlyph, SmileGlyph } from "@shared/ui/design";
 import { tokens } from "../../../shared/ui/theme.stylex";
 
@@ -173,6 +174,7 @@ export function MessageComposer({
   memberNamesById,
   mode,
   onCancelReply,
+  pendingText,
   onSend,
   replyTo,
   title
@@ -182,6 +184,7 @@ export function MessageComposer({
   memberNamesById: Record<string, string>;
   mode: "channel" | "dm";
   onCancelReply: () => void;
+  pendingText?: PendingComposerText;
   onSend: (body: string) => void;
   replyTo?: Message;
   title: string;
@@ -200,6 +203,11 @@ export function MessageComposer({
     if (focusKey === undefined) return;
     editorRef.current?.focus();
   }, [focusKey]);
+
+  useEffect(() => {
+    if (!pendingText) return;
+    insertText(pendingText.text);
+  }, [pendingText?.id]);
 
   useEffect(() => {
     setSelectedMentionIndex(0);

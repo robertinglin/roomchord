@@ -1,5 +1,6 @@
 import React, { createContext, useContext, type ReactNode } from "react";
 import { chatActionHandlers, type ChatActionHandlers } from "@entities/chat/model/chatActions";
+import { useChatDirectCalls, type ChatDirectCalls } from "@entities/chat/model/useChatDirectCalls";
 import { useChatMediaRooms, type ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
 import { useChatNotifications } from "@entities/chat/model/useChatNotifications";
 import { useChatSyncEffects } from "@entities/chat/model/useChatSyncEffects";
@@ -10,6 +11,7 @@ import type { Mosh} from "../../../../types";
 
 type ChatRuntime = {
   actions: ChatActionHandlers;
+  directCalls: ChatDirectCalls;
   live: MatterhornRoom<Mosh>;
   media: ChatMediaRooms;
   roomName: string;
@@ -27,12 +29,15 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   const closedDirectThreads = useChatUiStore((value) => value.closedDirectThreads);
   const draftDirectThread = useChatUiStore((value) => value.draftDirectThread);
   const joinedMediaRoomId = useChatUiStore((value) => value.joinedMediaRoomId);
+  const memberPreferences = useChatUiStore((value) => value.memberPreferences);
   const pendingScrollMessageId = useChatUiStore((value) => value.pendingScrollMessageId);
+  const readAtByThread = useChatUiStore((value) => value.readAtByThread);
   const recentVoiceJoin = useChatUiStore((value) => value.recentVoiceJoin);
   const selectedMediaRoomId = useChatUiStore((value) => value.selectedMediaRoomId);
   const voicePreferences = useChatUiStore((value) => value.voicePreferences);
   const voiceSettingsOpen = useChatUiStore((value) => value.voiceSettingsOpen);
   const media = useChatMediaRooms({ live, roomName, voicePreferences });
+  const directCalls = useChatDirectCalls({ actor: live.actor, live, roomName, state });
   const view = useChatViewData({
     activeChannelId,
     activeThreadId,
@@ -42,7 +47,9 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
     joinedMediaRoomId,
     live,
     media,
+    memberPreferences,
     recentVoiceJoin,
+    readAtByThread,
     selectedMediaRoomId,
     voicePreferences,
     voiceSettingsOpen
@@ -76,7 +83,7 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   });
 
   return (
-    <ChatRuntimeContext.Provider value={{ actions, live, media, roomName, view }}>
+    <ChatRuntimeContext.Provider value={{ actions, directCalls, live, media, roomName, view }}>
       {children}
     </ChatRuntimeContext.Provider>
   );

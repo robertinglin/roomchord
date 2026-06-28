@@ -9,6 +9,10 @@ import type { ScreenPreviewSnapshot } from "matterhorn-sdk/browser/types";
 import { Avatar, Button, HeadphonesGlyph, MicOffGlyph } from "@shared/ui/design";
 import { tokens } from "../../../shared/ui/theme.stylex";
 
+const spinAnim = stylex.keyframes({
+  to: { transform: "rotate(360deg)" },
+});
+
 const styles = stylex.create({
   grid: {
     flex: 1,
@@ -92,6 +96,18 @@ const styles = stylex.create({
     display: "inline-flex",
     color: tokens.danger,
   },
+  connectingIcon: {
+    display: "inline-flex",
+    width: "13px",
+    height: "13px",
+    border: "2px solid oklch(0.88 0.04 250 / 0.35)",
+    borderTopColor: tokens.fg,
+    borderRadius: "999px",
+    animationName: spinAnim,
+    animationDuration: "0.8s",
+    animationTimingFunction: "linear",
+    animationIterationCount: "infinite",
+  },
   previewImage: {
     width: "100%",
     height: "100%",
@@ -162,9 +178,10 @@ export function VoiceParticipantGrid({
 
   function stateBadge(participant: VoiceParticipant) {
     const muted = isVoiceParticipantMuted(participant, mutedVoiceParticipantIds);
-    if (!muted && !participant.deafened) return null;
+    if (!muted && !participant.deafened && !participant.connecting) return null;
     return (
       <>
+        {participant.connecting ? <span {...stylex.props(styles.connectingIcon)} aria-label="Connecting" /> : null}
         {muted ? <span {...stylex.props(styles.stateIcon)} aria-label="Muted"><MicOffGlyph size={14} /></span> : null}
         {participant.deafened ? <span {...stylex.props(styles.stateIcon)} aria-label="Deafened"><HeadphonesGlyph size={14} /></span> : null}
       </>
@@ -184,7 +201,7 @@ export function VoiceParticipantGrid({
         const participantCameraStream = cameraStream(participant);
         const hasVideo = Boolean(participantCameraStream);
         return (
-          <article {...stylex.props(styles.tile, audioOn(participant) && styles.speaking)} aria-label={`${participant.name} participant`} key={participant.id}>
+          <article {...stylex.props(styles.tile, Boolean(participant.stream) && audioOn(participant) && styles.speaking)} aria-label={`${participant.name} participant`} key={participant.id}>
             <MemberContextMenu
               additionalActions={voiceParticipantActions(participant)}
               currentUserId={actorId}

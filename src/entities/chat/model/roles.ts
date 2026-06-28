@@ -5,6 +5,7 @@ import {
   roomAccessLevelForActor as matterhornRoomAccessLevelForActor
 } from "matterhorn-sdk/browser";
 import type { MatterhornPermissionActor } from "matterhorn-sdk/browser";
+import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import type { Actor, ChatState, MediaRoom, Presence, RoleDefinition, RoleId, RoomMember, RoomRoleAccessLevel } from "@entities/chat/model/types";
 
 const DEFAULT_ROLE_LABELS: Record<string, string> = {
@@ -93,7 +94,7 @@ export function assignedRoleIds(memberId: string, baseRole?: string, state?: Par
   return roleIdsForActor({ memberId, role: baseRole }, state);
 }
 
-export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMember>, presence: Record<string, Presence>, state?: Partial<ChatState>): MemberOption[] {
+export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMember>, presence: Record<string, Presence>, state?: Partial<ChatState>, memberPreferences: Record<string, MemberPreference> = {}): MemberOption[] {
   const members = new Map<string, Omit<MemberOption, "roleIds">>();
   for (const [key, member] of Object.entries(roomMembers || {})) {
     if (member.revokedAt || member.bannedAt) continue;
@@ -122,7 +123,7 @@ export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMemb
     status: "online"
   });
   return [...members.values()]
-    .map((member) => ({ ...member, roleIds: assignedRoleIds(member.id, member.baseRole, state) }))
+    .map((member) => ({ ...member, name: memberPreferences[member.id]?.nickname || member.name, roleIds: assignedRoleIds(member.id, member.baseRole, state) }))
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 

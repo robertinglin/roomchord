@@ -18,6 +18,7 @@ export function ChatContent() {
   const composerFocusKey = useChatUiStore((value) => value.composerFocusKey);
   const localMediaSettings = useChatUiStore((value) => value.localMediaSettings);
   const mutedVoiceParticipantIds = useChatUiStore((value) => value.mutedVoiceParticipantIds);
+  const pendingComposerText = useChatUiStore((value) => value.pendingComposerText);
   const isMobile = useIsMobile();
 
   if (view.showingMediaRoom && view.selectedMediaRoom) {
@@ -89,6 +90,7 @@ export function ChatContent() {
       memberAvatarsById={view.memberAvatarsById}
       forwardTargets={view.forwardTargets}
       focusKey={composerFocusKey > 0 ? composerFocusKey : undefined}
+      pendingComposerText={pendingComposerText}
       currentUserId={live.actor.memberId}
       mode={view.showingDm ? "dm" : "channel"}
       feedKey={view.showingDm ? `direct.thread:${view.currentThreadId || ""}` : `channel:${view.currentChannelId || ""}`}
@@ -97,8 +99,8 @@ export function ChatContent() {
       onReply={view.showingDm ? undefined : actions.replyToMessage}
       onReact={view.showingDm ? undefined : actions.reactToMessage}
       onForward={actions.forwardMessage}
-      onPin={view.showingDm || !view.actorCanManageRooms ? undefined : actions.pinMessage}
-      onUnpin={view.showingDm || !view.actorCanManageRooms ? undefined : actions.unpinMessage}
+      onPin={view.showingDm || live.actor.role === "member" || !live.can("messagePin") ? undefined : actions.pinMessage}
+      onUnpin={view.showingDm || live.actor.role === "member" || !live.can("messagePin") ? undefined : actions.unpinMessage}
       onDelete={view.showingDm ? undefined : actions.deleteMessage}
       onEdit={view.showingDm ? undefined : actions.editMessage}
       onDirectMessage={actions.openDirectThreadForMember}

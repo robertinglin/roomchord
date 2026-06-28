@@ -54,10 +54,17 @@ export type MemberRoleAssignment = {
 };
 export type MemberModeration = {
   memberId?: string;
+  avatar?: string | null;
+  callClientId?: string;
+  callPubkey?: string;
+  callUpdatedAt?: number;
   nameLocked?: boolean | null;
   chatDisabled?: boolean | null;
   bannedAt?: number | null;
   banReason?: string | null;
+  name?: string | null;
+  peerAddress?: string;
+  peerId?: string;
 };
 export type PublicInvite = {
   id: string;

@@ -46,6 +46,7 @@ function storageKeys() {
   const key = `message-feed-test:${crypto.randomUUID()}`;
   return {
     closedDirectThreads: `${key}:closedDirectThreads`,
+    memberPreferences: `${key}:memberPreferences`,
     readAtByThread: `${key}:readAtByThread`,
     voicePreferences: `${key}:voicePreferences`,
     voiceReconnect: `${key}:voiceReconnect`

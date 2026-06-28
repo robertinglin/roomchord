@@ -4,6 +4,7 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import type { CallMediaSettings } from "matterhorn-sdk/browser/types";
 import { clearRecentVoiceJoin, loadRecentVoiceJoin, saveRecentVoiceJoin, type RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { loadClosedDirectThreads, saveClosedDirectThreads } from "@entities/chat/model/localClosedDirectThreads";
+import { loadMemberPreferences, saveMemberPreferences, type MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import { loadDirectReadState, saveDirectReadState } from "@entities/chat/model/localReadState";
 import { loadVoicePreferences, saveVoicePreferences, type VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { DirectThread } from "@entities/chat/model/types";
@@ -11,10 +12,12 @@ import type { LinkedMessageLocation } from "@entities/chat/model/chatViewModel";
 import type { ManagementTab } from "@entities/chat/model/managementTypes";
 
 export type ActiveView = "channel" | "dm" | "media";
-export type ManageDialogState = { tab?: ManagementTab; memberId?: string };
+export type ManageDialogState = { profileOnly?: boolean; tab?: ManagementTab; memberId?: string };
+export type PendingComposerText = { id: number; text: string };
 
 export type ChatStorageKeys = {
   closedDirectThreads: string;
+  memberPreferences: string;
   readAtByThread: string;
   voicePreferences: string;
   voiceReconnect: string;
@@ -30,7 +33,9 @@ type ChatUiValues = {
   joinedMediaRoomId?: string;
   localMediaSettings: CallMediaSettings;
   manageDialog?: ManageDialogState;
+  memberPreferences: Record<string, MemberPreference>;
   mutedVoiceParticipantIds: Record<string, boolean>;
+  pendingComposerText?: PendingComposerText;
   pendingScrollMessageId?: string;
   readAtByThread: Record<string, number>;
   recentVoiceJoin?: RecentVoiceJoin;
@@ -59,6 +64,8 @@ export type ChatUiActions = {
   openDraftDirectThread(thread: DirectThread): void;
   openLinkedMessage(location: LinkedMessageLocation, hash: string): void;
   openManageDialog(tab?: ManagementTab, memberId?: string): void;
+  openMemberProfileDialog(memberId: string): void;
+  queueComposerText(text: string): void;
   rememberVoiceJoin(roomId: string, media: CallMediaSettings, joinedAt?: number): void;
   refreshRecentVoiceJoin(): void;
   selectChannel(channelId: string): void;
@@ -68,6 +75,10 @@ export type ChatUiActions = {
   setActiveView(view: ActiveView): void;
   setJoinedMediaRoomId(roomId?: string): void;
   setLocalMediaSettings(media: CallMediaSettings): void;
+  setMemberBlock(memberId: string, blocked: boolean): void;
+  setMemberIgnore(memberId: string, ignored: boolean): void;
+  setMemberNickname(memberId: string, nickname: string | null): void;
+  setMemberNote(memberId: string, note: string | null): void;
   setPendingScrollMessageId(messageId?: string): void;
   setSelectedMediaRoomId(roomId?: string): void;
   setVoiceSettingsOpen(open: boolean): void;
@@ -103,6 +114,7 @@ function createChatUiState(input: ChatUiStoreInput, actions: ChatUiActions): Cha
     joinedMediaRoomId: undefined,
     localMediaSettings: { audio: true, video: false },
     mutedVoiceParticipantIds: {},
+    memberPreferences: loadMemberPreferences(input.storageKeys.memberPreferences),
     pendingScrollMessageId: input.initialLinkedLocation?.messageId,
     readAtByThread: loadDirectReadState(input.storageKeys.readAtByThread),
     recentVoiceJoin: loadRecentVoiceJoin(input.storageKeys.voiceReconnect),
@@ -117,6 +129,20 @@ function createChatUiState(input: ChatUiStoreInput, actions: ChatUiActions): Cha
 
 function currentHash() {
   return typeof window === "undefined" ? "" : window.location.hash;
+}
+
+function setMemberPreference(
+  set: StoreApi<ChatUiState>["setState"],
+  memberId: string,
+  update: (preference: MemberPreference) => MemberPreference
+) {
+  set((state) => {
+    const nextPreference = update({ ...(state.memberPreferences[memberId] || {}) });
+    const memberPreferences = { ...state.memberPreferences, [memberId]: nextPreference };
+    if (Object.keys(nextPreference).length === 0) delete memberPreferences[memberId];
+    saveMemberPreferences(state.storageKeys.memberPreferences, memberPreferences);
+    return { memberPreferences };
+  });
 }
 
 export function createChatUiStore(input: ChatUiStoreInput): ChatUiStore {
@@ -213,6 +239,12 @@ export function createChatUiStore(input: ChatUiStoreInput): ChatUiStore {
       openManageDialog(tab = "overview", memberId) {
         set({ manageDialog: { tab, memberId } });
       },
+      openMemberProfileDialog(memberId) {
+        set({ manageDialog: { profileOnly: true, tab: "members", memberId } });
+      },
+      queueComposerText(text) {
+        set((state) => ({ composerFocusKey: state.composerFocusKey + 1, pendingComposerText: { id: state.composerFocusKey + 1, text } }));
+      },
       rememberVoiceJoin(roomId, media, joinedAt = Date.now()) {
         set((state) => {
           const recentVoiceJoin = { roomId, media, joinedAt };
@@ -247,6 +279,36 @@ export function createChatUiStore(input: ChatUiStoreInput): ChatUiStore {
       },
       setLocalMediaSettings(media) {
         set({ localMediaSettings: media });
+      },
+      setMemberBlock(memberId, blocked) {
+        setMemberPreference(set, memberId, (preference) => {
+          if (blocked) return { ...preference, blocked };
+          delete preference.blocked;
+          return preference;
+        });
+      },
+      setMemberIgnore(memberId, ignored) {
+        setMemberPreference(set, memberId, (preference) => {
+          if (ignored) return { ...preference, ignored };
+          delete preference.ignored;
+          return preference;
+        });
+      },
+      setMemberNickname(memberId, nickname) {
+        setMemberPreference(set, memberId, (preference) => {
+          const value = nickname?.trim();
+          if (value) return { ...preference, nickname: value };
+          delete preference.nickname;
+          return preference;
+        });
+      },
+      setMemberNote(memberId, note) {
+        setMemberPreference(set, memberId, (preference) => {
+          const value = note?.trim();
+          if (value) return { ...preference, note: value };
+          delete preference.note;
+          return preference;
+        });
       },
       setPendingScrollMessageId(messageId) {
         set({ pendingScrollMessageId: messageId });

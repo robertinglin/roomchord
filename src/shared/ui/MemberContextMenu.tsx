@@ -123,28 +123,51 @@ const styles = stylex.create({
   },
 });
 
-function noop() {}
-
 export function MemberContextMenu({
   additionalActions = [],
   children,
   currentUserId,
   memberId,
   memberName,
-  onDirectMessage
+  onBlock,
+  blockLabel = "Block",
+  onDirectMessage,
+  onEditNickname,
+  onEditNote,
+  onIgnore,
+  ignoreLabel = "Ignore",
+  onInvite,
+  onMention,
+  onOpenModView,
+  onOpenProfile,
+  onRemoveFriend,
+  onStartCall
 }: {
   additionalActions?: MemberContextMenuAction[];
+  blockLabel?: string;
   children: React.ReactNode;
   currentUserId?: string;
   memberId?: string;
   memberName: string;
+  onBlock?: (memberId: string) => void;
   onDirectMessage?: (memberId: string) => void;
+  onEditNickname?: (memberId: string) => void;
+  onEditNote?: (memberId: string) => void;
+  onIgnore?: (memberId: string) => void;
+  ignoreLabel?: string;
+  onInvite?: (memberId: string) => void;
+  onMention?: (memberId: string, memberName: string) => void;
+  onOpenModView?: (memberId: string) => void;
+  onOpenProfile?: (memberId: string) => void;
+  onRemoveFriend?: (memberId: string) => void;
+  onStartCall?: (memberId: string) => void;
 }) {
   const [position, setPosition] = useState<MenuPosition | undefined>();
   const menuItems = useMemo<ContextMenuItem[]>(() => {
     const activeActions = additionalActions.filter((action) => !action.disabled);
     const roleAction = activeActions.find((action) => action.id === "set-roles");
-    const canMessage = Boolean(memberId && memberId !== currentUserId && onDirectMessage);
+    const isOtherMember = Boolean(memberId && memberId !== currentUserId);
+    const canMessage = Boolean(isOtherMember && onDirectMessage);
     const canManageRoles = Boolean(roleAction);
     const actionItems = activeActions.map((action, index) => ({
       ariaLabel: action.label,
@@ -154,8 +177,8 @@ export function MemberContextMenu({
       sectionBefore: index === 0
     }));
     return [
-      { id: "profile", label: "Profile", onSelect: noop },
-      { id: "mention", label: "Mention", onSelect: noop },
+      { disabled: !memberId || !onOpenProfile, id: "profile", label: "Profile", onSelect: memberId ? () => onOpenProfile?.(memberId) : undefined },
+      { disabled: !memberId || !onMention, id: "mention", label: "Mention", onSelect: memberId ? () => onMention?.(memberId, memberName) : undefined },
       {
         ariaLabel: canMessage ? "Send DM" : undefined,
         disabled: !canMessage,
@@ -163,19 +186,19 @@ export function MemberContextMenu({
         label: "Message",
         onSelect: canMessage && memberId ? () => onDirectMessage?.(memberId) : undefined
       },
-      { disabled: true, id: "start-call", label: "Start a Call" },
-      { disabled: true, id: "edit-note", label: "Edit Note", meta: "Only visible to you" },
-      { disabled: true, id: "nickname", label: "Add Friend Nickname" },
+      { disabled: !isOtherMember || !onStartCall, id: "start-call", label: "Start a Call", onSelect: memberId ? () => onStartCall?.(memberId) : undefined },
+      { disabled: !memberId || !onEditNote, id: "edit-note", label: "Edit Note", meta: "Member profile", onSelect: memberId ? () => onEditNote?.(memberId) : undefined },
+      { disabled: !isOtherMember || !onEditNickname, id: "nickname", label: "Add Friend Nickname", onSelect: memberId ? () => onEditNickname?.(memberId) : undefined },
       ...actionItems,
       { disabled: true, icon: "›", id: "apps", label: "Apps", sectionBefore: actionItems.length === 0 },
-      { disabled: true, icon: "›", id: "invite", label: "Invite to Server" },
-      { disabled: true, id: "remove-friend", label: "Remove Friend" },
-      { disabled: true, id: "ignore", label: "Ignore" },
-      { disabled: true, id: "block", label: "Block", variant: "danger" },
+      { disabled: !isOtherMember || !onInvite, icon: "›", id: "invite", label: "Invite to Server", onSelect: memberId ? () => onInvite?.(memberId) : undefined },
+      { disabled: !isOtherMember || !onRemoveFriend, id: "remove-friend", label: "Remove Friend", onSelect: memberId ? () => onRemoveFriend?.(memberId) : undefined },
+      { disabled: !isOtherMember || !onIgnore, id: "ignore", label: ignoreLabel, onSelect: memberId ? () => onIgnore?.(memberId) : undefined },
+      { disabled: !isOtherMember || !onBlock, id: "block", label: blockLabel, onSelect: memberId ? () => onBlock?.(memberId) : undefined, variant: "danger" },
       { disabled: !canManageRoles, icon: "›", id: "roles", label: "Roles", onSelect: roleAction?.onSelect, sectionBefore: true },
-      { disabled: !canManageRoles, id: "mod-view", label: "Open in Mod View", onSelect: roleAction?.onSelect, sectionBefore: true }
+      { disabled: !memberId || !onOpenModView, id: "mod-view", label: "Open in Mod View", onSelect: memberId ? () => onOpenModView?.(memberId) : undefined, sectionBefore: true }
     ];
-  }, [additionalActions, currentUserId, memberId, onDirectMessage]);
+  }, [additionalActions, blockLabel, currentUserId, ignoreLabel, memberId, memberName, onBlock, onDirectMessage, onEditNickname, onEditNote, onIgnore, onInvite, onMention, onOpenModView, onOpenProfile, onRemoveFriend, onStartCall]);
 
   useEffect(() => {
     if (!position) return undefined;

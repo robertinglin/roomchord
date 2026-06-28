@@ -1,5 +1,6 @@
 import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
 import { parseMarkdown, type MarkdownEmbed } from "matterhorn-sdk/browser/markdown";
+import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import type { Actor, AvatarSource, ChatState, DirectThread, MemberId, Message, MessageId, RoomMember, ThreadId } from "@entities/chat/model/types";
 import {
   channelEmbeds,
@@ -51,7 +52,7 @@ function roomMemberName(member: RoomMember, id: string) {
   return matterhornDisplayName({ member, fallbackId: id });
 }
 
-export function memberNamesForState(state: ChatState, actor: Actor): Record<string, string> {
+export function memberNamesForState(state: ChatState, actor: Actor, memberPreferences: Record<string, MemberPreference> = {}): Record<string, string> {
   const names: Record<string, string> = {};
   for (const [key, member] of Object.entries(state.members || {})) {
     const id = member.memberId || member.id || key;
@@ -62,6 +63,9 @@ export function memberNamesForState(state: ChatState, actor: Actor): Record<stri
     if (id) names[id] = matterhornDisplayName({ presence: item, member: state.members?.[id as MemberId], fallback: names[id], fallbackId: id });
   }
   names[actor.memberId] = matterhornDisplayName({ actor, fallback: names[actor.memberId], fallbackId: actor.memberId });
+  for (const [memberId, preference] of Object.entries(memberPreferences)) {
+    if (preference.nickname) names[memberId] = preference.nickname;
+  }
   return names;
 }
 

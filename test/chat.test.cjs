@@ -33,6 +33,7 @@ function assertCleanMoshTypes(types) {
   assert.match(types, /export type ScopeType = "channel" \| \(string & \{\}\);/);
   assert.match(types, /commentThreads: Record<ThreadId, CommentThread>;/);
   assert.match(types, /comments: Record<CommentId, Comment>;/);
+  assert.match(types, /callRoutes: Record<string, CallRoute>;/);
   assert.match(types, /Requires `member` role\./);
   assert.match(types, /body: string, <= 4000/);
   assert.match(types, /omit to leave unchanged; null to clear/);
@@ -125,7 +126,13 @@ test("Chat schema declares moderation, author-only edits, and moderator deletes"
     assert.ok(primaryAction(type), `${type} action required`);
     assert.deepEqual(primaryOperation(type).authorize.roles, ["admin"]);
   }
-
+  for (const type of ["member.note.set", "member.nickname.set", "member.ignore.set", "member.block.set"]) {
+    assert.equal(primaryAction(type), undefined, `${type} should stay personal UI state`);
+  }
+  assert.ok(primaryAction("member.call.update"), "member.call.update action required");
+  assert.deepEqual(primaryOperation("member.call.update").authorize.roles, ["member"]);
+  assert.equal(app.compositionSchema.primaryPlugin.model.shapes.callRoutes.readClass, "head");
+  assert.equal(app.compositionSchema.primaryPlugin.model.shapes.callRoutes.integrityClass, "signature");
   assert.deepEqual(
     ["roleCreate", "memberRoleAssign", "memberRoleUnassign", "scopeRoleSet"].map((name) => app.appPack.composition.actions.find((action) => action.name === name)?.type),
     ["access.role.define", "access.role.assign", "access.role.unassign", "scope.role.set"]

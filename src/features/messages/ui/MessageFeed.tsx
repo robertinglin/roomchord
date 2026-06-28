@@ -5,7 +5,7 @@ import { MessageComposer } from "@features/messages/ui/MessageComposer";
 import { MessageRow } from "@features/messages/ui/MessageRow";
 import { loadRecentReactions, rememberReaction } from "@features/messages/model/recentReactions";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
-import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
+import { useChatUiActions, useChatUiStore, type PendingComposerText } from "@entities/chat/model/chatUiStore";
 import {
   Button,
   ChatHeader,
@@ -26,6 +26,7 @@ export type MessageFeedProps = {
   memberAvatarsById?: Record<string, string>;
   forwardTargets?: MessageForwardTarget[];
   focusKey?: number;
+  pendingComposerText?: PendingComposerText;
   currentUserId?: string;
   mode: "channel" | "dm";
   disabled?: boolean;
@@ -51,6 +52,7 @@ export function MessageFeed({
   memberAvatarsById = {},
   forwardTargets = [],
   focusKey,
+  pendingComposerText,
   currentUserId,
   mode,
   disabled,
@@ -194,6 +196,7 @@ export function MessageFeed({
         memberNamesById={memberNamesById}
         mode={mode}
         onCancelReply={() => setReplyTo(undefined)}
+        pendingText={pendingComposerText}
         onSend={submitMessage}
         replyTo={replyTo}
         title={title}

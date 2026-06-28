@@ -9,6 +9,7 @@ export function ChatManageDialog() {
   const { actions, live, media, view, roomName } = useChatRuntime();
   const ui = useChatUiActions();
   const manageDialog = useChatUiStore((value) => value.manageDialog);
+  const memberPreferences = useChatUiStore((value) => value.memberPreferences);
   const localMediaSettings = useChatUiStore((value) => value.localMediaSettings);
   const voicePreferences = useChatUiStore((value) => value.voicePreferences);
   const mediaBeforeSettings = React.useRef<CallMediaSettings | undefined>(undefined);
@@ -84,6 +85,8 @@ export function ChatManageDialog() {
       canManageRoles={view.actorCanManageRoles}
       initialTab={manageDialog.tab}
       initialMemberId={manageDialog.memberId}
+      memberPreferences={memberPreferences}
+      profileOnly={manageDialog.profileOnly}
       voicePreferences={voicePreferences}
       onClose={ui.closeManageDialog}
       onCreateChannel={actions.createTextChannel}
@@ -102,6 +105,10 @@ export function ChatManageDialog() {
       onDisableInvite={actions.disableInvite}
       onModerateMember={actions.moderateMember}
       onRemoveInvite={actions.removeInvite}
+      onSetMemberBlock={ui.setMemberBlock}
+      onSetMemberIgnore={ui.setMemberIgnore}
+      onSetMemberNickname={ui.setMemberNickname}
+      onSetMemberNote={ui.setMemberNote}
       onUnbanMember={actions.unbanMember}
       onUpdateVoicePreferences={updateVoicePreferences}
     />

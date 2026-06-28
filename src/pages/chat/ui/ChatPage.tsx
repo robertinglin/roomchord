@@ -5,6 +5,7 @@ import { ChatShell } from "@widgets/chat-shell/ui/ChatShell";
 import { ChatRuntimeProvider } from "@entities/chat/model/chatRuntime";
 import { ChatUiStoreProvider, type ChatStorageKeys } from "@entities/chat/model/chatUiStore";
 import { closedDirectThreadsStorageKey } from "@entities/chat/model/localClosedDirectThreads";
+import { memberPreferencesStorageKey } from "@entities/chat/model/localMemberPreferences";
 import { directReadStorageKey } from "@entities/chat/model/localReadState";
 import { voiceReconnectStorageKey } from "@entities/chat/model/localVoiceReconnect";
 import { voicePreferencesStorageKey } from "@entities/chat/model/localVoicePreferences";
@@ -30,6 +31,7 @@ export function ChatApp(props: ChatProps) {
   const openLaunchHomeRoom = props.onOpenLaunchHomeRoom || props.openRoom;
   const storageKeys: ChatStorageKeys = {
     closedDirectThreads: closedDirectThreadsStorageKey(roomName, live.actor.memberId),
+    memberPreferences: memberPreferencesStorageKey(roomName, live.actor.memberId),
     readAtByThread: directReadStorageKey(roomName, live.actor.memberId),
     voicePreferences: voicePreferencesStorageKey(roomName, live.actor.memberId),
     voiceReconnect: voiceReconnectStorageKey(roomName, live.actor.memberId)

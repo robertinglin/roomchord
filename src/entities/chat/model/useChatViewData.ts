@@ -3,6 +3,7 @@ import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
 import { channelReadTopic, unreadCountsByTopic, type MatterhornReadTopic, type TopicReadCursor, type TopicReadableItem } from "matterhorn-sdk/browser";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
 import type { ActiveView } from "@entities/chat/model/chatUiStore";
+import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { canEditRoom, canViewRoom, assignedRoleIds } from "@entities/chat/model/roles";
@@ -28,7 +29,9 @@ export type ChatViewDataInput = {
   joinedMediaRoomId?: string;
   live: MatterhornRoom<Mosh>;
   media: ChatMediaRooms;
+  memberPreferences: Record<string, MemberPreference>;
   recentVoiceJoin?: RecentVoiceJoin;
+  readAtByThread: Record<string, number>;
   selectedMediaRoomId?: string;
   voicePreferences: VoicePreferences;
   voiceSettingsOpen: boolean;
@@ -72,7 +75,7 @@ export function useChatViewData(input: ChatViewDataInput) {
     }
     return visible;
   }, [directGroups, input.closedDirectThreads, input.draftDirectThread, state]);
-  const memberNamesById = useMemo(() => memberNamesForState(state, live.actor), [live.actor, state.members, state.presence]);
+  const memberNamesById = useMemo(() => memberNamesForState(state, live.actor, input.memberPreferences), [input.memberPreferences, live.actor, state.members, state.presence]);
   const memberAvatarsById = useMemo(() => memberAvatarsForState(state, live.actor), [live.actor, state.members, state.presence]);
   const topicUnreadCounts = useMemo(() => {
     const readTags = state.members?.[live.actor.memberId]?.readTags || {};
@@ -88,8 +91,16 @@ export function useChatViewData(input: ChatViewDataInput) {
     return unreadCountsByTopic(items, (topic) => live.notifications?.getReadCursor(topic) || readTags[topic], { currentUserId: live.actor.memberId });
   }, [live.actor.memberId, live.notifications, state.members, state.messages]);
   const unreadCounts = useMemo(() => Object.fromEntries(directGroups.map((group) => {
-    return [group.thread.id, group.unreadCount || 0];
-  })), [directGroups]);
+    const ignored = (group.thread.userIds || []).some((memberId) => memberId !== live.actor.memberId && input.memberPreferences[memberId]?.ignored);
+    if (ignored) return [group.thread.id, 0];
+    const readAt = Number(input.readAtByThread[group.thread.id] || 0);
+    if (readAt <= 0) return [group.thread.id, group.unreadCount || 0];
+    const unread = group.messages.filter((message) =>
+      message.authorId !== live.actor.memberId
+      && Number(message.createdAt || 0) > readAt
+    ).length;
+    return [group.thread.id, unread];
+  })), [directGroups, input.memberPreferences, input.readAtByThread, live.actor.memberId]);
   const actorCanManageRooms = live.can("mediaRoomCreate");
   const actorCanCreateChannels = live.can("channelCreate");
   const actorCanManageRoles = live.can("roleCreate") || live.can("memberRoleAssign") || live.can("scopeRoleSet");

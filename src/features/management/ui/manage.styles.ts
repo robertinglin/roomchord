@@ -37,6 +37,12 @@ export const shell = stylex.create({
     backgroundColor: "#15171a",
     boxShadow: tokens.elevPanel,
   },
+  profileDialog: {
+    width: "min(720px, calc(100vw - 48px))",
+    height: "auto",
+    maxHeight: "min(640px, calc(100vh - 48px))",
+    gridTemplateColumns: "minmax(0, 1fr)",
+  },
 });
 
 /* ───────────────────────────── nav rail ───────────────────────────── */

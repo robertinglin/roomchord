@@ -65,6 +65,19 @@ export namespace Mosh {
   export interface Actor { memberId: MemberId; deviceId: string; role: Role | (string & {}); displayName?: string; avatar?: string; avatarUrl?: string; profileImageUrl?: string; }
   export interface Activity { id: string; operationId?: string; actorId?: MemberId; actorName?: string; message: string; createdAt?: number; }
   /**
+   * From primary model collection `callRoutes`.
+   */
+  export interface CallRoute {
+    avatar?: string;
+    callClientId?: string;
+    callPubkey?: string;
+    callUpdatedAt?: number;
+    memberId?: MemberId;
+    name?: string;
+    peerAddress?: string;
+    peerId?: string;
+  }
+  /**
    * From primary model collection `channels`.
    */
   export interface Channel {
@@ -81,6 +94,7 @@ export namespace Mosh {
    * From primary model collection `guests`.
    */
   export interface Guest {
+    avatar?: string;
     /**
      * omit to leave unchanged; null to clear.
      */
@@ -90,11 +104,19 @@ export namespace Mosh {
      * omit to leave unchanged; null to clear.
      */
     banReason?: null | string;
+    callClientId?: string;
+    callPubkey?: string;
+    callUpdatedAt?: number;
     chatDisabled?: boolean;
+    lastSeenAt?: number;
     memberId?: MemberId;
     moderatedAt?: number;
     moderatedBy?: string;
+    name?: string;
     nameLocked?: boolean;
+    peerAddress?: string;
+    peerId?: string;
+    role?: string;
     unbannedAt?: number;
     unbannedBy?: string;
   }
@@ -149,6 +171,7 @@ export namespace Mosh {
   export interface State {
     access: CoreAccessState;
     activity: Activity[];
+    callRoutes: Record<string, CallRoute>;
     channels: Channel[];
     comments: Record<CommentId, Comment>;
     commentThreads: Record<ThreadId, CommentThread>;
@@ -214,6 +237,16 @@ export namespace Mosh {
      * reason: string, <= 300, nullable, omit to leave unchanged; null to clear
      */
     memberBan: { memberId: MemberId; reason?: null | string };
+    /**
+     * Requires `member` role.
+     * clientId: string, <= 200
+     * peerId: string, <= 200
+     * callPubkey: string, <= 200
+     * peerAddress: string, <= 400
+     * name: string, <= 80
+     * avatar: string, <= 200
+     */
+    memberCallUpdate: { clientId: string; peerId: string; callPubkey: string; peerAddress?: string; name?: string; avatar?: string };
     /**
      * Requires `admin` role.
      * memberId: string, <= 200
@@ -447,6 +480,16 @@ export namespace Mosh {
      */
     moderateMember: { memberId: MemberId; nameLocked?: boolean; chatDisabled?: boolean };
     /**
+     * Requires `member` role.
+     * clientId: string, <= 200
+     * peerId: string, <= 200
+     * callPubkey: string, <= 200
+     * peerAddress: string, <= 400
+     * name: string, <= 80
+     * avatar: string, <= 200
+     */
+    updateMemberCall: { clientId: string; peerId: string; callPubkey: string; peerAddress?: string; name?: string; avatar?: string };
+    /**
      * Requires `admin` role.
      * memberId: string, <= 200
      * reason: string, <= 300, nullable, omit to leave unchanged; null to clear
@@ -496,6 +539,7 @@ export namespace Mosh {
     joinApprove: "join.approve";
     joinDeny: "join.deny";
     memberBan: "member.ban";
+    memberCallUpdate: "member.call.update";
     memberModerate: "member.moderate";
     memberUnban: "member.unban";
     messageDelete: "message.delete";
@@ -529,6 +573,7 @@ export namespace Mosh {
     memberRoleUnassign: "access.role.unassign";
     scopeRoleSet: "scope.role.set";
     moderateMember: "member.moderate";
+    updateMemberCall: "member.call.update";
     banMember: "member.ban";
     unbanMember: "member.unban";
     disableInvite: "invite.disable";

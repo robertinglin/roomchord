@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
 import type { MatterhornEphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
+import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import type { Actor, ChatEmbed, ChatState, CommentThread, MediaRoom, Presence, RoleDefinition, RoomMember, ScreenShare } from "@entities/chat/model/types";
+import { mentionToken } from "@entities/chat/model/mentions";
 import { assignedRoleIds, roleNames } from "@entities/chat/model/roles";
 import { MemberContextMenu, type MemberContextMenuAction } from "@shared/ui/MemberContextMenu";
 import { RailGroup, RailMember } from "@shared/ui/design";
@@ -84,7 +86,7 @@ function avatarFor(member?: RoomMember, presence?: Presence, actor?: Actor) {
   return presence?.profileImageUrl || presence?.avatarUrl || presence?.avatar || member?.profileImageUrl || member?.avatarUrl || member?.avatar || actor?.profileImageUrl || actor?.avatarUrl || actor?.avatar;
 }
 
-function memberRows(roomMembers: Record<string, RoomMember> | undefined, presence: Record<string, Presence> | undefined, actor?: Actor, roleDefinitions?: ChatState["roleDefinitions"], memberRoles?: Partial<ChatState>): MemberRow[] {
+function memberRows(roomMembers: Record<string, RoomMember> | undefined, presence: Record<string, Presence> | undefined, actor?: Actor, roleDefinitions?: ChatState["roleDefinitions"], memberRoles?: Partial<ChatState>, memberPreferences?: Record<string, MemberPreference>): MemberRow[] {
   const rows = new Map<string, MemberRow>();
   const safeRoomMembers = roomMembers || {};
   const safePresence = presence || {};
@@ -134,7 +136,7 @@ function memberRows(roomMembers: Record<string, RoomMember> | undefined, presenc
   return [...rows.values()].map((row) => {
     const assignedRoles = roleNames(row.roleIds, roleDefinitions);
     const activity = row.activity && row.activity !== row.role ? row.activity : assignedRoles.join(", ") || row.activity;
-    return { ...row, role: assignedRoles.join(", ") || row.role, activity };
+    return { ...row, name: memberPreferences?.[row.id]?.nickname || row.name, role: assignedRoles.join(", ") || row.role, activity };
   }).sort((left, right) => Number(right.self) - Number(left.self) || left.name.localeCompare(right.name));
 }
 
@@ -148,10 +150,16 @@ export function PresencePanel({
   screenShares,
   voiceTokens,
   roleDefinitions,
+  memberPreferences,
   memberRoles,
   canManageRoles,
   onDirectMessage,
-  onSetMemberRoles
+  onMention,
+  onOpenMemberProfile,
+  onSetMemberBlock,
+  onSetMemberIgnore,
+  onSetMemberRoles,
+  onStartCall
 }: {
   actor?: Actor;
   roomMembers?: Record<string, RoomMember>;
@@ -162,13 +170,19 @@ export function PresencePanel({
   screenShares: ScreenShare[];
   voiceTokens: MatterhornEphemeralToken[];
   roleDefinitions?: ChatState["roleDefinitions"];
+  memberPreferences?: Record<string, MemberPreference>;
   memberRoles?: Partial<ChatState>;
   canManageRoles: boolean;
   onDirectMessage: (memberId: string) => void;
+  onMention: (text: string) => void;
+  onOpenMemberProfile: (memberId: string) => void;
+  onSetMemberBlock: (memberId: string, blocked: boolean) => void;
+  onSetMemberIgnore: (memberId: string, ignored: boolean) => void;
   onSetMemberRoles: (memberId: string) => void;
+  onStartCall?: (memberId: string) => void;
 }) {
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>();
-  const members = memberRows(roomMembers, presence, actor, roleDefinitions, memberRoles);
+  const members = memberRows(roomMembers, presence, actor, roleDefinitions, memberRoles, memberPreferences);
   const activeRooms = rooms
     .filter((room) => !room.archivedAt && voiceTokens.some((token) => token.scope === room.id))
     .map((room) => ({ room, count: voiceTokens.filter((token) => token.scope === room.id).length }));
@@ -205,14 +219,26 @@ export function PresencePanel({
   }
 
   function renderMember(member: MemberRow) {
+    const preference = memberPreferences?.[member.id];
+    const canInteractDirectly = !preference?.blocked;
     return (
       <React.Fragment key={member.id}>
         <MemberContextMenu
           additionalActions={memberActions(member)}
+          blockLabel={preference?.blocked ? "Unblock" : "Block"}
           currentUserId={actor?.memberId}
+          ignoreLabel={preference?.ignored ? "Unignore" : "Ignore"}
           memberId={member.id}
           memberName={member.name}
-          onDirectMessage={onDirectMessage}
+          onBlock={() => onSetMemberBlock(member.id, !preference?.blocked)}
+          onDirectMessage={canInteractDirectly ? onDirectMessage : undefined}
+          onEditNickname={onOpenMemberProfile}
+          onEditNote={onOpenMemberProfile}
+          onIgnore={() => onSetMemberIgnore(member.id, !preference?.ignored)}
+          onMention={() => onMention(`${mentionToken(member.id)} `)}
+          onOpenModView={canManageRoles ? onSetMemberRoles : undefined}
+          onOpenProfile={onOpenMemberProfile}
+          onStartCall={canInteractDirectly ? onStartCall : undefined}
         >
           <button
             {...stylex.props(styles.memberButton, selectedMemberId === member.id && styles.selected)}

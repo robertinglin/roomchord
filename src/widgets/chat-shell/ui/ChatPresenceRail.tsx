@@ -1,9 +1,12 @@
 import React from "react";
 import { useChatRuntime } from "@entities/chat/model/chatRuntime";
+import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
 import { PresencePanel } from "@features/presence/ui/PresencePanel";
 
 export function ChatPresenceRail() {
-  const { actions, live, media, view } = useChatRuntime();
+  const { actions, directCalls, live, media, view } = useChatRuntime();
+  const ui = useChatUiActions();
+  const memberPreferences = useChatUiStore((value) => value.memberPreferences);
   return (
     <PresencePanel
       actor={live.actor}
@@ -15,10 +18,16 @@ export function ChatPresenceRail() {
       screenShares={view.activeScreenShares}
       voiceTokens={media.voiceTokens}
       roleDefinitions={live.state.roleDefinitions}
+      memberPreferences={memberPreferences}
       memberRoles={live.state}
       canManageRoles={view.actorCanManageRoles}
       onDirectMessage={actions.openDirectThreadForMember}
+      onMention={ui.queueComposerText}
+      onOpenMemberProfile={ui.openMemberProfileDialog}
+      onSetMemberBlock={ui.setMemberBlock}
+      onSetMemberIgnore={ui.setMemberIgnore}
       onSetMemberRoles={(memberId) => actions.openManageDialog("members", memberId)}
+      onStartCall={(memberId) => directCalls.callMember(memberId, "voice")}
     />
   );
 }

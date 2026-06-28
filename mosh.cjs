@@ -31,6 +31,7 @@ const chat = defineModel({
       ],
       messages: {},
       guests: {},
+      callRoutes: {},
       publicInvites: [],
       joinRequests: {},
       // activity: [] and roleDefinitions are seeded by Matterhorn from `roles`.
@@ -48,6 +49,7 @@ const chat = defineModel({
     // cross-partition validator is not yet wired into defineApp, so these
     // declarations describe intent without blocking the build.
     messages: { readClass: "window", integrityClass: "seq" },
+    callRoutes: { readClass: "head", integrityClass: "signature" },
     guests: { readClass: "head", integrityClass: "signature" },
     publicInvites: { readClass: "head", integrityClass: "signature" },
     joinRequests: { readClass: "head", integrityClass: "signature" },
@@ -59,6 +61,7 @@ const chat = defineModel({
 
 const {
   channels,
+  callRoutes,
   messages,
   guests,
   publicInvites,
@@ -345,6 +348,50 @@ const operations = {
             moderatedBy: ref.actor("memberId"),
           },
           activity: "moderated member",
+        }),
+      ],
+    }),
+  ),
+
+  "member.call.update": action(
+    {
+      authorize: { roles: ["member"] },
+      payload: {
+        clientId: p.string({ max: 200 }),
+        peerId: p.string({ max: 200 }),
+        peerAddress: p.string({ max: 400 }).optional(),
+        callPubkey: p.string({ max: 200 }),
+        name: p.string({ max: 80 }).optional(),
+        avatar: p.string({ max: 200 }).optional(),
+      },
+    },
+    ({ ref, fx }) => ({
+      effects: [
+        fx.upsertActor(guests, {
+          fields: {
+            memberId: ref.actor("memberId"),
+            role: ref.actor("role"),
+            lastSeenAt: ref.now(),
+            callClientId: ref.payload("clientId"),
+            peerId: ref.payload("peerId"),
+            peerAddress: ref.payload("peerAddress"),
+            callPubkey: ref.payload("callPubkey"),
+            name: ref.payload("name"),
+            avatar: ref.payload("avatar"),
+            callUpdatedAt: ref.now(),
+          },
+        }),
+        fx.upsertActor(callRoutes, {
+          fields: {
+            memberId: ref.actor("memberId"),
+            callClientId: ref.payload("clientId"),
+            peerId: ref.payload("peerId"),
+            peerAddress: ref.payload("peerAddress"),
+            callPubkey: ref.payload("callPubkey"),
+            name: ref.payload("name"),
+            avatar: ref.payload("avatar"),
+            callUpdatedAt: ref.now(),
+          },
         }),
       ],
     }),
@@ -643,6 +690,11 @@ const app = defineApp({
       plugin: "primary",
       type: "member.moderate",
       requiredRole: "admin",
+    },
+    updateMemberCall: {
+      plugin: "primary",
+      type: "member.call.update",
+      requiredRole: "member",
     },
     banMember: { plugin: "primary", type: "member.ban", requiredRole: "admin" },
     unbanMember: {

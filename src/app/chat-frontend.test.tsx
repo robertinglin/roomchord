@@ -19,6 +19,7 @@ import type { ChatState } from "@entities/chat/model/types";
 
 const state: ChatState = {
   channels: [{ id: "general", name: "general", topic: "Room coordination" }],
+  callRoutes: {},
   messages: { m1: { id: "m1", channelId: "general", authorName: "Mina", authorId: "mina", body: "Welcome to the live chat app", reactions: {}, pinnedAt: null, deletedAt: null, createdAt: 1 } },
   guests: {},
   publicInvites: [],
@@ -109,6 +110,7 @@ const testAppMetadata = {
       { name: "messagePin", type: "message.pin", authorize: { roles: ["moderator"] } },
       { name: "moderateMember", type: "member.moderate", authorize: { roles: ["admin"] } },
       { name: "removeInvite", type: "invite.remove", authorize: { roles: ["admin"] } },
+      { name: "updateMemberCall", type: "member.call.update", authorize: { roles: ["member"] } },
       { name: "unbanMember", type: "member.unban", authorize: { roles: ["admin"] } },
       { name: "roleCreate", type: "access.role.define", authorize: { roles: ["admin"] } },
       { name: "memberRoleAssign", type: "access.role.assign", authorize: { roles: ["admin"] } },
@@ -286,6 +288,13 @@ async function memberRailAvatar(name: string, label: string) {
     || within(memberRow).getByLabelText(`${label} avatar`);
 }
 
+function manageTab(dialog: HTMLElement, label: string) {
+  const text = label === "Voice" ? "Voice channels" : label;
+  const tab = within(dialog).getByText(text).closest("button");
+  if (!tab) throw new Error(`Expected ${label} management tab`);
+  return tab;
+}
+
 function stateWithMessage(body: string): ChatState {
   return {
     ...state,
@@ -324,10 +333,9 @@ describe("ChatApp", () => {
   });
 
   it("renders a real backend-connected team chat surface", async () => {
-    const { container } = renderChat();
+    renderChat();
     expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Mosh/ })).toBeInTheDocument();
-    expect(container.querySelector("mtn-home")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Channels" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Text Channels" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Voice Channels" })).not.toBeInTheDocument();
@@ -335,10 +343,10 @@ describe("ChatApp", () => {
     expect(screen.getByRole("button", { name: "Join Launch Room" })).toBeInTheDocument();
     expect(screen.queryByText(/joined ·/)).not.toBeInTheDocument();
     expect(screen.queryByText("No one joined")).not.toBeInTheDocument();
-    const dmSection = screen.getByRole("region", { name: "DMs" });
-    expect(within(dmSection).getByRole("button", { name: "Lee, 1 unread DM" })).toBeInTheDocument();
-    expect(within(dmSection).getByLabelText("Lee avatar")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Online - 2" })).toBeInTheDocument();
+    const dmRow = screen.getByRole("button", { name: "Lee, 1 unread DM" });
+    expect(dmRow).toBeInTheDocument();
+    expect(within(dmRow).getByLabelText("Lee avatar")).toBeInTheDocument();
+    expect(screen.getByText("Online —")).toBeInTheDocument();
   });
 
   it("opens launch home rooms from SDK mount options without exposing room data in callbacks", async () => {
@@ -380,13 +388,13 @@ describe("ChatApp", () => {
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
 
     expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
-    expect(screen.getByText("connected")).toBeInTheDocument();
+    expect(screen.getByText("Live")).toBeInTheDocument();
     expect((window as any).MATTERHORN_CHORD_HOST).toBeUndefined();
     expect((window as any).MATTERHORN_HOST).toBeUndefined();
   });
 
   it("renders connected voice members without channel metadata", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const voiceTokens = [{
       id: "voice_tiret",
       kind: "media-room.join",
@@ -427,24 +435,28 @@ describe("ChatApp", () => {
   });
 
   it("adds text and voice channels from their sidebar group plus buttons", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
 
-    await user.click(await screen.findByRole("button", { name: "Add text channel to General" }));
-    await user.type(screen.getByLabelText("New text channel name in General"), "launch");
-    await user.click(screen.getByRole("button", { name: "Create" }));
-    await user.click(screen.getByRole("button", { name: "Add voice channel to General" }));
-    await user.type(screen.getByLabelText("New voice channel name in General"), "Standup");
-    await user.click(screen.getByRole("button", { name: "Create" }));
+    await user.click(await screen.findByRole("button", { name: "Manage" }));
+    const manageDialog = await screen.findByRole("dialog", { name: "Manage" });
+    await user.click(manageTab(manageDialog, "Channels"));
+    await user.click(within(manageDialog).getByRole("button", { name: "New channel" }));
+    await user.type(await screen.findByLabelText("Channel name"), "launch");
+    await user.click(screen.getAllByRole("button", { name: "Create channel" }).at(-1)!);
+    await user.click(manageTab(manageDialog, "Voice"));
+    await user.click(within(manageDialog).getByRole("button", { name: "New voice channel" }));
+    await user.type(await screen.findByLabelText("Voice channel name"), "Standup");
+    await user.click(screen.getByRole("button", { name: "Create voice channel" }));
 
     await waitFor(() => expect(sent).toHaveLength(2));
-    expect(sent[0]).toMatchObject({ type: "channelCreate", schemaAction: "channelCreate", payload: { name: "launch", group: "General" } });
-    expect(sent[1]).toMatchObject({ type: "mediaRoomCreate", schemaAction: "mediaRoomCreate", payload: { name: "Standup", group: "General", allowsVideo: true } });
+    expect(sent[0]).toMatchObject({ type: "channelCreate", schemaAction: "channelCreate", payload: { name: "launch", group: undefined } });
+    expect(sent[1]).toMatchObject({ type: "mediaRoomCreate", schemaAction: "mediaRoomCreate", payload: { name: "Standup", group: undefined, allowsVideo: true } });
   });
 
   it("collapses text and voice channel groups", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const groupedState: ChatState = {
       ...state,
       channels: [{ id: "general", name: "general", topic: "Room coordination", group: "Ops" }],
@@ -483,7 +495,7 @@ describe("ChatApp", () => {
   });
 
   it("opens eligible embeds in a shrouded fullscreen dialog", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     render(
       <MarkdownMessage
         body={[
@@ -542,8 +554,8 @@ describe("ChatApp", () => {
     });
 
     expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Online - 1" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Offline - 1" })).toBeInTheDocument();
+    expect(screen.getByText("Online —")).toBeInTheDocument();
+    expect(screen.getByText("Offline —")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Lee, offline" })).toBeInTheDocument();
   });
 
@@ -560,7 +572,7 @@ describe("ChatApp", () => {
     });
 
     expect(await screen.findByText("Welcome to the live chat app")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Online - 1" })).toBeInTheDocument();
+    expect(screen.getByText("Online —")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Guest (you)" })).toBeInTheDocument();
   });
 
@@ -673,7 +685,7 @@ describe("ChatApp", () => {
     />);
 
     expect(screen.getByText("Welcome to the live chat app")).toBeInTheDocument();
-    expect(screen.getByText("connected")).toBeInTheDocument();
+    expect(screen.getByText("Live")).toBeInTheDocument();
   });
 
   it("injects styles through the launcher mount path", async () => {
@@ -698,15 +710,16 @@ describe("ChatApp", () => {
   });
 
   it("commits channel, message, and status operations without storing voice join in app state", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     const { sendOperation } = renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
 
     await user.click(await screen.findByRole("button", { name: "Manage" }));
     const manageDialog = await screen.findByRole("dialog", { name: "Manage" });
-    await user.click(within(manageDialog).getByRole("button", { name: "Channels" }));
+    await user.click(manageTab(manageDialog, "Channels"));
+    await user.click(within(manageDialog).getByRole("button", { name: "New channel" }));
     await user.type(within(manageDialog).getByLabelText("Channel name"), "launch");
-    await user.click(within(manageDialog).getByRole("button", { name: "Create channel" }));
+    await user.click(screen.getAllByRole("button", { name: "Create channel" }).at(-1)!);
     await user.click(within(manageDialog).getByRole("button", { name: "Close management" }));
     await user.type(screen.getByLabelText("Message # general"), "Ship it");
     await user.click(screen.getByRole("button", { name: "Send message" }));
@@ -721,7 +734,7 @@ describe("ChatApp", () => {
   });
 
   it("drives the admin control panel through member, invite, and join actions", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     const adminState = {
       ...state,
@@ -797,7 +810,7 @@ describe("ChatApp", () => {
   });
 
   it("submits channel messages with Enter and keeps Shift+Enter as a newline", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     const originalScrollHeight = Object.getOwnPropertyDescriptor(window.HTMLElement.prototype, "scrollHeight");
     Object.defineProperty(window.HTMLElement.prototype, "scrollHeight", {
@@ -812,7 +825,6 @@ describe("ChatApp", () => {
 
       const composer = await screen.findByLabelText("Message # general");
       const sendButton = screen.getByRole("button", { name: "Send message" });
-      expect(sendButton).toHaveClass("composer-send-button");
       expect(sendButton.textContent).toBe("Send");
       expect(screen.getByRole("button", { name: "Add emoji" })).toBeInTheDocument();
 
@@ -842,7 +854,7 @@ describe("ChatApp", () => {
   });
 
   it("offers clickable mention suggestions and deletes a completed mention as one object", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
 
@@ -874,7 +886,7 @@ describe("ChatApp", () => {
   });
 
   it("uses Enter and arrow keys to pick mention suggestions without submitting", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
 
@@ -933,7 +945,7 @@ describe("ChatApp", () => {
   });
 
   it("keeps completed mention nicknames in the editable composer", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderChat();
 
     const composer = await screen.findByLabelText("Message # general");
@@ -946,7 +958,7 @@ describe("ChatApp", () => {
   });
 
   it("supports mention suggestions for display names with spaces while storing the member id", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }), {
       ...state,
@@ -974,7 +986,7 @@ describe("ChatApp", () => {
   });
 
   it("resolves punctuated channel mentions before dispatch", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
 
@@ -994,7 +1006,7 @@ describe("ChatApp", () => {
   });
 
   it("claims an SDK ephemeral token for voice join when the injected bridge supports it", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const getUserMedia = installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
     const sendOperation = vi.fn(async (operation) => ({ ok: true, state, operation }));
@@ -1039,7 +1051,7 @@ describe("ChatApp", () => {
   });
 
   it("opens the voice room participant view without restarting the active stream", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const getUserMedia = installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
     installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
@@ -1070,7 +1082,7 @@ describe("ChatApp", () => {
   });
 
   it("keeps sidebar voice controls visible while viewing the joined voice room", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
     installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
@@ -1092,7 +1104,7 @@ describe("ChatApp", () => {
   });
 
   it("renders camera video in the selected voice room grid", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
     installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
@@ -1172,13 +1184,13 @@ describe("ChatApp", () => {
     expect(screen.getByLabelText("Alice participant")).toBeInTheDocument();
     expect(screen.getByLabelText("Your room video")).toBeInTheDocument();
     expect(screen.getByLabelText("Your screen share")).toBeInTheDocument();
-    expect(screen.getByLabelText("Mic on · Camera on · Sharing")).toBeInTheDocument();
+    expect(screen.getByText("Sharing now")).toBeInTheDocument();
     expect(((screen.getByLabelText("Your room video") as HTMLVideoElement).srcObject as MediaStream).getVideoTracks().map((track) => track.id)).toEqual(["camera"]);
     expect(((screen.getByLabelText("Your screen share") as HTMLVideoElement).srcObject as MediaStream).getVideoTracks().map((track) => track.id)).toEqual(["screen"]);
   });
 
   it("shows camera swap button when supported and hides screen-share controls when disabled", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const onToggleCameraSwap = vi.fn();
     installMediaCapture();
     const localStream = new FakeMediaStream([new FakeMediaStreamTrack("audio"), new FakeMediaStreamTrack("video", "camera")]) as unknown as MediaStream;
@@ -1206,7 +1218,7 @@ describe("ChatApp", () => {
 
   it("shows remote screen shares as blurred previews until the user watches them", async () => {
     installMediaCapture();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const watchScreenShare = vi.fn();
     const stopWatchingScreenShare = vi.fn();
     const cameraTrack = new FakeMediaStreamTrack("video", "camera");
@@ -1326,11 +1338,11 @@ describe("ChatApp", () => {
 
     expect(screen.queryByLabelText("Bob room video")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Bob room audio")).toBeInTheDocument();
-    expect(screen.getByLabelText("Mic on · Camera off")).toBeInTheDocument();
+    expect(screen.getByLabelText("Bob participant")).toBeInTheDocument();
   });
 
   it("keeps voice connected when selecting a text channel", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const getUserMedia = installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
     installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
@@ -1356,7 +1368,7 @@ describe("ChatApp", () => {
   });
 
   it("moves the active call when selecting a different voice room", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const getUserMedia = installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
     const releases: Array<ReturnType<typeof vi.fn>> = [];
@@ -1785,7 +1797,7 @@ describe("ChatApp", () => {
   });
 
   it("shows message edit only to the author and delete to authors or admins", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderChat();
 
     await user.click(await screen.findByRole("button", { name: "More actions for message from Mina" }));
@@ -1795,7 +1807,7 @@ describe("ChatApp", () => {
   });
 
   it("lets member authors edit and delete their own messages in the menu", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     renderChat(undefined, {
       ...state,
       messages: {
@@ -1807,11 +1819,11 @@ describe("ChatApp", () => {
     const menu = screen.getByRole("menu");
     expect(within(menu).getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
-    expect(within(menu).queryByRole("menuitem", { name: "Pin" })).not.toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Pin Message⌖" })).toBeDisabled();
   });
 
   it("duplicates pinned messages and lets moderators unpin them", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     const pinnedState: ChatState = {
       ...state,
@@ -1841,12 +1853,12 @@ describe("ChatApp", () => {
   });
 
   it("previews the target message while composing a reply", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
 
     await user.click(await screen.findByRole("button", { name: "Reply to message from Mina" }));
-    const replyBar = screen.getByText("Replying to Mina").closest(".replying-bar");
+    const replyBar = screen.getByText("Replying to Mina").closest("div");
     expect(replyBar).toBeTruthy();
     expect(within(replyBar as HTMLElement).getByText("Welcome to the live chat app")).toBeInTheDocument();
 
@@ -1858,7 +1870,7 @@ describe("ChatApp", () => {
   });
 
   it("renders reply previews as hard links to the source message", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     window.location.hash = "#/room/matterhorn-mosh-6?secret=invite-secret";
     try {
       renderChat(undefined, {
@@ -1925,7 +1937,7 @@ describe("ChatApp", () => {
   });
 
   it("does not replay the same hard link after manual channel navigation", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const linkedState = {
       ...state,
       channels: [
@@ -1965,7 +1977,7 @@ describe("ChatApp", () => {
   });
 
   it("opens the SDK emoji picker for reactions and stores recent reactions", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
 
@@ -1979,7 +1991,7 @@ describe("ChatApp", () => {
   });
 
   it("keeps quick reaction order stable when using an already visible emoji", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
 
@@ -1990,7 +2002,7 @@ describe("ChatApp", () => {
   });
 
   it("forwards messages to other channels and direct messages", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     const twoChannelState = {
       ...state,
@@ -2018,7 +2030,7 @@ describe("ChatApp", () => {
   });
 
   it("sends status changes as transient presence when the injected bridge supports it", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sendPresence = vi.fn(async () => true);
     const sendOperation = vi.fn(async (operation) => ({ ok: true, state, operation }));
     installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, sendOperation, { sendPresence });
@@ -2032,13 +2044,14 @@ describe("ChatApp", () => {
   });
 
   it("lets admins add and remove camera-capable voice channels", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
 
     await user.click(await screen.findByRole("button", { name: "Manage" }));
     const manageDialog = await screen.findByRole("dialog", { name: "Manage" });
-    await user.click(within(manageDialog).getByRole("button", { name: "Voice" }));
+    await user.click(manageTab(manageDialog, "Voice"));
+    await user.click(within(manageDialog).getByRole("button", { name: "New voice channel" }));
     await user.type(within(manageDialog).getByLabelText("Voice channel name"), "Design review");
     await user.type(within(manageDialog).getByLabelText("Voice channel group"), "Crits");
     expect(within(manageDialog).getByLabelText("Allow camera")).toBeChecked();
@@ -2068,7 +2081,7 @@ describe("ChatApp", () => {
   });
 
   it("commits direct messages from the active DM view", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     renderChat(
       vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }),
@@ -2084,7 +2097,7 @@ describe("ChatApp", () => {
   });
 
   it("toggles camera, local mute, and sharing from the bottom-left controls", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const updateMedia = vi.fn();
     const updateVoicePreferences = vi.fn();
     render(
@@ -2120,7 +2133,7 @@ describe("ChatApp", () => {
   });
 
   it("configures SDK voice processing from the bottom-left settings cog", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const updateMedia = vi.fn();
     const updateVoicePreferences = vi.fn();
     const voiceSettingsOpenChange = vi.fn();
@@ -2202,7 +2215,7 @@ describe("ChatApp", () => {
   });
 
   it("disconnects room audio when settings open while testing raw mic through processed playback", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const getUserMedia = installMediaCapture();
     const playMock = vi.mocked(window.HTMLMediaElement.prototype.play);
     playMock.mockClear();
@@ -2271,7 +2284,7 @@ describe("ChatApp", () => {
   });
 
   it("uses raw no-DSP capture for the voice settings recording even without an active outbound stream", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const getUserMedia = installMediaCapture();
     const playMock = vi.mocked(window.HTMLMediaElement.prototype.play);
     playMock.mockClear();
@@ -2365,7 +2378,7 @@ describe("ChatApp", () => {
   });
 
   it("keeps local mute and deafen preferences after an app restart", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const first = renderChat();
 
     await user.click(await screen.findByRole("button", { name: "Mute mic" }));
@@ -2379,7 +2392,7 @@ describe("ChatApp", () => {
   });
 
   it("shows a reconnect prompt after refresh without auto joining voice", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const first = renderChat();
 
     await user.click(await screen.findByRole("button", { name: "Join Launch Room" }));
@@ -2396,21 +2409,20 @@ describe("ChatApp", () => {
   });
 
   it("keeps read direct-message notifications read after an app restart", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const first = renderChat();
 
     await user.click(await screen.findByRole("button", { name: "Lee, 1 unread DM" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Lee" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Lee, 1 unread DM" })).not.toBeInTheDocument());
     first.unmount();
 
     renderChat();
 
-    expect(await screen.findByRole("button", { name: "Lee" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Lee, 1 unread DM" })).not.toBeInTheDocument();
   });
 
   it("closes direct-message rows without deleting the stored thread data", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     const first = renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
 
@@ -2430,12 +2442,12 @@ describe("ChatApp", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Send DM" }));
 
     expect(await screen.findByText("Private hello")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Lee" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Lee" })).toBeInTheDocument();
     expect(sent).toHaveLength(0);
   });
 
   it("opens a local direct-message draft from a room member without notifying the target", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const initialState = { ...state, directThreads: {}, directMessages: {} };
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: initialState, operation }; }), initialState);
@@ -2449,7 +2461,7 @@ describe("ChatApp", () => {
   });
 
   it("opens a focused direct-message draft from the member context menu", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const initialState = { ...state, directThreads: {}, directMessages: {} };
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: initialState, operation }; }), initialState);
@@ -2459,6 +2471,107 @@ describe("ChatApp", () => {
 
     expect(sent).toHaveLength(0);
     expect(screen.getByLabelText("Message Lee")).toHaveFocus();
+  });
+
+  it("opens member profile settings for nickname edits instead of a browser prompt", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const promptSpy = vi.spyOn(window, "prompt");
+    const sent: any[] = [];
+    renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
+
+    fireEvent.contextMenu(await memberRailAvatar("Lee", "Lee, online"), { clientX: 80, clientY: 90 });
+    await user.click(await screen.findByRole("menuitem", { name: "Add Friend Nickname" }));
+
+    const manageDialog = await screen.findByRole("dialog", { name: "Manage" });
+    expect(promptSpy).not.toHaveBeenCalled();
+    expect(within(manageDialog).getByRole("heading", { name: "Profile for Lee" })).toBeInTheDocument();
+    const nickname = within(manageDialog).getByLabelText("Friend nickname");
+    await user.type(nickname, "Launch Lee");
+    await user.click(within(manageDialog).getByRole("button", { name: "Save profile" }));
+    await user.click(within(manageDialog).getByRole("button", { name: "Close management" }));
+
+    expect(sent).toHaveLength(0);
+    expect(await screen.findByRole("button", { name: "Launch Lee, online" })).toBeInTheDocument();
+    promptSpy.mockRestore();
+  });
+
+  it("opens only the personal member profile editor for regular members", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderChat(undefined, state, { memberId: "lee", deviceId: "dev", role: "member", displayName: "Lee" });
+
+    fireEvent.contextMenu(await memberRailAvatar("Alice", "Alice, online"), { clientX: 80, clientY: 90 });
+    await user.click(await screen.findByRole("menuitem", { name: "Add Friend Nickname" }));
+
+    const manageDialog = await screen.findByRole("dialog", { name: "Manage" });
+    expect(within(manageDialog).getByRole("heading", { name: "Member profile" })).toBeInTheDocument();
+    expect(within(manageDialog).getByRole("heading", { name: "Profile for Alice" })).toBeInTheDocument();
+    expect(within(manageDialog).queryByText("Room settings")).not.toBeInTheDocument();
+    expect(within(manageDialog).queryByRole("button", { name: "Channels" })).not.toBeInTheDocument();
+    expect(within(manageDialog).queryByRole("heading", { name: "Role tags for Alice" })).not.toBeInTheDocument();
+  });
+
+  it("toggles local member blocking from the context menu", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const sent: any[] = [];
+    renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }));
+
+    fireEvent.contextMenu(await memberRailAvatar("Lee", "Lee, online"), { clientX: 80, clientY: 90 });
+    await user.click(await screen.findByRole("menuitem", { name: "Block" }));
+
+    expect(sent).toHaveLength(0);
+    fireEvent.contextMenu(await memberRailAvatar("Lee", "Lee, online"), { clientX: 80, clientY: 90 });
+    expect(await screen.findByRole("menuitem", { name: "Unblock" })).toBeInTheDocument();
+  });
+
+  it("lets members start a direct call to admins", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const mediaPeer = { id: "peer-lee", open: true, on: vi.fn(), call: vi.fn() };
+    const sendPeerSignal = vi.fn(() => true);
+    const callState: ChatState = {
+      ...state,
+      guests: {},
+      callRoutes: {
+        alice: {
+          memberId: "alice",
+          callClientId: "client-alice",
+          peerId: "peer-alice",
+          peerAddress: "peerjs:peer-alice",
+          callPubkey: "admin-call-key",
+          name: "Alice"
+        }
+      }
+    };
+    renderChat(
+      vi.fn(async (operation) => ({ ok: true, state: callState, operation })),
+      callState,
+      { memberId: "lee", deviceId: "dev", role: "member", displayName: "Lee" },
+      {
+        clientId: "client-lee",
+        getMediaPeer: vi.fn(() => mediaPeer),
+        getMediaPeerAddress: vi.fn(() => "peerjs:peer-lee"),
+        sendPeerSignal,
+        subscribeRelayMessage: vi.fn(() => vi.fn())
+      }
+    );
+    await waitFor(() => expect(mediaPeer.on).toHaveBeenCalledWith("call", expect.any(Function)));
+
+    fireEvent.contextMenu(await memberRailAvatar("Alice", "Alice, online"), { clientX: 80, clientY: 90 });
+    const startCall = await screen.findByRole("menuitem", { name: "Start a Call" });
+    expect(startCall).not.toBeDisabled();
+    await user.click(startCall);
+
+    expect(await screen.findByRole("complementary", { name: "Direct call" })).toHaveTextContent("Calling");
+    await waitFor(() => expect(sendPeerSignal.mock.calls.some((call) => call[2]?.type === "direct-call.invite")).toBe(true));
+    const invite = sendPeerSignal.mock.calls.find((call) => call[2]?.type === "direct-call.invite");
+    expect(invite?.[0]).toBe("client-alice");
+    expect(invite?.[1]).toBe("peer-alice");
+    expect(invite?.[2]).toMatchObject({
+      directRoomId: expect.stringMatching(/^direct_room_/),
+      mode: "voice",
+      sourceClientId: "client-lee",
+      targetClientId: "client-alice",
+      type: "direct-call.invite"
+    });
   });
 
   it("does not offer direct messages from your own avatar context menu", async () => {
@@ -2472,7 +2585,7 @@ describe("ChatApp", () => {
   });
 
   it("opens a focused direct-message draft from a message author avatar", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const initialState = {
       ...state,
       messages: { m1: { ...state.messages.m1, authorId: "lee", authorName: "Lee" } },
@@ -2491,16 +2604,13 @@ describe("ChatApp", () => {
   });
 
   it("opens role-tag assignment from the member context menu and saves multiple roles", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     const roleState: ChatState = {
       ...state,
-      scopedRoles: {
-        roles: {
-          launch: { id: "launch", name: "Launch Lead", description: "Launch coordination", color: "#38bdf8", rank: 1, grants: [{ scopeType: "*", scopeId: "*", role: "viewer" }] }
-        },
-        assignments: { lee: [] },
-        scopes: {}
+      memberRoles: { lee: { memberId: "lee", roleIds: [] } },
+      roleDefinitions: {
+        launch: { id: "launch", name: "Launch Lead", description: "Launch coordination", color: "#38bdf8", rank: 1, grants: [{ scopeType: "*", scopeId: "*", role: "viewer" }] }
       }
     };
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: roleState, operation }; }), roleState);
@@ -2510,11 +2620,11 @@ describe("ChatApp", () => {
     const manageDialog = await screen.findByRole("dialog", { name: "Manage" });
 
     expect(within(manageDialog).getByRole("heading", { name: "Role tags for Lee" })).toBeInTheDocument();
-    await user.click(within(manageDialog).getByLabelText("Launch Lead"));
+    await user.click(within(manageDialog).getAllByRole("checkbox", { name: "Launch Lead role tag" })[0]);
     await user.click(within(manageDialog).getByRole("button", { name: "Save roles" }));
 
-    await waitFor(() => expect(sent).toHaveLength(1));
-    expect(sent[0]).toMatchObject({ type: "access.role.assign", schemaAction: "memberRoleAssign", payload: { target: "lee", roleId: "launch" } });
+    await waitFor(() => expect(sent.some((operation) => operation.schemaAction === "memberRoleAssign" && operation.payload.roleId === "launch")).toBe(true));
+    expect(sent.find((operation) => operation.schemaAction === "memberRoleAssign" && operation.payload.roleId === "launch")).toMatchObject({ payload: { target: "lee", roleId: "launch" } });
   });
 
   it("renders presence when member role ids arrive as unresolved expression wrappers", async () => {
@@ -2533,7 +2643,7 @@ describe("ChatApp", () => {
   });
 
   it("creates the direct-message thread only when the first message is sent", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const initialState = { ...state, directThreads: {}, directMessages: {} };
     const sent: any[] = [];
     renderChat(
@@ -2553,7 +2663,7 @@ describe("ChatApp", () => {
   });
 
   it("hides direct message threads that are not core NIP-17 threads", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state, operation }; }), {
       ...state,

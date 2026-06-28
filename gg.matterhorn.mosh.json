@@ -17,14 +17,14 @@
     "matterhornVersion": ">=0.1 <0.2",
     "hostPack": {
       "url": "workspace:matterhorn-mosh#hostPack",
-      "integrity": "sha256-fce134c4a40b40fe843eeeb07b89c12ae7cb4872759b8ea96f267b5c0a08b168"
+      "integrity": "sha256-4656201dc31d43398dadfa03ca52bdbc1632c0d63347576988dac03f5ea1614d"
     },
     "playerPacks": [
       {
         "id": "gg.matterhorn.mosh.player",
         "name": "Mosh Player",
         "url": "workspace:matterhorn-mosh#playerPack",
-        "integrity": "sha256-eaa1fa147ef4cfbb74fa4c45cc202b36d143b3b90297174e6b1ee277b10eff99",
+        "integrity": "sha256-28231c4e4d79a84c3a927fcbdc4927effbb66a9d55f266963d38c943a2254aea",
         "recommendedFor": {
           "devices": [
             "desktop",
@@ -38,11 +38,11 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-c4cf74ff489b778de9272ff7af819e8e4c3ca1f5cace55dd88c29d633a62db32",
-      "operationSchemaHash": "sha256-383daaa322dc414ba17e68f96c5fc4561fb247e55ddaee5c65eaebed641b946e",
-      "stateSchemaHash": "sha256-ac391b0efaf006b5120d00f48ed1067a8d767ee9113351332eb61630de666bbf",
-      "pluginGraphHash": "sha256-b45cacb8a1f9637fa523f4fd71cbd218ca44da5e2b5ed8ad26d61d204fe65f23",
-      "compositionSchemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
+      "appProtocolHash": "sha256-4852cb142eb79e597f8f1110bd29cb1303bde52320885c0566749fbfa077f568",
+      "operationSchemaHash": "sha256-cd00586f499b814cb8a51548066ba5e6c2f12b45c00ae30773debe788edec35e",
+      "stateSchemaHash": "sha256-cedf13995816c9800a8f16b44e417da72a5c12312585147a99444a1b5726e7e8",
+      "pluginGraphHash": "sha256-0422bac2635e1128968a8ced05bc2666a71c9fdcdfdfe9e0ce977b58b9614faf",
+      "compositionSchemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
     },
     "composition": {
       "kind": "matterhorn.app-composition.schema",
@@ -73,6 +73,7 @@
               ],
               "messages": {},
               "guests": {},
+              "callRoutes": {},
               "publicInvites": [],
               "joinRequests": {},
               "roleDefinitions": {
@@ -602,6 +603,79 @@
                 }
               ]
             },
+            "member.call.update": {
+              "authorize": {
+                "roles": [
+                  "member"
+                ]
+              },
+              "payload": {
+                "required": {
+                  "clientId": {
+                    "type": "string",
+                    "max": 200
+                  },
+                  "peerId": {
+                    "type": "string",
+                    "max": 200
+                  },
+                  "callPubkey": {
+                    "type": "string",
+                    "max": 200
+                  }
+                },
+                "optional": {
+                  "peerAddress": {
+                    "type": "string",
+                    "max": 400
+                  },
+                  "name": {
+                    "type": "string",
+                    "max": 80
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "max": 200
+                  }
+                }
+              },
+              "effects": [
+                {
+                  "kind": "upsertActorRecord",
+                  "collection": "guests",
+                  "storage": "map",
+                  "partition": "guests",
+                  "fields": {
+                    "memberId": "$actor.memberId",
+                    "role": "$actor.role",
+                    "lastSeenAt": "$createdAt",
+                    "callClientId": "$payload.clientId",
+                    "peerId": "$payload.peerId",
+                    "peerAddress": "$payload.peerAddress",
+                    "callPubkey": "$payload.callPubkey",
+                    "name": "$payload.name",
+                    "avatar": "$payload.avatar",
+                    "callUpdatedAt": "$createdAt"
+                  }
+                },
+                {
+                  "kind": "upsertActorRecord",
+                  "collection": "callRoutes",
+                  "storage": "map",
+                  "partition": "callRoutes",
+                  "fields": {
+                    "memberId": "$actor.memberId",
+                    "callClientId": "$payload.clientId",
+                    "peerId": "$payload.peerId",
+                    "peerAddress": "$payload.peerAddress",
+                    "callPubkey": "$payload.callPubkey",
+                    "name": "$payload.name",
+                    "avatar": "$payload.avatar",
+                    "callUpdatedAt": "$createdAt"
+                  }
+                }
+              ]
+            },
             "member.ban": {
               "authorize": {
                 "roles": [
@@ -826,6 +900,15 @@
               },
               "storage": "map",
               "partition": "guests"
+            },
+            "callRoutes": {
+              "readClass": "head",
+              "integrityClass": "signature",
+              "historyVisibility": {
+                "mode": "active-epoch-only"
+              },
+              "storage": "map",
+              "partition": "callRoutes"
             },
             "publicInvites": {
               "readClass": "head",
@@ -1184,6 +1267,11 @@
           "name": "memberBan",
           "plugin": "primary",
           "type": "member.ban"
+        },
+        {
+          "name": "memberCallUpdate",
+          "plugin": "primary",
+          "type": "member.call.update"
         },
         {
           "name": "memberModerate",
@@ -1729,6 +1817,12 @@
           "requiredRole": "admin"
         },
         {
+          "name": "updateMemberCall",
+          "plugin": "primary",
+          "type": "member.call.update",
+          "requiredRole": "member"
+        },
+        {
           "name": "banMember",
           "plugin": "primary",
           "type": "member.ban",
@@ -1914,7 +2008,7 @@
           }
         }
       },
-      "schemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
+      "schemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
     },
     "capabilities": {
       "required": [
@@ -1986,8 +2080,8 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-c4cf74ff489b778de9272ff7af819e8e4c3ca1f5cace55dd88c29d633a62db32",
-      "pluginGraphHash": "sha256-b45cacb8a1f9637fa523f4fd71cbd218ca44da5e2b5ed8ad26d61d204fe65f23"
+      "appProtocolHash": "sha256-4852cb142eb79e597f8f1110bd29cb1303bde52320885c0566749fbfa077f568",
+      "pluginGraphHash": "sha256-0422bac2635e1128968a8ced05bc2666a71c9fdcdfdfe9e0ce977b58b9614faf"
     },
     "runtime": {
       "minMatterhornVersion": "0.1.0",
@@ -2003,7 +2097,7 @@
       ]
     },
     "composition": {
-      "schemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834",
+      "schemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c",
       "primaryPlugin": {
         "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
@@ -2025,6 +2119,7 @@
               ],
               "messages": {},
               "guests": {},
+              "callRoutes": {},
               "publicInvites": [],
               "joinRequests": {},
               "roleDefinitions": {
@@ -2554,6 +2649,79 @@
                 }
               ]
             },
+            "member.call.update": {
+              "authorize": {
+                "roles": [
+                  "member"
+                ]
+              },
+              "payload": {
+                "required": {
+                  "clientId": {
+                    "type": "string",
+                    "max": 200
+                  },
+                  "peerId": {
+                    "type": "string",
+                    "max": 200
+                  },
+                  "callPubkey": {
+                    "type": "string",
+                    "max": 200
+                  }
+                },
+                "optional": {
+                  "peerAddress": {
+                    "type": "string",
+                    "max": 400
+                  },
+                  "name": {
+                    "type": "string",
+                    "max": 80
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "max": 200
+                  }
+                }
+              },
+              "effects": [
+                {
+                  "kind": "upsertActorRecord",
+                  "collection": "guests",
+                  "storage": "map",
+                  "partition": "guests",
+                  "fields": {
+                    "memberId": "$actor.memberId",
+                    "role": "$actor.role",
+                    "lastSeenAt": "$createdAt",
+                    "callClientId": "$payload.clientId",
+                    "peerId": "$payload.peerId",
+                    "peerAddress": "$payload.peerAddress",
+                    "callPubkey": "$payload.callPubkey",
+                    "name": "$payload.name",
+                    "avatar": "$payload.avatar",
+                    "callUpdatedAt": "$createdAt"
+                  }
+                },
+                {
+                  "kind": "upsertActorRecord",
+                  "collection": "callRoutes",
+                  "storage": "map",
+                  "partition": "callRoutes",
+                  "fields": {
+                    "memberId": "$actor.memberId",
+                    "callClientId": "$payload.clientId",
+                    "peerId": "$payload.peerId",
+                    "peerAddress": "$payload.peerAddress",
+                    "callPubkey": "$payload.callPubkey",
+                    "name": "$payload.name",
+                    "avatar": "$payload.avatar",
+                    "callUpdatedAt": "$createdAt"
+                  }
+                }
+              ]
+            },
             "member.ban": {
               "authorize": {
                 "roles": [
@@ -2778,6 +2946,15 @@
               },
               "storage": "map",
               "partition": "guests"
+            },
+            "callRoutes": {
+              "readClass": "head",
+              "integrityClass": "signature",
+              "historyVisibility": {
+                "mode": "active-epoch-only"
+              },
+              "storage": "map",
+              "partition": "callRoutes"
             },
             "publicInvites": {
               "readClass": "head",
@@ -3139,6 +3316,11 @@
           "type": "member.ban"
         },
         {
+          "name": "memberCallUpdate",
+          "plugin": "primary",
+          "type": "member.call.update"
+        },
+        {
           "name": "memberModerate",
           "plugin": "primary",
           "type": "member.moderate"
@@ -3682,6 +3864,12 @@
           "requiredRole": "admin"
         },
         {
+          "name": "updateMemberCall",
+          "plugin": "primary",
+          "type": "member.call.update",
+          "requiredRole": "member"
+        },
+        {
           "name": "banMember",
           "plugin": "primary",
           "type": "member.ban",
@@ -3887,6 +4075,7 @@
                 ],
                 "messages": {},
                 "guests": {},
+                "callRoutes": {},
                 "publicInvites": [],
                 "joinRequests": {},
                 "roleDefinitions": {
@@ -4416,6 +4605,79 @@
                   }
                 ]
               },
+              "member.call.update": {
+                "authorize": {
+                  "roles": [
+                    "member"
+                  ]
+                },
+                "payload": {
+                  "required": {
+                    "clientId": {
+                      "type": "string",
+                      "max": 200
+                    },
+                    "peerId": {
+                      "type": "string",
+                      "max": 200
+                    },
+                    "callPubkey": {
+                      "type": "string",
+                      "max": 200
+                    }
+                  },
+                  "optional": {
+                    "peerAddress": {
+                      "type": "string",
+                      "max": 400
+                    },
+                    "name": {
+                      "type": "string",
+                      "max": 80
+                    },
+                    "avatar": {
+                      "type": "string",
+                      "max": 200
+                    }
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "upsertActorRecord",
+                    "collection": "guests",
+                    "storage": "map",
+                    "partition": "guests",
+                    "fields": {
+                      "memberId": "$actor.memberId",
+                      "role": "$actor.role",
+                      "lastSeenAt": "$createdAt",
+                      "callClientId": "$payload.clientId",
+                      "peerId": "$payload.peerId",
+                      "peerAddress": "$payload.peerAddress",
+                      "callPubkey": "$payload.callPubkey",
+                      "name": "$payload.name",
+                      "avatar": "$payload.avatar",
+                      "callUpdatedAt": "$createdAt"
+                    }
+                  },
+                  {
+                    "kind": "upsertActorRecord",
+                    "collection": "callRoutes",
+                    "storage": "map",
+                    "partition": "callRoutes",
+                    "fields": {
+                      "memberId": "$actor.memberId",
+                      "callClientId": "$payload.clientId",
+                      "peerId": "$payload.peerId",
+                      "peerAddress": "$payload.peerAddress",
+                      "callPubkey": "$payload.callPubkey",
+                      "name": "$payload.name",
+                      "avatar": "$payload.avatar",
+                      "callUpdatedAt": "$createdAt"
+                    }
+                  }
+                ]
+              },
               "member.ban": {
                 "authorize": {
                   "roles": [
@@ -4640,6 +4902,15 @@
                 },
                 "storage": "map",
                 "partition": "guests"
+              },
+              "callRoutes": {
+                "readClass": "head",
+                "integrityClass": "signature",
+                "historyVisibility": {
+                  "mode": "active-epoch-only"
+                },
+                "storage": "map",
+                "partition": "callRoutes"
               },
               "publicInvites": {
                 "readClass": "head",
@@ -4998,6 +5269,11 @@
             "name": "memberBan",
             "plugin": "primary",
             "type": "member.ban"
+          },
+          {
+            "name": "memberCallUpdate",
+            "plugin": "primary",
+            "type": "member.call.update"
           },
           {
             "name": "memberModerate",
@@ -5543,6 +5819,12 @@
             "requiredRole": "admin"
           },
           {
+            "name": "updateMemberCall",
+            "plugin": "primary",
+            "type": "member.call.update",
+            "requiredRole": "member"
+          },
+          {
             "name": "banMember",
             "plugin": "primary",
             "type": "member.ban",
@@ -5728,7 +6010,7 @@
             }
           }
         },
-        "schemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
+        "schemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
       }
     },
     {
@@ -5799,7 +6081,7 @@
         {
           "appPackId": "gg.matterhorn.mosh",
           "appPackRange": "^1.0.0",
-          "appProtocolHash": "sha256-c4cf74ff489b778de9272ff7af819e8e4c3ca1f5cace55dd88c29d633a62db32",
+          "appProtocolHash": "sha256-4852cb142eb79e597f8f1110bd29cb1303bde52320885c0566749fbfa077f568",
           "pluginIds": [
             "gg.matterhorn.examples.plugins.comments",
             "gg.matterhorn.examples.plugins.embeds",
@@ -5809,7 +6091,7 @@
             "gg.matterhorn.examples.plugins.screen-share",
             "gg.matterhorn.mosh.plugin"
           ],
-          "compositionSchemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
+          "compositionSchemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
         }
       ],
       "recommendedFor": {
@@ -5927,6 +6209,7 @@
             ],
             "messages": {},
             "guests": {},
+            "callRoutes": {},
             "publicInvites": [],
             "joinRequests": {},
             "roleDefinitions": {
@@ -6456,6 +6739,79 @@
               }
             ]
           },
+          "member.call.update": {
+            "authorize": {
+              "roles": [
+                "member"
+              ]
+            },
+            "payload": {
+              "required": {
+                "clientId": {
+                  "type": "string",
+                  "max": 200
+                },
+                "peerId": {
+                  "type": "string",
+                  "max": 200
+                },
+                "callPubkey": {
+                  "type": "string",
+                  "max": 200
+                }
+              },
+              "optional": {
+                "peerAddress": {
+                  "type": "string",
+                  "max": 400
+                },
+                "name": {
+                  "type": "string",
+                  "max": 80
+                },
+                "avatar": {
+                  "type": "string",
+                  "max": 200
+                }
+              }
+            },
+            "effects": [
+              {
+                "kind": "upsertActorRecord",
+                "collection": "guests",
+                "storage": "map",
+                "partition": "guests",
+                "fields": {
+                  "memberId": "$actor.memberId",
+                  "role": "$actor.role",
+                  "lastSeenAt": "$createdAt",
+                  "callClientId": "$payload.clientId",
+                  "peerId": "$payload.peerId",
+                  "peerAddress": "$payload.peerAddress",
+                  "callPubkey": "$payload.callPubkey",
+                  "name": "$payload.name",
+                  "avatar": "$payload.avatar",
+                  "callUpdatedAt": "$createdAt"
+                }
+              },
+              {
+                "kind": "upsertActorRecord",
+                "collection": "callRoutes",
+                "storage": "map",
+                "partition": "callRoutes",
+                "fields": {
+                  "memberId": "$actor.memberId",
+                  "callClientId": "$payload.clientId",
+                  "peerId": "$payload.peerId",
+                  "peerAddress": "$payload.peerAddress",
+                  "callPubkey": "$payload.callPubkey",
+                  "name": "$payload.name",
+                  "avatar": "$payload.avatar",
+                  "callUpdatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
           "member.ban": {
             "authorize": {
               "roles": [
@@ -6680,6 +7036,15 @@
             },
             "storage": "map",
             "partition": "guests"
+          },
+          "callRoutes": {
+            "readClass": "head",
+            "integrityClass": "signature",
+            "historyVisibility": {
+              "mode": "active-epoch-only"
+            },
+            "storage": "map",
+            "partition": "callRoutes"
           },
           "publicInvites": {
             "readClass": "head",
@@ -7038,6 +7403,11 @@
         "name": "memberBan",
         "plugin": "primary",
         "type": "member.ban"
+      },
+      {
+        "name": "memberCallUpdate",
+        "plugin": "primary",
+        "type": "member.call.update"
       },
       {
         "name": "memberModerate",
@@ -7583,6 +7953,12 @@
         "requiredRole": "admin"
       },
       {
+        "name": "updateMemberCall",
+        "plugin": "primary",
+        "type": "member.call.update",
+        "requiredRole": "member"
+      },
+      {
         "name": "banMember",
         "plugin": "primary",
         "type": "member.ban",
@@ -7768,7 +8144,7 @@
         }
       }
     },
-    "schemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
+    "schemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
   },
   "artifacts": {
     "composition": {
@@ -7800,6 +8176,7 @@
               ],
               "messages": {},
               "guests": {},
+              "callRoutes": {},
               "publicInvites": [],
               "joinRequests": {},
               "roleDefinitions": {
@@ -8329,6 +8706,79 @@
                 }
               ]
             },
+            "member.call.update": {
+              "authorize": {
+                "roles": [
+                  "member"
+                ]
+              },
+              "payload": {
+                "required": {
+                  "clientId": {
+                    "type": "string",
+                    "max": 200
+                  },
+                  "peerId": {
+                    "type": "string",
+                    "max": 200
+                  },
+                  "callPubkey": {
+                    "type": "string",
+                    "max": 200
+                  }
+                },
+                "optional": {
+                  "peerAddress": {
+                    "type": "string",
+                    "max": 400
+                  },
+                  "name": {
+                    "type": "string",
+                    "max": 80
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "max": 200
+                  }
+                }
+              },
+              "effects": [
+                {
+                  "kind": "upsertActorRecord",
+                  "collection": "guests",
+                  "storage": "map",
+                  "partition": "guests",
+                  "fields": {
+                    "memberId": "$actor.memberId",
+                    "role": "$actor.role",
+                    "lastSeenAt": "$createdAt",
+                    "callClientId": "$payload.clientId",
+                    "peerId": "$payload.peerId",
+                    "peerAddress": "$payload.peerAddress",
+                    "callPubkey": "$payload.callPubkey",
+                    "name": "$payload.name",
+                    "avatar": "$payload.avatar",
+                    "callUpdatedAt": "$createdAt"
+                  }
+                },
+                {
+                  "kind": "upsertActorRecord",
+                  "collection": "callRoutes",
+                  "storage": "map",
+                  "partition": "callRoutes",
+                  "fields": {
+                    "memberId": "$actor.memberId",
+                    "callClientId": "$payload.clientId",
+                    "peerId": "$payload.peerId",
+                    "peerAddress": "$payload.peerAddress",
+                    "callPubkey": "$payload.callPubkey",
+                    "name": "$payload.name",
+                    "avatar": "$payload.avatar",
+                    "callUpdatedAt": "$createdAt"
+                  }
+                }
+              ]
+            },
             "member.ban": {
               "authorize": {
                 "roles": [
@@ -8553,6 +9003,15 @@
               },
               "storage": "map",
               "partition": "guests"
+            },
+            "callRoutes": {
+              "readClass": "head",
+              "integrityClass": "signature",
+              "historyVisibility": {
+                "mode": "active-epoch-only"
+              },
+              "storage": "map",
+              "partition": "callRoutes"
             },
             "publicInvites": {
               "readClass": "head",
@@ -8911,6 +9370,11 @@
           "name": "memberBan",
           "plugin": "primary",
           "type": "member.ban"
+        },
+        {
+          "name": "memberCallUpdate",
+          "plugin": "primary",
+          "type": "member.call.update"
         },
         {
           "name": "memberModerate",
@@ -9456,6 +9920,12 @@
           "requiredRole": "admin"
         },
         {
+          "name": "updateMemberCall",
+          "plugin": "primary",
+          "type": "member.call.update",
+          "requiredRole": "member"
+        },
+        {
           "name": "banMember",
           "plugin": "primary",
           "type": "member.ban",
@@ -9641,7 +10111,7 @@
           }
         }
       },
-      "schemaHash": "sha256-05736b14ba24c8a17f0b0966a2953521d29e6b46b757ba1fdbb677f777a4d834"
+      "schemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
     },
     "model": {
       "kind": "matterhorn.primary-model.schema",
@@ -9661,6 +10131,7 @@
           ],
           "messages": {},
           "guests": {},
+          "callRoutes": {},
           "publicInvites": [],
           "joinRequests": {},
           "roleDefinitions": {
@@ -10190,6 +10661,79 @@
             }
           ]
         },
+        "member.call.update": {
+          "authorize": {
+            "roles": [
+              "member"
+            ]
+          },
+          "payload": {
+            "required": {
+              "clientId": {
+                "type": "string",
+                "max": 200
+              },
+              "peerId": {
+                "type": "string",
+                "max": 200
+              },
+              "callPubkey": {
+                "type": "string",
+                "max": 200
+              }
+            },
+            "optional": {
+              "peerAddress": {
+                "type": "string",
+                "max": 400
+              },
+              "name": {
+                "type": "string",
+                "max": 80
+              },
+              "avatar": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "upsertActorRecord",
+              "collection": "guests",
+              "storage": "map",
+              "partition": "guests",
+              "fields": {
+                "memberId": "$actor.memberId",
+                "role": "$actor.role",
+                "lastSeenAt": "$createdAt",
+                "callClientId": "$payload.clientId",
+                "peerId": "$payload.peerId",
+                "peerAddress": "$payload.peerAddress",
+                "callPubkey": "$payload.callPubkey",
+                "name": "$payload.name",
+                "avatar": "$payload.avatar",
+                "callUpdatedAt": "$createdAt"
+              }
+            },
+            {
+              "kind": "upsertActorRecord",
+              "collection": "callRoutes",
+              "storage": "map",
+              "partition": "callRoutes",
+              "fields": {
+                "memberId": "$actor.memberId",
+                "callClientId": "$payload.clientId",
+                "peerId": "$payload.peerId",
+                "peerAddress": "$payload.peerAddress",
+                "callPubkey": "$payload.callPubkey",
+                "name": "$payload.name",
+                "avatar": "$payload.avatar",
+                "callUpdatedAt": "$createdAt"
+              }
+            }
+          ]
+        },
         "member.ban": {
           "authorize": {
             "roles": [
@@ -10415,6 +10959,15 @@
           "storage": "map",
           "partition": "guests"
         },
+        "callRoutes": {
+          "readClass": "head",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "active-epoch-only"
+          },
+          "storage": "map",
+          "partition": "callRoutes"
+        },
         "publicInvites": {
           "readClass": "head",
           "integrityClass": "signature",
@@ -10488,6 +11041,10 @@
       "memberBan": {
         "plugin": "primary",
         "type": "member.ban"
+      },
+      "memberCallUpdate": {
+        "plugin": "primary",
+        "type": "member.call.update"
       },
       "memberModerate": {
         "plugin": "primary",
@@ -10998,6 +11555,11 @@
         "plugin": "primary",
         "type": "member.moderate",
         "requiredRole": "admin"
+      },
+      "updateMemberCall": {
+        "plugin": "primary",
+        "type": "member.call.update",
+        "requiredRole": "member"
       },
       "banMember": {
         "plugin": "primary",

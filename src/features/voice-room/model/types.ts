@@ -1,10 +1,13 @@
 import type { MatterhornEphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
-import type { CallMediaSettings, CallMediaTrackInfo, ScreenPreviewSnapshot, SfuCallState } from "matterhorn-sdk/browser/types";
+import type { CallMediaSettings, CallMediaTrackInfo, ScreenPreviewSnapshot, SfuCallState, SfuPeerPhase } from "matterhorn-sdk/browser/types";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { MediaRoom } from "@entities/chat/model/types";
 
 export type VoiceParticipant = {
   avatar: string;
+  connecting?: boolean;
+  connectionError?: string;
+  connectionPhase?: SfuPeerPhase;
   deafened?: boolean;
   id: string;
   isLocal?: boolean;
