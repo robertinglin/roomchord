@@ -15,7 +15,7 @@ import { mountMatterhornChat } from "@app/matterhornChat";
 import { defaultVoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import { channelMessages } from "@entities/chat/model/state";
 import { forwardedMessageBody } from "@entities/chat/model/chatViewModel";
-import { directCallCanRenderRoom, directCallMatchesThread, directCallThreadForMembers } from "@entities/chat/model/directCallThreads";
+import { directCallCanRenderRoom, directCallMatchesThread, directCallPresenceLabel, directCallThreadForMembers } from "@entities/chat/model/directCallThreads";
 import type { ChatState } from "@entities/chat/model/types";
 
 const state: ChatState = {
@@ -333,6 +333,7 @@ describe("ChatApp", () => {
     expect(directCallCanRenderRoom("outgoing")).toBe(true);
     expect(directCallCanRenderRoom("connecting")).toBe(true);
     expect(directCallCanRenderRoom("connected")).toBe(true);
+    expect(directCallPresenceLabel("connected", true)).toBe("On hold");
   });
 
   it("filters direct messages by the default lane or a topic regex", () => {

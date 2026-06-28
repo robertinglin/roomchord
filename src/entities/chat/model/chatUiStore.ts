@@ -30,6 +30,8 @@ type ChatUiValues = {
   closedDirectThreads: Record<string, number>;
   composerFocusKey: number;
   draftDirectThread?: DirectThread;
+  heldDirectCallRoomId?: string;
+  heldMediaRoomIds: Record<string, boolean>;
   joinedMediaRoomId?: string;
   localMediaSettings: CallMediaSettings;
   manageDialog?: ManageDialogState;
@@ -56,6 +58,8 @@ export type ChatUiActions = {
   closeDirectThread(input: { threadId: string; latestMessageAt: number; nextThreadId?: string }): void;
   closeManageDialog(): void;
   clearVoiceJoin(): void;
+  clearDirectCallHold(roomId?: string): void;
+  clearMediaRoomHold(roomId: string): void;
   dismissReconnect(): void;
   ensureActiveChannel(channelId?: string): void;
   ensureActiveThread(threadId?: string): void;
@@ -73,6 +77,8 @@ export type ChatUiActions = {
   selectMediaRoom(roomId: string): void;
   setActiveThreadId(threadId?: string): void;
   setActiveView(view: ActiveView): void;
+  holdDirectCall(roomId: string): void;
+  holdMediaRoom(roomId: string): void;
   setJoinedMediaRoomId(roomId?: string): void;
   setLocalMediaSettings(media: CallMediaSettings): void;
   setMemberBlock(memberId: string, blocked: boolean): void;
@@ -111,6 +117,7 @@ function createChatUiState(input: ChatUiStoreInput, actions: ChatUiActions): Cha
     actions,
     closedDirectThreads: loadClosedDirectThreads(input.storageKeys.closedDirectThreads),
     composerFocusKey: 0,
+    heldMediaRoomIds: {},
     joinedMediaRoomId: undefined,
     localMediaSettings: { audio: true, video: false },
     mutedVoiceParticipantIds: {},
@@ -182,6 +189,17 @@ export function createChatUiStore(input: ChatUiStoreInput): ChatUiStore {
         set((state) => {
           clearRecentVoiceJoin(state.storageKeys.voiceReconnect);
           return { recentVoiceJoin: undefined };
+        });
+      },
+      clearDirectCallHold(roomId) {
+        set((state) => !roomId || state.heldDirectCallRoomId === roomId ? { heldDirectCallRoomId: undefined } : {});
+      },
+      clearMediaRoomHold(roomId) {
+        set((state) => {
+          if (!state.heldMediaRoomIds[roomId]) return {};
+          const heldMediaRoomIds = { ...state.heldMediaRoomIds };
+          delete heldMediaRoomIds[roomId];
+          return { heldMediaRoomIds };
         });
       },
       dismissReconnect() {
@@ -264,6 +282,12 @@ export function createChatUiStore(input: ChatUiStoreInput): ChatUiStore {
       },
       selectMediaRoom(roomId) {
         set({ activeView: "media", selectedMediaRoomId: roomId });
+      },
+      holdDirectCall(roomId) {
+        set({ heldDirectCallRoomId: roomId });
+      },
+      holdMediaRoom(roomId) {
+        set((state) => ({ heldMediaRoomIds: { ...state.heldMediaRoomIds, [roomId]: true } }));
       },
       setActiveThreadId(threadId) {
         set({ activeThreadId: threadId });

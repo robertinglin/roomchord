@@ -15,6 +15,7 @@ type LiveInput = {
 };
 
 type Input = {
+  heldMediaRoomIds?: Record<string, boolean>;
   live: LiveInput;
   roomName: string;
   voicePreferences: VoicePreferences;
@@ -192,12 +193,13 @@ export function useChatMediaRooms(input: Input) {
     const announcedMedia = publicCallMediaSettings(media);
     const meshParticipant = meshRef.current?.localParticipant(room.id, announcedMedia);
     const activeState = activeCallState();
+    const held = Boolean(input.heldMediaRoomIds?.[room.id]);
     const payload = {
       roomId: room.id,
       media: announcedMedia,
       voiceStatus: {
-        deafened: input.voicePreferences.deafened,
-        muted: input.voicePreferences.muted
+        deafened: input.voicePreferences.deafened || held,
+        muted: input.voicePreferences.muted || held
       },
       mediaTracks: activeState.mediaRoomId === room.id ? activeState.localMediaTracks : undefined,
       screenPreview: media.screen ? screenPreviewRef.current : undefined,
@@ -233,7 +235,7 @@ export function useChatMediaRooms(input: Input) {
     const state = activeCallState();
     if (!room || state.mediaRoomId !== room.id || state.status !== "connected" || !state.media) return;
     claimVoiceToken(room, state.media);
-  }, [input.voicePreferences.deafened, input.voicePreferences.muted, meshState.status, meshState.media, meshState.mediaRoomId, sfuState.status, sfuState.media, sfuState.mediaRoomId]);
+  }, [input.heldMediaRoomIds, input.voicePreferences.deafened, input.voicePreferences.muted, meshState.status, meshState.media, meshState.mediaRoomId, sfuState.status, sfuState.media, sfuState.mediaRoomId]);
 
   useEffect(() => {
     const state = activeCallState();

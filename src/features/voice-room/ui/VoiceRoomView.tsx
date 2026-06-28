@@ -140,7 +140,9 @@ export function VoiceRoomView(props: VoiceRoomViewProps) {
             canUseVideo={Boolean(props.voiceControlCanUseVideo)}
             error={props.voiceControlError}
             label="Voice room controls"
+            holdActive={Boolean(props.voiceControlHoldActive)}
             onLeave={props.onLeaveVoiceRoom || (() => undefined)}
+            onResumeHold={props.onResumeVoiceRoom}
             onToggleCameraSwap={props.onToggleVoiceCameraSwap}
             onToggleScreenShare={props.onToggleVoiceScreenShare || (() => undefined)}
             onToggleVideo={props.onToggleVoiceVideo || (() => undefined)}

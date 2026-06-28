@@ -33,6 +33,8 @@ export function ChatContent() {
   const { actions, directCalls, live, media, view } = useChatRuntime();
   const ui = useChatUiActions();
   const composerFocusKey = useChatUiStore((value) => value.composerFocusKey);
+  const heldDirectCallRoomId = useChatUiStore((value) => value.heldDirectCallRoomId);
+  const heldMediaRoomIds = useChatUiStore((value) => value.heldMediaRoomIds);
   const localMediaSettings = useChatUiStore((value) => value.localMediaSettings);
   const mutedVoiceParticipantIds = useChatUiStore((value) => value.mutedVoiceParticipantIds);
   const pendingComposerText = useChatUiStore((value) => value.pendingComposerText);
@@ -47,16 +49,32 @@ export function ChatContent() {
   );
 
   if (showingActiveDirectCall && directRoom) {
+    const activeDirectRoom = directRoom;
+    const directHeld = heldDirectCallRoomId === activeDirectRoom.id;
+    const directVoicePreferences = directHeld
+      ? { ...view.effectiveVoicePreferences, muted: true, deafened: true }
+      : view.effectiveVoicePreferences;
     const directMedia = directCall.media || localMediaSettings;
     const videoOn = Boolean(directMedia.video);
     const audioOn = !view.effectiveVoicePreferences.muted && !view.effectiveVoicePreferences.deafened;
     const screenOn = Boolean(directMedia.screen);
 
+    function resumeDirectCall() {
+      if (view.activeThread) {
+        actions.resumeDirectCallThread(view.activeThread.id);
+        return;
+      }
+      ui.clearDirectCallHold(activeDirectRoom.id);
+      directCalls.updateMedia({ audio: audioOn, video: videoOn, screen: screenOn });
+    }
+
     function toggleScreenShare() {
+      ui.clearDirectCallHold(activeDirectRoom.id);
       directCalls.updateMedia({ audio: audioOn, video: videoOn, screen: !screenOn });
     }
 
     function toggleVideo() {
+      ui.clearDirectCallHold(activeDirectRoom.id);
       directCalls.updateMedia({ audio: audioOn, video: !videoOn, screen: screenOn });
     }
 
@@ -65,21 +83,23 @@ export function ChatContent() {
         actorId={directCalls.clientId}
         actorName={view.actorName}
         actorAvatar={avatarForActor(live.actor)}
-        joinedRoomId={directRoom.id}
+        joinedRoomId={activeDirectRoom.id}
         localMedia={directMedia}
-        room={directRoom}
-        sfu={directCall.room || { status: directCall.status === "idle" ? "idle" : "connecting", mediaRoomId: directRoom.id, remoteStreams: [] }}
-        voicePreferences={view.effectiveVoicePreferences}
+        room={activeDirectRoom}
+        sfu={directCall.room || { status: directCall.status === "idle" ? "idle" : "connecting", mediaRoomId: activeDirectRoom.id, remoteStreams: [] }}
+        voicePreferences={directVoicePreferences}
         voiceTokens={[]}
         mutedVoiceParticipantIds={mutedVoiceParticipantIds}
         showSidebarMenu={true}
         onOpenMenu={() => ui.setSidebarOpen(true)}
         onLeaveVoiceRoom={directCalls.endCall}
+        onResumeVoiceRoom={directHeld ? resumeDirectCall : undefined}
         onToggleVoiceScreenShare={toggleScreenShare}
         voiceControlShowScreenShare={!isMobile}
         onToggleVoiceVideo={toggleVideo}
         voiceControlCanUseVideo={true}
         voiceControlCanSwapCamera={false}
+        voiceControlHoldActive={directHeld}
         voiceControlSfuActive={directCall.status === "connecting" || directCall.status === "connected"}
         voiceControlSfuStatus={directCall.status}
         voiceControlShareActive={screenOn}
@@ -95,6 +115,10 @@ export function ChatContent() {
 
   if (view.showingMediaRoom && view.selectedMediaRoom) {
     const room = view.selectedMediaRoom;
+    const roomHeld = Boolean(heldMediaRoomIds[room.id]);
+    const roomVoicePreferences = roomHeld
+      ? { ...view.effectiveVoicePreferences, muted: true, deafened: true }
+      : view.effectiveVoicePreferences;
     const joined = view.joinedRoomId === room.id;
     const roomSfuActive = media.sfu.mediaRoomId === room.id;
     const sfuActive = roomSfuActive && (media.sfu.status === "connected" || media.sfu.status === "connecting");
@@ -107,6 +131,7 @@ export function ChatContent() {
 
     function toggleScreenShare() {
       if (!joined) return;
+      ui.clearMediaRoomHold(room.id);
       if (!screenOn && share) {
         void actions.stopScreenShare(share.id);
         return;
@@ -116,7 +141,12 @@ export function ChatContent() {
 
     function toggleVideo() {
       if (!joined) return;
+      ui.clearMediaRoomHold(room.id);
       void media.updateRoomMedia(room, { audio: audioOn, video: !videoOn, screen: screenOn });
+    }
+
+    function resumeMediaRoom() {
+      void actions.updateMediaRoom(room, { audio: audioOn, video: videoOn, screen: screenOn });
     }
 
     return (
@@ -128,18 +158,20 @@ export function ChatContent() {
         localMedia={localMediaSettings}
         room={view.selectedMediaRoom}
         sfu={media.sfu}
-        voicePreferences={view.effectiveVoicePreferences}
+        voicePreferences={roomVoicePreferences}
         voiceTokens={media.voiceTokens}
         mutedVoiceParticipantIds={mutedVoiceParticipantIds}
         showSidebarMenu={true}
         onOpenMenu={() => ui.setSidebarOpen(true)}
         onLeaveVoiceRoom={() => actions.leaveMediaRoom(room.id)}
+        onResumeVoiceRoom={roomHeld ? resumeMediaRoom : undefined}
         onToggleVoiceCameraSwap={media.canSwapCamera ? () => media.toggleCameraFacing() : undefined}
         onToggleVoiceScreenShare={toggleScreenShare}
         voiceControlShowScreenShare={!isMobile}
         onToggleVoiceVideo={toggleVideo}
         voiceControlCanUseVideo={joined && room.allowsVideo !== false}
         voiceControlCanSwapCamera={media.canSwapCamera}
+        voiceControlHoldActive={roomHeld}
         voiceControlSfuActive={sfuActive}
         voiceControlSfuStatus={media.sfu.status}
         voiceControlShareActive={shareActive}

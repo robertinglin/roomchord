@@ -23,7 +23,7 @@ export type UserControlsProps = {
   voicePreferences: VoicePreferences;
   reconnectRoom?: MediaRoom;
   screenShares: ScreenShare[];
-  onUpdateMedia: (room: MediaRoom, media: CallMediaSettings) => void;
+  onUpdateMedia: (room: MediaRoom, media: CallMediaSettings) => void | Promise<void>;
   onLeave: (roomId: string) => void;
   onReconnect: (room: MediaRoom) => void;
   onDismissReconnect: () => void;
@@ -102,7 +102,7 @@ export function UserControls({
   const canUseVideo = joined && room?.allowsVideo !== false;
 
   function updateRoomMedia(media: CallMediaSettings) {
-    if (room && joined) onUpdateMedia(room, media);
+    if (room && joined) void onUpdateMedia(room, media);
   }
 
   const mediaBeforeSettings = React.useRef<CallMediaSettings | undefined>(undefined);

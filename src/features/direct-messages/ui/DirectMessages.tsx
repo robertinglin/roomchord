@@ -37,7 +37,7 @@ export function DirectMessages({
             avatar={threadAvatar(thread, memberAvatarsById, currentUserId)}
             name={title}
             preview={callPresence?.label}
-            previewTone={callPresence ? "success" : "muted"}
+            previewTone={callPresence?.held ? "warning" : callPresence ? "success" : "muted"}
             active={thread.id === activeThreadId}
             badge={unread > 0 ? <Badge count={unread} /> : undefined}
             onClose={() => onClose(thread.id)}

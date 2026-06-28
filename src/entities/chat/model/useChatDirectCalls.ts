@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DirectCallOrchestrator } from "matterhorn-sdk/browser/directCalls";
+import type { DirectCallDockOptions } from "matterhorn-sdk/browser/directCallDock";
 import { MeshRoomCallController } from "matterhorn-sdk/browser/meshRoomCalls";
 import type { CallMediaSettings, CallMode, DirectCallState, PeerJsMediaConnection, RoomParticipant } from "matterhorn-sdk/browser/types";
 import { mediaBridgeFromHost } from "@entities/chat/api/callBridge";
@@ -11,6 +12,8 @@ import type { Mosh } from "../../../../types";
 type Input = {
   actor: Actor;
   live: MatterhornRoom<Mosh>;
+  incomingActions?: DirectCallDockOptions["incomingActions"];
+  onBeforeAccept?: (call: DirectCallState) => boolean | void | Promise<boolean | void>;
   roomName: string;
   state: ChatState;
 };
@@ -106,8 +109,18 @@ export function useChatDirectCalls(input: Input) {
   const [state, setState] = useState<DirectCallState>({ status: "idle" });
   const [error, setError] = useState("");
   const directRef = useRef<DirectCallOrchestrator | undefined>(undefined);
+  const incomingActionsRef = useRef(input.incomingActions);
+  const onBeforeAcceptRef = useRef(input.onBeforeAccept);
   const publishedKeyRef = useRef("");
   const getParticipantRef = useRef(participantResolverForState(input.state));
+
+  useEffect(() => {
+    onBeforeAcceptRef.current = input.onBeforeAccept;
+  }, [input.onBeforeAccept]);
+
+  useEffect(() => {
+    incomingActionsRef.current = input.incomingActions;
+  }, [input.incomingActions]);
 
   useEffect(() => {
     getParticipantRef.current = participantResolverForState(input.state);
@@ -130,7 +143,9 @@ export function useChatDirectCalls(input: Input) {
       getParticipant: (id) => getParticipantRef.current(id),
       renderDefaultCallDock: {
         theme: "dark",
-        shouldRender: (call) => call.status === "incoming"
+        shouldRender: (call) => call.status === "incoming",
+        incomingActions: (call) => incomingActionsRef.current?.(call),
+        onBeforeAccept: (call) => onBeforeAcceptRef.current?.(call)
       },
       createMeshController: ({ onState, onError }) => new MeshRoomCallController({
         roomName: input.roomName,

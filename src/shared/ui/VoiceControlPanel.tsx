@@ -67,12 +67,14 @@ export function VoiceControlPanel({
   error,
   label = "Voice controls",
   onLeave,
+  onResumeHold,
   onToggleCameraSwap,
   onToggleScreenShare,
   onToggleVideo,
   roomName,
   sfuActive,
   sfuStatus,
+  holdActive = false,
   showScreenShare = true,
   shareActive,
   variant = "panel",
@@ -83,12 +85,14 @@ export function VoiceControlPanel({
   error?: string;
   label?: string;
   onLeave: () => void;
+  onResumeHold?: () => void;
   onToggleCameraSwap?: () => void;
   onToggleScreenShare: () => void;
   onToggleVideo: () => void;
   roomName: string;
   sfuActive: boolean;
   sfuStatus: string;
+  holdActive?: boolean;
   showScreenShare?: boolean;
   shareActive: boolean;
   variant?: "panel" | "bar";
@@ -150,6 +154,17 @@ export function VoiceControlPanel({
           >
             <VideoGlyph size={16} />
             <span {...stylex.props(styles.textHidden)}>Flip</span>
+          </Button>
+        ) : null}
+        {holdActive && onResumeHold ? (
+          <Button
+            size={bar ? "lg" : "md"}
+            variant="solid"
+            tone="accent"
+            aria-label="Resume call"
+            onClick={onResumeHold}
+          >
+            Resume
           </Button>
         ) : null}
         {bar ? (

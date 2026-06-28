@@ -4,7 +4,7 @@ import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiSto
 import { PresencePanel } from "@features/presence/ui/PresencePanel";
 
 export function ChatPresenceRail() {
-  const { actions, directCalls, live, media, view } = useChatRuntime();
+  const { actions, live, media, view } = useChatRuntime();
   const ui = useChatUiActions();
   const memberPreferences = useChatUiStore((value) => value.memberPreferences);
   return (
@@ -27,7 +27,7 @@ export function ChatPresenceRail() {
       onSetMemberBlock={ui.setMemberBlock}
       onSetMemberIgnore={ui.setMemberIgnore}
       onSetMemberRoles={(memberId) => actions.openManageDialog("members", memberId)}
-      onStartCall={(memberId) => directCalls.callMember(memberId, "voice")}
+      onStartCall={actions.startDirectCall}
     />
   );
 }

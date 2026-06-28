@@ -39,9 +39,11 @@ export type VoiceRoomViewProps = {
   showSidebarMenu?: boolean;
   onOpenMenu?: () => void;
   onLeaveVoiceRoom?: () => void;
+  onResumeVoiceRoom?: () => void;
   onToggleVoiceCameraSwap?: () => void;
   onToggleVoiceScreenShare?: () => void;
   voiceControlCanSwapCamera?: boolean;
+  voiceControlHoldActive?: boolean;
   voiceControlShowScreenShare?: boolean;
   onToggleVoiceVideo?: () => void;
   voiceControlCanUseVideo?: boolean;

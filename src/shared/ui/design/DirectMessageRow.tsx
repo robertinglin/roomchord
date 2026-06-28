@@ -57,6 +57,10 @@ const styles = stylex.create({
     color: tokens.success,
     fontWeight: 700,
   },
+  subWarning: {
+    color: tokens.warning,
+    fontWeight: 700,
+  },
   close: {
     flex: "0 0 auto",
   },
@@ -82,7 +86,7 @@ export function DirectMessageRow({
   avatar?: string;
   name: string;
   preview?: string;
-  previewTone?: "muted" | "success";
+  previewTone?: "muted" | "success" | "warning";
   status?: PresenceStatus;
   badge?: React.ReactNode;
   active?: boolean;
@@ -100,7 +104,7 @@ export function DirectMessageRow({
       <Avatar avatar={avatar} name={name} size="md" status={status} alt={name} />
       <span {...stylex.props(styles.text)}>
         <span {...stylex.props(styles.name)}>{name}</span>
-        {preview ? <span {...stylex.props(styles.sub, previewTone === "success" && styles.subSuccess)}>{preview}</span> : null}
+        {preview ? <span {...stylex.props(styles.sub, previewTone === "success" && styles.subSuccess, previewTone === "warning" && styles.subWarning)}>{preview}</span> : null}
       </span>
       {badge}
     </button>

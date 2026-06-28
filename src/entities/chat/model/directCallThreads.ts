@@ -3,6 +3,7 @@ import { directThreadIdForUsers } from "@entities/chat/model/state";
 import type { DirectThread, MemberId, ThreadId } from "@entities/chat/model/types";
 
 export type DirectCallThreadPresence = {
+  held?: boolean;
   label: string;
   status: DirectCallState["status"];
 };
@@ -33,7 +34,8 @@ export function directCallMatchesThread(thread: DirectThread, currentUserId: str
     && threadRemotes.every((id, index) => id === callRemotes[index]);
 }
 
-export function directCallPresenceLabel(status: DirectCallState["status"]) {
+export function directCallPresenceLabel(status: DirectCallState["status"], held = false) {
+  if (held) return "On hold";
   if (status === "incoming") return "Incoming call";
   if (status === "outgoing") return "Calling";
   if (status === "connecting") return "Connecting";

@@ -24,13 +24,14 @@ function directCallPresenceByThreadId(
   threads: ReturnType<typeof useChatRuntime>["view"]["threads"],
   currentUserId: string,
   memberIds: string[],
+  held: boolean,
   status: ReturnType<typeof useChatRuntime>["directCalls"]["state"]["status"]
 ) {
-  const label = directCallPresenceLabel(status);
+  const label = directCallPresenceLabel(status, held);
   if (!label) return {};
   return Object.fromEntries(threads
     .filter((thread) => directCallMatchesThread(thread, currentUserId, memberIds))
-    .map((thread) => [thread.id, { label, status } satisfies DirectCallThreadPresence]));
+    .map((thread) => [thread.id, { held, label, status } satisfies DirectCallThreadPresence]));
 }
 
 export function ChatSidebar({
@@ -47,12 +48,19 @@ export function ChatSidebar({
   const { actions, directCalls, live, media, view } = useChatRuntime();
   const ui = useChatUiActions();
   const activeView = useChatUiStore((value) => value.activeView);
+  const heldDirectCallRoomId = useChatUiStore((value) => value.heldDirectCallRoomId);
   const localMediaSettings = useChatUiStore((value) => value.localMediaSettings);
   const mutedVoiceParticipantIds = useChatUiStore((value) => value.mutedVoiceParticipantIds);
   const voicePreferences = useChatUiStore((value) => value.voicePreferences);
   const isMobile = useIsMobile();
   const sidebarOpen = useChatUiStore((value) => value.sidebarOpen);
-  const directCallPresence = directCallPresenceByThreadId(view.threads, live.actor.memberId, directCalls.memberIds, directCalls.state.status);
+  const directCallPresence = directCallPresenceByThreadId(
+    view.threads,
+    live.actor.memberId,
+    directCalls.memberIds,
+    Boolean(directCalls.state.directRoomId && heldDirectCallRoomId === directCalls.state.directRoomId),
+    directCalls.state.status
+  );
   function closeSidebar() {
     onClose?.();
   }
@@ -124,8 +132,8 @@ export function ChatSidebar({
                 actions.openDirectThreadForMember(memberId);
                 handleNavigate();
               },
-              onJoin: (room, media) => {
-                actions.selectMediaRoom(room, media);
+              onJoin: async (room, media) => {
+                await actions.selectMediaRoom(room, media);
                 handleNavigate();
               },
               onToggleVoiceParticipantMute: ui.toggleVoiceParticipantMute
@@ -146,7 +154,7 @@ export function ChatSidebar({
             unreadCounts={view.unreadCounts}
             callPresenceByThreadId={directCallPresence}
             onSelect={(threadId) => {
-              ui.selectDirectThread(threadId);
+              actions.resumeDirectCallThread(threadId);
               handleNavigate();
             }}
             onClose={(threadId) => {
