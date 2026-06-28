@@ -1,5 +1,6 @@
 import React from "react";
 import type { DirectThread } from "@entities/chat/model/types";
+import type { DirectCallThreadPresence } from "@entities/chat/model/directCallThreads";
 import { threadAvatar, threadTitle } from "@entities/chat/model/directThreads";
 import { Badge, ChannelGroup, DirectMessageRow } from "@shared/ui/design";
 
@@ -10,6 +11,7 @@ export function DirectMessages({
   memberNamesById,
   memberAvatarsById,
   unreadCounts,
+  callPresenceByThreadId = {},
   onSelect,
   onClose
 }: {
@@ -19,6 +21,7 @@ export function DirectMessages({
   memberNamesById: Record<string, string>;
   memberAvatarsById: Record<string, string>;
   unreadCounts: Record<string, number>;
+  callPresenceByThreadId?: Record<string, DirectCallThreadPresence>;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
 }) {
@@ -27,11 +30,14 @@ export function DirectMessages({
       {threads.length === 0 ? null : threads.map((thread) => {
         const title = threadTitle(thread, memberNamesById, currentUserId);
         const unread = unreadCounts[thread.id] || 0;
+        const callPresence = callPresenceByThreadId[thread.id];
         return (
           <DirectMessageRow
             key={thread.id}
             avatar={threadAvatar(thread, memberAvatarsById, currentUserId)}
             name={title}
+            preview={callPresence?.label}
+            previewTone={callPresence ? "success" : "muted"}
             active={thread.id === activeThreadId}
             badge={unread > 0 ? <Badge count={unread} /> : undefined}
             onClose={() => onClose(thread.id)}

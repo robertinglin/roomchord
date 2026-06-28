@@ -70,6 +70,26 @@ function participantResolverForState(state: ChatState) {
   };
 }
 
+function memberIdForCallClientId(state: ChatState, id: string) {
+  const routes = callRoutesForState(state);
+  for (const [memberId, route] of Object.entries(routes)) {
+    if (route?.memberId === id || route?.callClientId === id) return memberId;
+  }
+  return id;
+}
+
+function activeDirectCallMemberIds(state: ChatState, actorMemberId: string, call: DirectCallState) {
+  if (call.status === "idle") return [];
+  const ids = [
+    actorMemberId,
+    call.remoteClientId,
+    ...(call.invitedMemberIds || []),
+    ...(call.room?.remoteStreams || []).map((stream) => stream.clientId),
+    ...(call.room?.peers || []).map((peer) => peer.clientId)
+  ].filter((id): id is string => Boolean(id));
+  return Array.from(new Set(ids.map((id) => memberIdForCallClientId(state, id))));
+}
+
 function removePeerCallListener(peer: unknown, handler: (call: PeerJsMediaConnection) => void) {
   if (!peer || typeof peer !== "object") return;
   const target = peer as { off?: (event: string, listener: (call: PeerJsMediaConnection) => void) => void; removeListener?: (event: string, listener: (call: PeerJsMediaConnection) => void) => void };
@@ -108,6 +128,10 @@ export function useChatDirectCalls(input: Input) {
       },
       subscribeRelayMessage: bridge.subscribeRelayMessage,
       getParticipant: (id) => getParticipantRef.current(id),
+      renderDefaultCallDock: {
+        theme: "dark",
+        shouldRender: (call) => call.status === "incoming"
+      },
       createMeshController: ({ onState, onError }) => new MeshRoomCallController({
         roomName: input.roomName,
         profile,
@@ -189,7 +213,6 @@ export function useChatDirectCalls(input: Input) {
   const callMember = useCallback((memberId: string, mode: CallMode = "voice") => {
     setError("");
     publishLocalCallRoute();
-    const route = getParticipantRef.current(memberId);
     const directRoomId = directRef.current?.startDirectCall(memberId, mode);
     return Boolean(directRoomId);
   }, [publishLocalCallRoute]);
@@ -213,15 +236,27 @@ export function useChatDirectCalls(input: Input) {
     directRef.current?.updateMedia(media);
   }, [state]);
 
+  const watchScreenShare = useCallback((clientId: string) => {
+    directRef.current?.watchScreen(clientId);
+  }, []);
+
+  const stopWatchingScreenShare = useCallback((clientId: string) => {
+    directRef.current?.stopWatchingScreen(clientId);
+  }, []);
+
   return {
     acceptCall,
     canCallMember: (memberId: string) => Boolean(getParticipantRef.current(memberId)),
     callMember,
+    clientId,
     declineCall,
     endCall,
     error,
+    memberIds: activeDirectCallMemberIds(input.state, actorMemberId, state),
+    stopWatchingScreenShare,
     state,
-    updateMedia
+    updateMedia,
+    watchScreenShare
   };
 }
 

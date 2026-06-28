@@ -1,5 +1,6 @@
 import React from "react";
 import { avatarForActor } from "@entities/chat/model/chatViewModel";
+import { directCallMatchesThread, directCallPresenceLabel, type DirectCallThreadPresence } from "@entities/chat/model/directCallThreads";
 import { useChatRuntime } from "@entities/chat/model/chatRuntime";
 import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
 import { ChannelSidebar } from "@features/channel-navigation/ui/ChannelSidebar";
@@ -19,6 +20,19 @@ function statusTone(status: string): "on" | "warn" | "off" {
   return "off";
 }
 
+function directCallPresenceByThreadId(
+  threads: ReturnType<typeof useChatRuntime>["view"]["threads"],
+  currentUserId: string,
+  memberIds: string[],
+  status: ReturnType<typeof useChatRuntime>["directCalls"]["state"]["status"]
+) {
+  const label = directCallPresenceLabel(status);
+  if (!label) return {};
+  return Object.fromEntries(threads
+    .filter((thread) => directCallMatchesThread(thread, currentUserId, memberIds))
+    .map((thread) => [thread.id, { label, status } satisfies DirectCallThreadPresence]));
+}
+
 export function ChatSidebar({
   launchHome,
   onClose,
@@ -30,7 +44,7 @@ export function ChatSidebar({
   onNavigate?: () => void;
   onOpenLaunchHomeRoom?: ChatProps["onOpenLaunchHomeRoom"];
 }) {
-  const { actions, live, media, view } = useChatRuntime();
+  const { actions, directCalls, live, media, view } = useChatRuntime();
   const ui = useChatUiActions();
   const activeView = useChatUiStore((value) => value.activeView);
   const localMediaSettings = useChatUiStore((value) => value.localMediaSettings);
@@ -38,6 +52,7 @@ export function ChatSidebar({
   const voicePreferences = useChatUiStore((value) => value.voicePreferences);
   const isMobile = useIsMobile();
   const sidebarOpen = useChatUiStore((value) => value.sidebarOpen);
+  const directCallPresence = directCallPresenceByThreadId(view.threads, live.actor.memberId, directCalls.memberIds, directCalls.state.status);
   function closeSidebar() {
     onClose?.();
   }
@@ -129,6 +144,7 @@ export function ChatSidebar({
             memberNamesById={view.memberNamesById}
             memberAvatarsById={view.memberAvatarsById}
             unreadCounts={view.unreadCounts}
+            callPresenceByThreadId={directCallPresence}
             onSelect={(threadId) => {
               ui.selectDirectThread(threadId);
               handleNavigate();

@@ -1,7 +1,6 @@
 import React from "react";
 import * as stylex from "@stylexjs/stylex";
 import { ChatContent } from "@widgets/chat-shell/ui/ChatContent";
-import { ChatDirectCallDock } from "@widgets/chat-shell/ui/ChatDirectCallDock";
 import { ChatManageDialog } from "@widgets/chat-shell/ui/ChatManageDialog";
 import { ChatPresenceRail } from "@widgets/chat-shell/ui/ChatPresenceRail";
 import { ChatSidebar } from "@widgets/chat-shell/ui/ChatSidebar";
@@ -64,7 +63,6 @@ export function ChatShell({ launchHome, onOpenLaunchHomeRoom }: Pick<ChatProps, 
       />
       <ChatContent />
       <ChatPresenceRail />
-      <ChatDirectCallDock />
       <ChatManageDialog />
     </main>
   );

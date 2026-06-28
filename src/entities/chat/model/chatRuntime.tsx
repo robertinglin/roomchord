@@ -40,6 +40,7 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   const directCalls = useChatDirectCalls({ actor: live.actor, live, roomName, state });
   const view = useChatViewData({
     activeChannelId,
+    activeDirectCallMemberIds: directCalls.memberIds,
     activeThreadId,
     activeView,
     closedDirectThreads,

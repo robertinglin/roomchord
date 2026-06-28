@@ -8,6 +8,7 @@ import type { VoicePreferences } from "@entities/chat/model/localVoicePreference
 import type { RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { canEditRoom, canViewRoom, assignedRoleIds } from "@entities/chat/model/roles";
 import { channelThreads, latestDirectMessageTime, memberChatDisabled, visibleChannelMessages } from "@entities/chat/model/state";
+import { directCallMatchesThread, directCallThreadForMembers } from "@entities/chat/model/directCallThreads";
 import type { ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
 import type { ChannelId, DirectThread, MediaRoom, ThreadId } from "@entities/chat/model/types";
 import {
@@ -22,6 +23,7 @@ import type { Mosh} from "../../../../types";
 
 export type ChatViewDataInput = {
   activeChannelId?: string;
+  activeDirectCallMemberIds?: string[];
   activeThreadId?: string;
   activeView: ActiveView;
   closedDirectThreads: Record<string, number>;
@@ -73,8 +75,12 @@ export function useChatViewData(input: ChatViewDataInput) {
       );
       if (!hasRealThread) visible.push(input.draftDirectThread);
     }
+    const activeCallThread = directCallThreadForMembers(live.actor.memberId, input.activeDirectCallMemberIds || []);
+    if (activeCallThread && !visible.some((thread) => directCallMatchesThread(thread, live.actor.memberId, activeCallThread.userIds || []))) {
+      visible.push(activeCallThread);
+    }
     return visible;
-  }, [directGroups, input.closedDirectThreads, input.draftDirectThread, state]);
+  }, [directGroups, input.activeDirectCallMemberIds, input.closedDirectThreads, input.draftDirectThread, live.actor.memberId, state]);
   const memberNamesById = useMemo(() => memberNamesForState(state, live.actor, input.memberPreferences), [input.memberPreferences, live.actor, state.members, state.presence]);
   const memberAvatarsById = useMemo(() => memberAvatarsForState(state, live.actor), [live.actor, state.members, state.presence]);
   const topicUnreadCounts = useMemo(() => {

@@ -15,6 +15,7 @@ import { mountMatterhornChat } from "@app/matterhornChat";
 import { defaultVoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import { channelMessages } from "@entities/chat/model/state";
 import { forwardedMessageBody } from "@entities/chat/model/chatViewModel";
+import { directCallCanRenderRoom, directCallMatchesThread, directCallThreadForMembers } from "@entities/chat/model/directCallThreads";
 import type { ChatState } from "@entities/chat/model/types";
 
 const state: ChatState = {
@@ -313,6 +314,25 @@ describe("ChatApp", () => {
 
   afterEach(() => {
     resetMatterhornForTests();
+  });
+
+  it("matches direct call presence to exact one-to-one and group DM threads", () => {
+    const pairThread = directCallThreadForMembers("alice", ["alice", "lee"]);
+    const groupThread = directCallThreadForMembers("alice", ["alice", "lee", "mina"]);
+
+    expect(pairThread).toBeTruthy();
+    expect(groupThread).toBeTruthy();
+    expect(directCallMatchesThread(pairThread!, "alice", ["alice", "lee"])).toBe(true);
+    expect(directCallMatchesThread(pairThread!, "alice", ["alice", "lee", "mina"])).toBe(false);
+    expect(directCallMatchesThread(groupThread!, "alice", ["alice", "lee", "mina"])).toBe(true);
+  });
+
+  it("does not render the direct call room before the callee accepts", () => {
+    expect(directCallCanRenderRoom("idle")).toBe(false);
+    expect(directCallCanRenderRoom("incoming")).toBe(false);
+    expect(directCallCanRenderRoom("outgoing")).toBe(true);
+    expect(directCallCanRenderRoom("connecting")).toBe(true);
+    expect(directCallCanRenderRoom("connected")).toBe(true);
   });
 
   it("filters direct messages by the default lane or a topic regex", () => {
@@ -2560,7 +2580,12 @@ describe("ChatApp", () => {
     expect(startCall).not.toBeDisabled();
     await user.click(startCall);
 
-    expect(await screen.findByRole("complementary", { name: "Direct call" })).toHaveTextContent("Calling");
+    const navigation = screen.getByRole("complementary", { name: "Room navigation" });
+    await waitFor(() => expect(within(navigation).getByRole("button", { name: "Alice" })).toHaveTextContent("Calling"));
+    expect(screen.queryByRole("complementary", { name: "Direct call" })).not.toBeInTheDocument();
+    await user.click(within(navigation).getByRole("button", { name: "Alice" }));
+    expect(await screen.findByRole("heading", { name: "Alice" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Voice room controls")).toBeInTheDocument();
     await waitFor(() => expect(sendPeerSignal.mock.calls.some((call) => call[2]?.type === "direct-call.invite")).toBe(true));
     const invite = sendPeerSignal.mock.calls.find((call) => call[2]?.type === "direct-call.invite");
     expect(invite?.[0]).toBe("client-alice");
