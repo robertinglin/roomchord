@@ -6,3 +6,4 @@ matterhorn-frontend-bundle.zip
 .matterhorn-live-objects/
 .tmp/
 *.onnx
+.matterhorn/

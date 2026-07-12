@@ -6133,7 +6133,7 @@
   "frontend": {
     "kind": "matterhorn-player-bundle",
     "appId": "gg.matterhorn.mosh",
-    "root": "C:\\workspace\\roomchord",
+    "root": "/home/robert/workspace/mosh",
     "defaultPort": 42732,
     "locations": [
       {
@@ -6153,11 +6153,11 @@
       "builtEntry": "matterhorn-mosh.js",
       "healthPath": "src/index.tsx",
       "dev": {
-        "command": "C:\\nvm4w\\nodejs\\node.exe",
+        "command": "/home/robert/.local/share/mise/installs/node/26.2.0/bin/node",
         "args": [
-          "C:\\workspace\\roomchord\\shared\\frontendCommand.cjs",
+          "/home/robert/workspace/mosh/shared/frontendCommand.cjs",
           "dev",
-          "C:\\workspace\\roomchord",
+          "/home/robert/workspace/mosh",
           "--",
           "--host",
           "127.0.0.1",
@@ -6167,11 +6167,11 @@
         ]
       },
       "build": {
-        "command": "C:\\nvm4w\\nodejs\\node.exe",
+        "command": "/home/robert/.local/share/mise/installs/node/26.2.0/bin/node",
         "args": [
-          "C:\\workspace\\roomchord\\shared\\frontendCommand.cjs",
+          "/home/robert/workspace/mosh/shared/frontendCommand.cjs",
           "build",
-          "C:\\workspace\\roomchord"
+          "/home/robert/workspace/mosh"
         ]
       },
       "dist": "dist"
