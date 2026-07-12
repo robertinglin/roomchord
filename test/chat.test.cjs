@@ -215,6 +215,15 @@ test("Chat schema starts with role-scoped member and guest channels and voice ro
       roleAccess: { member: "editor", moderator: "editor", admin: "editor", owner: "editor" }
     },
     {
+      id: "voice",
+      name: "Voice",
+      group: "General",
+      allowsVideo: false,
+      scopeType: "channel",
+      scopeId: "general",
+      roleAccess: { member: "editor", moderator: "editor", admin: "editor", owner: "editor" }
+    },
+    {
       id: "guest_voice",
       name: "Guest",
       group: "Guest",
@@ -235,6 +244,12 @@ test("Chat guest projection exposes only the guest channel and guest-scoped room
       general: { id: "general", channelId: "general", body: "member message" },
       guest: { id: "guest", channelId: "guest", body: "guest message" }
     },
+    directThreads: {
+      dm_guest: { id: "dm_guest", userIds: ["guest-user", "member-user"], archivedAt: null }
+    },
+    directMessages: {
+      dm_message: { id: "dm_message", threadId: "dm_guest", userIds: ["guest-user", "member-user"], body: "private message" }
+    },
     rooms: Object.fromEntries(mediaRooms.config.defaultRooms.map((room) => [room.id, room]))
   };
 
@@ -242,10 +257,12 @@ test("Chat guest projection exposes only the guest channel and guest-scoped room
   assert.deepEqual(guest.channels.map((channel) => channel.id), ["guest"]);
   assert.deepEqual(Object.keys(guest.messages), ["guest"]);
   assert.deepEqual(Object.keys(guest.rooms), ["guest_voice"]);
+  assert.deepEqual(Object.keys(guest.directThreads), ["dm_guest"]);
+  assert.deepEqual(Object.keys(guest.directMessages), ["dm_message"]);
 
   const member = permissionsApi.filterStateForActor(state, { memberId: "member-user", role: "member" });
   assert.deepEqual(member.channels.map((channel) => channel.id), ["general", "guest"]);
-  assert.deepEqual(Object.keys(member.rooms), ["general_voice", "guest_voice"]);
+  assert.deepEqual(Object.keys(member.rooms), ["general_voice", "voice", "guest_voice"]);
 });
 
 test("Chat runtime room applies primary message operations through Matterhorn", async () => {
@@ -315,8 +332,13 @@ test("Chat runtime room rejects actions using Matterhorn role checks", async () 
   });
   const guest = room.as(testActor("guest", { role: "guest", displayName: "Guest" }));
 
+  await guest.actions.messageSend({ channelId: "guest", body: "Welcome", embeds: [] });
   await assert.rejects(
     () => guest.actions.messageSend({ channelId: "general", body: "Nope", embeds: [] }),
+    /Schema guard rejected|requires scoped edit access|not authorized|unauthorized/i
+  );
+  await assert.rejects(
+    () => guest.actions.directMessageSend({ userIds: ["member"], body: "Nope" }),
     /requires member|not authorized|unauthorized/i
   );
   await assert.rejects(
@@ -383,12 +405,13 @@ test("Chat UI removes direct-message controls and writing for actors below membe
   const sidebar = fs.readFileSync(path.join(__dirname, "../src/widgets/chat-shell/ui/ChatSidebar.tsx"), "utf8");
 
   assert.match(view, /const actorCanDirectMessage = live\.can\("directMessageSend"\)/);
+  assert.match(view, /const actorCanReceiveDirectMessages = true/);
   assert.match(view, /const actorCanSendMessages = live\.can\("messageSend"\)/);
   assert.match(view, /channels\.find\(\(channel\) => channel\.id === input\.activeChannelId\)\?\.id \|\| channels\[0\]\?\.id/);
   assert.match(content, /!view\.actorCanDirectMessage \|\| !view\.currentThreadId/);
   assert.match(content, /!view\.actorCanSendMessages \|\| !view\.currentChannelId/);
   assert.match(content, /view\.actorCanDirectMessage \? actions\.openDirectThreadForMember : undefined/);
-  assert.match(sidebar, /view\.actorCanDirectMessage \? \(/);
+  assert.match(sidebar, /view\.actorCanReceiveDirectMessages \? \(/);
 });
 
 test("Chat schema routes direct messages through a core host action", () => {

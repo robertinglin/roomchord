@@ -145,7 +145,7 @@ export function ChatSidebar({
             }}
           />
 
-          {view.actorCanDirectMessage ? (
+          {view.actorCanReceiveDirectMessages ? (
             <DirectMessages
               threads={view.threads}
               activeThreadId={view.showingDm ? view.currentThreadId : undefined}

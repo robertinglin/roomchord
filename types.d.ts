@@ -288,7 +288,7 @@ export namespace Mosh {
      */
     messageReact: { messageId: MessageId; emoji: string };
     /**
-     * Requires `member` role.
+     * Requires one of `guest`, `member` roles.
      * channelId: string, <= 200
      * replyToId: string, <= 200
      * body: string, <= 4000
@@ -296,7 +296,7 @@ export namespace Mosh {
      */
     messageReply: { channelId: ChannelId; replyToId: MessageId; body: string; mentionIds?: string[] };
     /**
-     * Requires `member` role.
+     * Requires one of `guest`, `member` roles.
      * channelId: string, <= 200
      * body: string, <= 4000
      * embeds: array

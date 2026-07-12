@@ -17,14 +17,14 @@
     "matterhornVersion": ">=0.1 <0.2",
     "hostPack": {
       "url": "workspace:matterhorn-mosh#hostPack",
-      "integrity": "sha256-27b3e2ae08ea080c956ce9cc799441bb26e8aeb4b0b3a23921488b7b2d636089"
+      "integrity": "sha256-9cd4650c838d0a77a42fbc111752a650e4521bd148ec219090e3b3497efcd341"
     },
     "playerPacks": [
       {
         "id": "gg.matterhorn.mosh.player",
         "name": "Mosh Player",
         "url": "workspace:matterhorn-mosh#playerPack",
-        "integrity": "sha256-aec37cda50022e84b314163a46386c05326a43d6a08d0b677d42446a5846a068",
+        "integrity": "sha256-c711c48e80eadb63df88560d10aca3e688ba931cb41961f5ab4dee37596e11d4",
         "recommendedFor": {
           "devices": [
             "desktop",
@@ -38,11 +38,11 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-8cfcd33182c5cf80034f3023c4ee02cce9c867cbb59d0457124911762ed4b16e",
-      "operationSchemaHash": "sha256-cd00586f499b814cb8a51548066ba5e6c2f12b45c00ae30773debe788edec35e",
+      "appProtocolHash": "sha256-c0f511443d8de2619848d088841519ea50d99a500082a7c67d1ac59f7138c14b",
+      "operationSchemaHash": "sha256-b7c18181fff6547709fd8eccfcb151db005d6b188bd19c531cc02dd2d59efb81",
       "stateSchemaHash": "sha256-34e67621f967c25d0327717a749bf8c007bf6afd0e6aa6e09ba6450a6f25fd82",
-      "pluginGraphHash": "sha256-4913364fb6cec0ef32a669760ecfa1995c961ec9cd58462af6ff212ffab75d6d",
-      "compositionSchemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
+      "pluginGraphHash": "sha256-dd10ce33cbf2d63c5576188f95dfbb4bcb7ab507b10b8f4f67f5038f96e4593f",
+      "compositionSchemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
     },
     "composition": {
       "kind": "matterhorn.app-composition.schema",
@@ -275,6 +275,7 @@
             "message.send": {
               "authorize": {
                 "roles": [
+                  "guest",
                   "member"
                 ]
               },
@@ -302,6 +303,35 @@
                   }
                 }
               },
+              "guards": [
+                {
+                  "kind": "or",
+                  "guards": [
+                    {
+                      "kind": "eq",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$payload.channelId"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    },
+                    {
+                      "kind": "ne",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$actor.role"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    }
+                  ]
+                }
+              ],
               "effects": [
                 {
                   "kind": "createRecord",
@@ -333,6 +363,7 @@
             "message.reply": {
               "authorize": {
                 "roles": [
+                  "guest",
                   "member"
                 ]
               },
@@ -361,6 +392,35 @@
                   }
                 }
               },
+              "guards": [
+                {
+                  "kind": "or",
+                  "guards": [
+                    {
+                      "kind": "eq",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$payload.channelId"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    },
+                    {
+                      "kind": "ne",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$actor.role"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    }
+                  ]
+                }
+              ],
               "effects": [
                 {
                   "kind": "createRecord",
@@ -1197,6 +1257,20 @@
                 "name": "General",
                 "group": "General",
                 "allowsVideo": true,
+                "scopeType": "channel",
+                "scopeId": "general",
+                "roleAccess": {
+                  "member": "editor",
+                  "moderator": "editor",
+                  "admin": "editor",
+                  "owner": "editor"
+                }
+              },
+              {
+                "id": "voice",
+                "name": "Voice",
+                "group": "General",
+                "allowsVideo": false,
                 "scopeType": "channel",
                 "scopeId": "general",
                 "roleAccess": {
@@ -2047,7 +2121,7 @@
           }
         }
       },
-      "schemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
+      "schemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
     },
     "capabilities": {
       "required": [
@@ -2119,8 +2193,8 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-8cfcd33182c5cf80034f3023c4ee02cce9c867cbb59d0457124911762ed4b16e",
-      "pluginGraphHash": "sha256-4913364fb6cec0ef32a669760ecfa1995c961ec9cd58462af6ff212ffab75d6d"
+      "appProtocolHash": "sha256-c0f511443d8de2619848d088841519ea50d99a500082a7c67d1ac59f7138c14b",
+      "pluginGraphHash": "sha256-dd10ce33cbf2d63c5576188f95dfbb4bcb7ab507b10b8f4f67f5038f96e4593f"
     },
     "runtime": {
       "minMatterhornVersion": "0.1.0",
@@ -2136,7 +2210,7 @@
       ]
     },
     "composition": {
-      "schemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43",
+      "schemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc",
       "primaryPlugin": {
         "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
@@ -2360,6 +2434,7 @@
             "message.send": {
               "authorize": {
                 "roles": [
+                  "guest",
                   "member"
                 ]
               },
@@ -2387,6 +2462,35 @@
                   }
                 }
               },
+              "guards": [
+                {
+                  "kind": "or",
+                  "guards": [
+                    {
+                      "kind": "eq",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$payload.channelId"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    },
+                    {
+                      "kind": "ne",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$actor.role"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    }
+                  ]
+                }
+              ],
               "effects": [
                 {
                   "kind": "createRecord",
@@ -2418,6 +2522,7 @@
             "message.reply": {
               "authorize": {
                 "roles": [
+                  "guest",
                   "member"
                 ]
               },
@@ -2446,6 +2551,35 @@
                   }
                 }
               },
+              "guards": [
+                {
+                  "kind": "or",
+                  "guards": [
+                    {
+                      "kind": "eq",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$payload.channelId"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    },
+                    {
+                      "kind": "ne",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$actor.role"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    }
+                  ]
+                }
+              ],
               "effects": [
                 {
                   "kind": "createRecord",
@@ -3282,6 +3416,20 @@
                 "name": "General",
                 "group": "General",
                 "allowsVideo": true,
+                "scopeType": "channel",
+                "scopeId": "general",
+                "roleAccess": {
+                  "member": "editor",
+                  "moderator": "editor",
+                  "admin": "editor",
+                  "owner": "editor"
+                }
+              },
+              {
+                "id": "voice",
+                "name": "Voice",
+                "group": "General",
+                "allowsVideo": false,
                 "scopeType": "channel",
                 "scopeId": "general",
                 "roleAccess": {
@@ -4355,6 +4503,7 @@
               "message.send": {
                 "authorize": {
                   "roles": [
+                    "guest",
                     "member"
                   ]
                 },
@@ -4382,6 +4531,35 @@
                     }
                   }
                 },
+                "guards": [
+                  {
+                    "kind": "or",
+                    "guards": [
+                      {
+                        "kind": "eq",
+                        "left": {
+                          "kind": "value.expr",
+                          "expr": "$payload.channelId"
+                        },
+                        "right": {
+                          "kind": "value.literal",
+                          "value": "guest"
+                        }
+                      },
+                      {
+                        "kind": "ne",
+                        "left": {
+                          "kind": "value.expr",
+                          "expr": "$actor.role"
+                        },
+                        "right": {
+                          "kind": "value.literal",
+                          "value": "guest"
+                        }
+                      }
+                    ]
+                  }
+                ],
                 "effects": [
                   {
                     "kind": "createRecord",
@@ -4413,6 +4591,7 @@
               "message.reply": {
                 "authorize": {
                   "roles": [
+                    "guest",
                     "member"
                   ]
                 },
@@ -4441,6 +4620,35 @@
                     }
                   }
                 },
+                "guards": [
+                  {
+                    "kind": "or",
+                    "guards": [
+                      {
+                        "kind": "eq",
+                        "left": {
+                          "kind": "value.expr",
+                          "expr": "$payload.channelId"
+                        },
+                        "right": {
+                          "kind": "value.literal",
+                          "value": "guest"
+                        }
+                      },
+                      {
+                        "kind": "ne",
+                        "left": {
+                          "kind": "value.expr",
+                          "expr": "$actor.role"
+                        },
+                        "right": {
+                          "kind": "value.literal",
+                          "value": "guest"
+                        }
+                      }
+                    ]
+                  }
+                ],
                 "effects": [
                   {
                     "kind": "createRecord",
@@ -5277,6 +5485,20 @@
                   "name": "General",
                   "group": "General",
                   "allowsVideo": true,
+                  "scopeType": "channel",
+                  "scopeId": "general",
+                  "roleAccess": {
+                    "member": "editor",
+                    "moderator": "editor",
+                    "admin": "editor",
+                    "owner": "editor"
+                  }
+                },
+                {
+                  "id": "voice",
+                  "name": "Voice",
+                  "group": "General",
+                  "allowsVideo": false,
                   "scopeType": "channel",
                   "scopeId": "general",
                   "roleAccess": {
@@ -6127,7 +6349,7 @@
             }
           }
         },
-        "schemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
+        "schemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
       }
     },
     {
@@ -6154,6 +6376,20 @@
             "name": "General",
             "group": "General",
             "allowsVideo": true,
+            "scopeType": "channel",
+            "scopeId": "general",
+            "roleAccess": {
+              "member": "editor",
+              "moderator": "editor",
+              "admin": "editor",
+              "owner": "editor"
+            }
+          },
+          {
+            "id": "voice",
+            "name": "Voice",
+            "group": "General",
+            "allowsVideo": false,
             "scopeType": "channel",
             "scopeId": "general",
             "roleAccess": {
@@ -6219,7 +6455,7 @@
         {
           "appPackId": "gg.matterhorn.mosh",
           "appPackRange": "^1.0.0",
-          "appProtocolHash": "sha256-8cfcd33182c5cf80034f3023c4ee02cce9c867cbb59d0457124911762ed4b16e",
+          "appProtocolHash": "sha256-c0f511443d8de2619848d088841519ea50d99a500082a7c67d1ac59f7138c14b",
           "pluginIds": [
             "gg.matterhorn.examples.plugins.comments",
             "gg.matterhorn.examples.plugins.embeds",
@@ -6229,7 +6465,7 @@
             "gg.matterhorn.examples.plugins.screen-share",
             "gg.matterhorn.mosh.plugin"
           ],
-          "compositionSchemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
+          "compositionSchemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
         }
       ],
       "recommendedFor": {
@@ -6549,6 +6785,7 @@
           "message.send": {
             "authorize": {
               "roles": [
+                "guest",
                 "member"
               ]
             },
@@ -6576,6 +6813,35 @@
                 }
               }
             },
+            "guards": [
+              {
+                "kind": "or",
+                "guards": [
+                  {
+                    "kind": "eq",
+                    "left": {
+                      "kind": "value.expr",
+                      "expr": "$payload.channelId"
+                    },
+                    "right": {
+                      "kind": "value.literal",
+                      "value": "guest"
+                    }
+                  },
+                  {
+                    "kind": "ne",
+                    "left": {
+                      "kind": "value.expr",
+                      "expr": "$actor.role"
+                    },
+                    "right": {
+                      "kind": "value.literal",
+                      "value": "guest"
+                    }
+                  }
+                ]
+              }
+            ],
             "effects": [
               {
                 "kind": "createRecord",
@@ -6607,6 +6873,7 @@
           "message.reply": {
             "authorize": {
               "roles": [
+                "guest",
                 "member"
               ]
             },
@@ -6635,6 +6902,35 @@
                 }
               }
             },
+            "guards": [
+              {
+                "kind": "or",
+                "guards": [
+                  {
+                    "kind": "eq",
+                    "left": {
+                      "kind": "value.expr",
+                      "expr": "$payload.channelId"
+                    },
+                    "right": {
+                      "kind": "value.literal",
+                      "value": "guest"
+                    }
+                  },
+                  {
+                    "kind": "ne",
+                    "left": {
+                      "kind": "value.expr",
+                      "expr": "$actor.role"
+                    },
+                    "right": {
+                      "kind": "value.literal",
+                      "value": "guest"
+                    }
+                  }
+                ]
+              }
+            ],
             "effects": [
               {
                 "kind": "createRecord",
@@ -7471,6 +7767,20 @@
               "name": "General",
               "group": "General",
               "allowsVideo": true,
+              "scopeType": "channel",
+              "scopeId": "general",
+              "roleAccess": {
+                "member": "editor",
+                "moderator": "editor",
+                "admin": "editor",
+                "owner": "editor"
+              }
+            },
+            {
+              "id": "voice",
+              "name": "Voice",
+              "group": "General",
+              "allowsVideo": false,
               "scopeType": "channel",
               "scopeId": "general",
               "roleAccess": {
@@ -8321,7 +8631,7 @@
         }
       }
     },
-    "schemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
+    "schemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
   },
   "artifacts": {
     "composition": {
@@ -8555,6 +8865,7 @@
             "message.send": {
               "authorize": {
                 "roles": [
+                  "guest",
                   "member"
                 ]
               },
@@ -8582,6 +8893,35 @@
                   }
                 }
               },
+              "guards": [
+                {
+                  "kind": "or",
+                  "guards": [
+                    {
+                      "kind": "eq",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$payload.channelId"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    },
+                    {
+                      "kind": "ne",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$actor.role"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    }
+                  ]
+                }
+              ],
               "effects": [
                 {
                   "kind": "createRecord",
@@ -8613,6 +8953,7 @@
             "message.reply": {
               "authorize": {
                 "roles": [
+                  "guest",
                   "member"
                 ]
               },
@@ -8641,6 +8982,35 @@
                   }
                 }
               },
+              "guards": [
+                {
+                  "kind": "or",
+                  "guards": [
+                    {
+                      "kind": "eq",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$payload.channelId"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    },
+                    {
+                      "kind": "ne",
+                      "left": {
+                        "kind": "value.expr",
+                        "expr": "$actor.role"
+                      },
+                      "right": {
+                        "kind": "value.literal",
+                        "value": "guest"
+                      }
+                    }
+                  ]
+                }
+              ],
               "effects": [
                 {
                   "kind": "createRecord",
@@ -9477,6 +9847,20 @@
                 "name": "General",
                 "group": "General",
                 "allowsVideo": true,
+                "scopeType": "channel",
+                "scopeId": "general",
+                "roleAccess": {
+                  "member": "editor",
+                  "moderator": "editor",
+                  "admin": "editor",
+                  "owner": "editor"
+                }
+              },
+              {
+                "id": "voice",
+                "name": "Voice",
+                "group": "General",
+                "allowsVideo": false,
                 "scopeType": "channel",
                 "scopeId": "general",
                 "roleAccess": {
@@ -10327,7 +10711,7 @@
           }
         }
       },
-      "schemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
+      "schemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
     },
     "model": {
       "kind": "matterhorn.primary-model.schema",
@@ -10549,6 +10933,7 @@
         "message.send": {
           "authorize": {
             "roles": [
+              "guest",
               "member"
             ]
           },
@@ -10576,6 +10961,35 @@
               }
             }
           },
+          "guards": [
+            {
+              "kind": "or",
+              "guards": [
+                {
+                  "kind": "eq",
+                  "left": {
+                    "kind": "value.expr",
+                    "expr": "$payload.channelId"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": "guest"
+                  }
+                },
+                {
+                  "kind": "ne",
+                  "left": {
+                    "kind": "value.expr",
+                    "expr": "$actor.role"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": "guest"
+                  }
+                }
+              ]
+            }
+          ],
           "effects": [
             {
               "kind": "createRecord",
@@ -10607,6 +11021,7 @@
         "message.reply": {
           "authorize": {
             "roles": [
+              "guest",
               "member"
             ]
           },
@@ -10635,6 +11050,35 @@
               }
             }
           },
+          "guards": [
+            {
+              "kind": "or",
+              "guards": [
+                {
+                  "kind": "eq",
+                  "left": {
+                    "kind": "value.expr",
+                    "expr": "$payload.channelId"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": "guest"
+                  }
+                },
+                {
+                  "kind": "ne",
+                  "left": {
+                    "kind": "value.expr",
+                    "expr": "$actor.role"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": "guest"
+                  }
+                }
+              ]
+            }
+          ],
           "effects": [
             {
               "kind": "createRecord",

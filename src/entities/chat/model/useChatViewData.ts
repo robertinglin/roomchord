@@ -43,10 +43,12 @@ export function useChatViewData(input: ChatViewDataInput) {
   const { live, media } = input;
   const state = live.state;
   const actorCanDirectMessage = live.can("directMessageSend");
+  // Receipt is controlled by participant-scoped DM projection, not the send capability.
+  const actorCanReceiveDirectMessages = true;
   const channels = useMemo(() => (live.select.channels?.() || state.channels).filter((channel) => !channel.archivedAt), [live.select, state.channels]);
   const [directGroups, setDirectGroups] = useState<Awaited<ReturnType<MatterhornRoom<Mosh>["getDMs"]>>>([]);
   useEffect(() => {
-    if (!actorCanDirectMessage) {
+    if (!actorCanReceiveDirectMessages) {
       setDirectGroups([]);
       return;
     }
@@ -61,10 +63,10 @@ export function useChatViewData(input: ChatViewDataInput) {
       cancelled = true;
       unsubscribe();
     };
-  }, [actorCanDirectMessage, live, state.directMessages, state.directThreads]);
+  }, [actorCanReceiveDirectMessages, live, state.directMessages, state.directThreads]);
   const directGroupsByThreadId = useMemo(() => new Map(directGroups.map((group) => [group.thread.id, group])), [directGroups]);
   const threads = useMemo(() => {
-    if (!actorCanDirectMessage) return [];
+    if (!actorCanReceiveDirectMessages) return [];
     const visible = directGroups
       .filter((thread) => {
         if (thread.thread.archivedAt || thread.messages.length === 0) return false;
@@ -86,7 +88,7 @@ export function useChatViewData(input: ChatViewDataInput) {
       visible.push(activeCallThread);
     }
     return visible;
-  }, [actorCanDirectMessage, directGroups, input.activeDirectCallMemberIds, input.closedDirectThreads, input.draftDirectThread, live.actor.memberId, state]);
+  }, [actorCanReceiveDirectMessages, directGroups, input.activeDirectCallMemberIds, input.closedDirectThreads, input.draftDirectThread, live.actor.memberId, state]);
   const memberNamesById = useMemo(() => memberNamesForState(state, live.actor, input.memberPreferences), [input.memberPreferences, live.actor, state.members, state.presence]);
   const memberAvatarsById = useMemo(() => memberAvatarsForState(state, live.actor), [live.actor, state.members, state.presence]);
   const topicUnreadCounts = useMemo(() => {
@@ -182,6 +184,7 @@ export function useChatViewData(input: ChatViewDataInput) {
     activeThread,
     actorCanCreateChannels,
     actorCanDirectMessage,
+    actorCanReceiveDirectMessages,
     actorCanManageAnything,
     actorCanManageMembers,
     actorCanManageRoles,

@@ -160,7 +160,7 @@ const operations = {
 
   "message.send": action(
     {
-      authorize: { roles: ["member"] },
+      authorize: { roles: ["guest", "member"] },
       payload: {
         channelId: p.string({ max: 200 }),
         body: p.string({ max: 4000 }),
@@ -168,7 +168,8 @@ const operations = {
         mentionIds: p.array(p.string({ max: 120 })).optional(),
       },
     },
-    ({ ref, fx }) => ({
+    ({ ref, fx, guard }) => ({
+      guards: [guard.or(guard.eq("$payload.channelId", "guest"), guard.ne("$actor.role", "guest"))],
       effects: [
         fx.create(messages, {
           id: ref.newId("message"),
@@ -194,7 +195,7 @@ const operations = {
 
   "message.reply": action(
     {
-      authorize: { roles: ["member"] },
+      authorize: { roles: ["guest", "member"] },
       payload: {
         channelId: p.string({ max: 200 }),
         replyToId: p.string({ max: 200 }),
@@ -202,7 +203,8 @@ const operations = {
         mentionIds: p.array(p.string({ max: 120 })).optional(),
       },
     },
-    ({ ref, fx }) => ({
+    ({ ref, fx, guard }) => ({
+      guards: [guard.or(guard.eq("$payload.channelId", "guest"), guard.ne("$actor.role", "guest"))],
       effects: [
         fx.create(messages, {
           id: ref.newId("message"),
@@ -759,6 +761,20 @@ const app = defineApp({
             name: "General",
             group: "General",
             allowsVideo: true,
+            scopeType: "channel",
+            scopeId: "general",
+            roleAccess: {
+              member: "editor",
+              moderator: "editor",
+              admin: "editor",
+              owner: "editor",
+            },
+          },
+          {
+            id: "voice",
+            name: "Voice",
+            group: "General",
+            allowsVideo: false,
             scopeType: "channel",
             scopeId: "general",
             roleAccess: {
