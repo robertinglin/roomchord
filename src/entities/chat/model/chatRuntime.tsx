@@ -47,7 +47,13 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   const requestCallSwitch = useCallback((input: CallSwitchPromptInput) => new Promise<CallSwitchDecision>((resolve) => {
     setCallSwitchPrompt({ ...input, resolve });
   }), []);
-  const media = useChatMediaRooms({ heldMediaRoomIds, live, roomName, voicePreferences });
+  const media = useChatMediaRooms({
+    heldMediaRoomIds,
+    live,
+    onVoiceConnected: (roomId, mediaSettings) => ui.rememberVoiceJoin(roomId, mediaSettings),
+    roomName,
+    voicePreferences
+  });
   const activeListedRoom = useCallback(() => {
     const roomId = media.sfu.mediaRoomId || joinedMediaRoomId;
     const room = state.rooms.find((item) => item.id === roomId);

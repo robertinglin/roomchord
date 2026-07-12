@@ -219,7 +219,7 @@ export function UserControls({
       ) : null}
 
       {!joined && reconnectRoom ? (
-        <ReconnectPrompt room={reconnectRoom} onDismiss={onDismissReconnect} onReconnect={onReconnect} />
+        <ReconnectPrompt error={error} room={reconnectRoom} onDismiss={onDismissReconnect} onReconnect={onReconnect} />
       ) : null}
 
       <SelfAccountRow

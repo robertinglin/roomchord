@@ -17,6 +17,7 @@ type LiveInput = {
 type Input = {
   heldMediaRoomIds?: Record<string, boolean>;
   live: LiveInput;
+  onVoiceConnected?: (roomId: string, media: CallMediaSettings) => void;
   roomName: string;
   voicePreferences: VoicePreferences;
 };
@@ -44,10 +45,39 @@ export function useChatMediaRooms(input: Input) {
   const voiceTokenRef = useRef<MatterhornEphemeralTokenHandle | undefined>(undefined);
   const activeRoomRef = useRef<MediaRoom | undefined>(undefined);
   const screenPreviewRef = useRef<ScreenPreviewSnapshot | undefined>(undefined);
+  const connectedSessionRef = useRef<string | undefined>(undefined);
 
   function relayHasSfu() {
     const info = bridge?.getRelaySfuInfo?.();
     return Boolean(info?.enabled && info.peerId);
+  }
+
+  function logVoiceError(message: string, code?: string) {
+    console.error("[mosh.voice] media connection failed", {
+      roomName: input.roomName,
+      message,
+      code,
+      transport: relayHasSfu() ? "sfu" : "p2p"
+    });
+    setError(message);
+  }
+
+  function logVoiceState(transport: "sfu" | "p2p", state: SfuCallState) {
+    console.info("[mosh.voice] media state", {
+      roomName: input.roomName,
+      transport,
+      status: state.status,
+      mediaRoomId: state.mediaRoomId,
+      sessionId: state.sessionId,
+      peerCount: state.peers?.length || 0
+    });
+  }
+
+  function notifyVoiceConnected(state: SfuCallState) {
+    if (state.status !== "connected" || !state.mediaRoomId || !state.media || !state.sessionId) return;
+    if (connectedSessionRef.current === state.sessionId) return;
+    connectedSessionRef.current = state.sessionId;
+    input.onVoiceConnected?.(state.mediaRoomId, state.media);
   }
 
   function activeRoomState() {
@@ -126,10 +156,12 @@ export function useChatMediaRooms(input: Input) {
       sendSignal: (targetClientId, targetPeerId, signal, auth) => {
         return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
       },
-      onState: setSfuState,
-      onError: (message, code) => {
-        setError(message);
-      }
+      onState: (state) => {
+        logVoiceState("sfu", state);
+        setSfuState(state);
+        notifyVoiceConnected(state);
+      },
+      onError: logVoiceError
     });
     const mesh = new MeshRoomCallController({
       roomName: input.roomName,
@@ -140,10 +172,12 @@ export function useChatMediaRooms(input: Input) {
       sendSignal: (targetClientId, targetPeerId, signal, auth) => {
         return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
       },
-      onState: setMeshState,
-      onError: (message, code) => {
-        setError(message);
-      }
+      onState: (state) => {
+        logVoiceState("p2p", state);
+        setMeshState(state);
+        notifyVoiceConnected(state);
+      },
+      onError: logVoiceError
     });
     sfuRef.current = sfu;
     meshRef.current = mesh;
@@ -270,8 +304,16 @@ export function useChatMediaRooms(input: Input) {
     if (currentState.mediaRoomId && currentState.mediaRoomId !== room.id) releaseVoiceToken();
     activeRoomRef.current = room;
     if (!bridge) {
+      logVoiceError("Voice media bridge is unavailable.");
       return false;
     }
+    console.info("[mosh.voice] starting media connection", {
+      roomName: input.roomName,
+      roomId: room.id,
+      transport: relayHasSfu() ? "sfu" : "p2p",
+      peerId: bridge.getMediaPeer?.()?.id,
+      peerAddress: bridge.getMediaPeerAddress?.()
+    });
     sfuRef.current?.setRelaySfu(bridge.getRelaySfuInfo?.());
     if (relayHasSfu()) {
       meshRef.current?.end();

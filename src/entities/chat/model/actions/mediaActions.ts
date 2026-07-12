@@ -13,7 +13,6 @@ export function mediaActions(input: ChatActionHandlersInput) {
     const audioEnabled = mediaSettings?.audio !== false && !input.localVoicePreferences.muted && !input.localVoicePreferences.deafened;
     const nextMedia = mediaWithVoicePreferences({ audio: audioEnabled, video: Boolean(mediaSettings?.video), screen: Boolean(mediaSettings?.screen) }, input.localVoicePreferences);
     ui.setLocalMediaSettings(nextMedia);
-    ui.rememberVoiceJoin(room.id, nextMedia);
     if (!media.joinRoom(room, nextMedia)) ui.setJoinedMediaRoomId(room.id);
   }
 
@@ -85,7 +84,6 @@ export function mediaActions(input: ChatActionHandlersInput) {
       ui.selectMediaRoom(room.id);
       const nextMedia = unheldLocalMedia(mediaSettings || input.localMediaSettings || input.recentVoiceJoin?.media);
       ui.setLocalMediaSettings(nextMedia);
-      ui.rememberVoiceJoin(room.id, nextMedia);
       if (!media.updateRoomMedia(room, nextMedia)) ui.setJoinedMediaRoomId(room.id);
       return;
     }
@@ -105,7 +103,6 @@ export function mediaActions(input: ChatActionHandlersInput) {
     ui.clearMediaRoomHold(room.id);
     ui.setSelectedMediaRoomId(room.id);
     ui.setLocalMediaSettings(nextMedia);
-    ui.rememberVoiceJoin(room.id, nextMedia);
     if (!media.updateRoomMedia(room, nextMedia)) ui.setJoinedMediaRoomId(room.id);
   }
 

@@ -13,6 +13,7 @@ import { UserControls } from "@features/user-controls/ui/UserControls";
 import { VoiceRoomView } from "@features/voice-room/ui/VoiceRoomView";
 import { mountMatterhornChat } from "@app/matterhornChat";
 import { defaultVoicePreferences } from "@entities/chat/model/localVoicePreferences";
+import { voiceReconnectStorageKey } from "@entities/chat/model/localVoiceReconnect";
 import { channelMessages } from "@entities/chat/model/state";
 import { forwardedMessageBody } from "@entities/chat/model/chatViewModel";
 import { directCallCanRenderRoom, directCallMatchesThread, directCallPresenceLabel, directCallThreadForMembers } from "@entities/chat/model/directCallThreads";
@@ -1054,6 +1055,7 @@ describe("ChatApp", () => {
     await waitFor(() => expect(claimEphemeralToken).toHaveBeenCalled());
     expect(getUserMedia).toHaveBeenCalledWith({ audio: sdkDefaultAudioConstraints, video: false });
     expect(within(sidebarVoiceControls()).getByText("Voice connected")).toBeInTheDocument();
+    expect(window.localStorage.getItem(voiceReconnectStorageKey("chat", "alice"))).toBeTruthy();
     expect(screen.queryByText("Group calling is not available on this relay.")).not.toBeInTheDocument();
     expect(claimEphemeralToken).toHaveBeenCalledWith(expect.objectContaining({
       kind: "media-room.join",
@@ -2412,7 +2414,7 @@ describe("ChatApp", () => {
     expect(screen.getByRole("button", { name: "Undeafen" })).toBeInTheDocument();
   });
 
-  it("shows a reconnect prompt after refresh without auto joining voice", async () => {
+  it("does not save a reconnect prompt when voice signaling is unavailable", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     const first = renderChat();
 
@@ -2422,11 +2424,8 @@ describe("ChatApp", () => {
 
     renderChat();
 
-    expect(await screen.findByLabelText("Voice reconnect prompt")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Voice reconnect prompt")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Voice controls")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Reconnect" }));
-    expect(screen.getByLabelText("Voice controls")).toBeInTheDocument();
   });
 
   it("keeps read direct-message notifications read after an app restart", async () => {

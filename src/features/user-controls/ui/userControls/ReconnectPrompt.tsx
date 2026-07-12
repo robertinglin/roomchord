@@ -52,10 +52,12 @@ const styles = stylex.create({
 });
 
 export function ReconnectPrompt({
+  error,
   room,
   onDismiss,
   onReconnect
 }: {
+  error?: string;
   room: MediaRoom;
   onDismiss: () => void;
   onReconnect: (room: MediaRoom) => void;
@@ -65,6 +67,7 @@ export function ReconnectPrompt({
       <span {...stylex.props(styles.copy)}>
         <strong>Reconnect to {room.name}?</strong>
         <small>Recent voice session</small>
+        {error ? <small role="alert">Voice error: {error}</small> : null}
       </span>
       <span {...stylex.props(styles.actions)}>
         <button {...stylex.props(styles.primaryButton)} type="button" onClick={() => onReconnect(room)}>
