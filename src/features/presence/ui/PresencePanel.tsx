@@ -173,7 +173,7 @@ export function PresencePanel({
   memberPreferences?: Record<string, MemberPreference>;
   memberRoles?: Partial<ChatState>;
   canManageRoles: boolean;
-  onDirectMessage: (memberId: string) => void;
+  onDirectMessage?: (memberId: string) => void;
   onMention: (text: string) => void;
   onOpenMemberProfile: (memberId: string) => void;
   onSetMemberBlock: (memberId: string, blocked: boolean) => void;

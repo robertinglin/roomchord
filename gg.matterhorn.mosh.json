@@ -17,14 +17,14 @@
     "matterhornVersion": ">=0.1 <0.2",
     "hostPack": {
       "url": "workspace:matterhorn-mosh#hostPack",
-      "integrity": "sha256-4656201dc31d43398dadfa03ca52bdbc1632c0d63347576988dac03f5ea1614d"
+      "integrity": "sha256-27b3e2ae08ea080c956ce9cc799441bb26e8aeb4b0b3a23921488b7b2d636089"
     },
     "playerPacks": [
       {
         "id": "gg.matterhorn.mosh.player",
         "name": "Mosh Player",
         "url": "workspace:matterhorn-mosh#playerPack",
-        "integrity": "sha256-28231c4e4d79a84c3a927fcbdc4927effbb66a9d55f266963d38c943a2254aea",
+        "integrity": "sha256-aec37cda50022e84b314163a46386c05326a43d6a08d0b677d42446a5846a068",
         "recommendedFor": {
           "devices": [
             "desktop",
@@ -38,11 +38,11 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-4852cb142eb79e597f8f1110bd29cb1303bde52320885c0566749fbfa077f568",
+      "appProtocolHash": "sha256-8cfcd33182c5cf80034f3023c4ee02cce9c867cbb59d0457124911762ed4b16e",
       "operationSchemaHash": "sha256-cd00586f499b814cb8a51548066ba5e6c2f12b45c00ae30773debe788edec35e",
-      "stateSchemaHash": "sha256-cedf13995816c9800a8f16b44e417da72a5c12312585147a99444a1b5726e7e8",
-      "pluginGraphHash": "sha256-0422bac2635e1128968a8ced05bc2666a71c9fdcdfdfe9e0ce977b58b9614faf",
-      "compositionSchemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
+      "stateSchemaHash": "sha256-34e67621f967c25d0327717a749bf8c007bf6afd0e6aa6e09ba6450a6f25fd82",
+      "pluginGraphHash": "sha256-4913364fb6cec0ef32a669760ecfa1995c961ec9cd58462af6ff212ffab75d6d",
+      "compositionSchemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
     },
     "composition": {
       "kind": "matterhorn.app-composition.schema",
@@ -66,6 +66,21 @@
                   "name": "general",
                   "topic": "Room coordination",
                   "group": "General",
+                  "requiredRole": "member",
+                  "scopeType": "channel",
+                  "scopeId": "general",
+                  "createdAt": 0,
+                  "createdBy": "system",
+                  "archivedAt": null
+                },
+                {
+                  "id": "guest",
+                  "name": "guest",
+                  "topic": "Guest lobby",
+                  "group": "Guest",
+                  "requiredRole": "guest",
+                  "scopeType": "channel",
+                  "scopeId": "guest",
                   "createdAt": 0,
                   "createdBy": "system",
                   "archivedAt": null
@@ -170,6 +185,9 @@
                       "$expr": "$payload.group",
                       "fallback": null
                     },
+                    "requiredRole": "member",
+                    "scopeType": "channel",
+                    "scopeId": "$id:channel",
                     "createdAt": "$createdAt",
                     "createdBy": "$actor.memberId",
                     "archivedAt": null
@@ -878,7 +896,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "array",
               "partition": "channels"
@@ -887,7 +905,7 @@
               "readClass": "window",
               "integrityClass": "seq",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "messages"
@@ -896,7 +914,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "guests"
@@ -905,7 +923,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "callRoutes"
@@ -914,7 +932,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "array",
               "partition": "publicInvites"
@@ -923,7 +941,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "joinRequests"
@@ -932,7 +950,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "roleDefinitions"
@@ -941,7 +959,7 @@
               "readClass": "window",
               "integrityClass": "seq",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "array",
               "partition": "activity"
@@ -1180,7 +1198,28 @@
                 "group": "General",
                 "allowsVideo": true,
                 "scopeType": "channel",
-                "scopeId": "general"
+                "scopeId": "general",
+                "roleAccess": {
+                  "member": "editor",
+                  "moderator": "editor",
+                  "admin": "editor",
+                  "owner": "editor"
+                }
+              },
+              {
+                "id": "guest_voice",
+                "name": "Guest",
+                "group": "Guest",
+                "allowsVideo": false,
+                "scopeType": "channel",
+                "scopeId": "guest",
+                "roleAccess": {
+                  "guest": "readonly",
+                  "member": "editor",
+                  "moderator": "editor",
+                  "admin": "editor",
+                  "owner": "editor"
+                }
               }
             ]
           }
@@ -2008,7 +2047,7 @@
           }
         }
       },
-      "schemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
+      "schemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
     },
     "capabilities": {
       "required": [
@@ -2080,8 +2119,8 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-4852cb142eb79e597f8f1110bd29cb1303bde52320885c0566749fbfa077f568",
-      "pluginGraphHash": "sha256-0422bac2635e1128968a8ced05bc2666a71c9fdcdfdfe9e0ce977b58b9614faf"
+      "appProtocolHash": "sha256-8cfcd33182c5cf80034f3023c4ee02cce9c867cbb59d0457124911762ed4b16e",
+      "pluginGraphHash": "sha256-4913364fb6cec0ef32a669760ecfa1995c961ec9cd58462af6ff212ffab75d6d"
     },
     "runtime": {
       "minMatterhornVersion": "0.1.0",
@@ -2097,7 +2136,7 @@
       ]
     },
     "composition": {
-      "schemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c",
+      "schemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43",
       "primaryPlugin": {
         "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
@@ -2112,6 +2151,21 @@
                   "name": "general",
                   "topic": "Room coordination",
                   "group": "General",
+                  "requiredRole": "member",
+                  "scopeType": "channel",
+                  "scopeId": "general",
+                  "createdAt": 0,
+                  "createdBy": "system",
+                  "archivedAt": null
+                },
+                {
+                  "id": "guest",
+                  "name": "guest",
+                  "topic": "Guest lobby",
+                  "group": "Guest",
+                  "requiredRole": "guest",
+                  "scopeType": "channel",
+                  "scopeId": "guest",
                   "createdAt": 0,
                   "createdBy": "system",
                   "archivedAt": null
@@ -2216,6 +2270,9 @@
                       "$expr": "$payload.group",
                       "fallback": null
                     },
+                    "requiredRole": "member",
+                    "scopeType": "channel",
+                    "scopeId": "$id:channel",
                     "createdAt": "$createdAt",
                     "createdBy": "$actor.memberId",
                     "archivedAt": null
@@ -2924,7 +2981,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "array",
               "partition": "channels"
@@ -2933,7 +2990,7 @@
               "readClass": "window",
               "integrityClass": "seq",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "messages"
@@ -2942,7 +2999,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "guests"
@@ -2951,7 +3008,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "callRoutes"
@@ -2960,7 +3017,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "array",
               "partition": "publicInvites"
@@ -2969,7 +3026,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "joinRequests"
@@ -2978,7 +3035,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "roleDefinitions"
@@ -2987,7 +3044,7 @@
               "readClass": "window",
               "integrityClass": "seq",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "array",
               "partition": "activity"
@@ -3226,7 +3283,28 @@
                 "group": "General",
                 "allowsVideo": true,
                 "scopeType": "channel",
-                "scopeId": "general"
+                "scopeId": "general",
+                "roleAccess": {
+                  "member": "editor",
+                  "moderator": "editor",
+                  "admin": "editor",
+                  "owner": "editor"
+                }
+              },
+              {
+                "id": "guest_voice",
+                "name": "Guest",
+                "group": "Guest",
+                "allowsVideo": false,
+                "scopeType": "channel",
+                "scopeId": "guest",
+                "roleAccess": {
+                  "guest": "readonly",
+                  "member": "editor",
+                  "moderator": "editor",
+                  "admin": "editor",
+                  "owner": "editor"
+                }
               }
             ]
           }
@@ -4068,6 +4146,21 @@
                     "name": "general",
                     "topic": "Room coordination",
                     "group": "General",
+                    "requiredRole": "member",
+                    "scopeType": "channel",
+                    "scopeId": "general",
+                    "createdAt": 0,
+                    "createdBy": "system",
+                    "archivedAt": null
+                  },
+                  {
+                    "id": "guest",
+                    "name": "guest",
+                    "topic": "Guest lobby",
+                    "group": "Guest",
+                    "requiredRole": "guest",
+                    "scopeType": "channel",
+                    "scopeId": "guest",
                     "createdAt": 0,
                     "createdBy": "system",
                     "archivedAt": null
@@ -4172,6 +4265,9 @@
                         "$expr": "$payload.group",
                         "fallback": null
                       },
+                      "requiredRole": "member",
+                      "scopeType": "channel",
+                      "scopeId": "$id:channel",
                       "createdAt": "$createdAt",
                       "createdBy": "$actor.memberId",
                       "archivedAt": null
@@ -4880,7 +4976,7 @@
                 "readClass": "head",
                 "integrityClass": "signature",
                 "historyVisibility": {
-                  "mode": "active-epoch-only"
+                  "mode": "all"
                 },
                 "storage": "array",
                 "partition": "channels"
@@ -4889,7 +4985,7 @@
                 "readClass": "window",
                 "integrityClass": "seq",
                 "historyVisibility": {
-                  "mode": "active-epoch-only"
+                  "mode": "all"
                 },
                 "storage": "map",
                 "partition": "messages"
@@ -4898,7 +4994,7 @@
                 "readClass": "head",
                 "integrityClass": "signature",
                 "historyVisibility": {
-                  "mode": "active-epoch-only"
+                  "mode": "all"
                 },
                 "storage": "map",
                 "partition": "guests"
@@ -4907,7 +5003,7 @@
                 "readClass": "head",
                 "integrityClass": "signature",
                 "historyVisibility": {
-                  "mode": "active-epoch-only"
+                  "mode": "all"
                 },
                 "storage": "map",
                 "partition": "callRoutes"
@@ -4916,7 +5012,7 @@
                 "readClass": "head",
                 "integrityClass": "signature",
                 "historyVisibility": {
-                  "mode": "active-epoch-only"
+                  "mode": "all"
                 },
                 "storage": "array",
                 "partition": "publicInvites"
@@ -4925,7 +5021,7 @@
                 "readClass": "head",
                 "integrityClass": "signature",
                 "historyVisibility": {
-                  "mode": "active-epoch-only"
+                  "mode": "all"
                 },
                 "storage": "map",
                 "partition": "joinRequests"
@@ -4934,7 +5030,7 @@
                 "readClass": "head",
                 "integrityClass": "signature",
                 "historyVisibility": {
-                  "mode": "active-epoch-only"
+                  "mode": "all"
                 },
                 "storage": "map",
                 "partition": "roleDefinitions"
@@ -4943,7 +5039,7 @@
                 "readClass": "window",
                 "integrityClass": "seq",
                 "historyVisibility": {
-                  "mode": "active-epoch-only"
+                  "mode": "all"
                 },
                 "storage": "array",
                 "partition": "activity"
@@ -5182,7 +5278,28 @@
                   "group": "General",
                   "allowsVideo": true,
                   "scopeType": "channel",
-                  "scopeId": "general"
+                  "scopeId": "general",
+                  "roleAccess": {
+                    "member": "editor",
+                    "moderator": "editor",
+                    "admin": "editor",
+                    "owner": "editor"
+                  }
+                },
+                {
+                  "id": "guest_voice",
+                  "name": "Guest",
+                  "group": "Guest",
+                  "allowsVideo": false,
+                  "scopeType": "channel",
+                  "scopeId": "guest",
+                  "roleAccess": {
+                    "guest": "readonly",
+                    "member": "editor",
+                    "moderator": "editor",
+                    "admin": "editor",
+                    "owner": "editor"
+                  }
                 }
               ]
             }
@@ -6010,7 +6127,7 @@
             }
           }
         },
-        "schemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
+        "schemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
       }
     },
     {
@@ -6038,7 +6155,28 @@
             "group": "General",
             "allowsVideo": true,
             "scopeType": "channel",
-            "scopeId": "general"
+            "scopeId": "general",
+            "roleAccess": {
+              "member": "editor",
+              "moderator": "editor",
+              "admin": "editor",
+              "owner": "editor"
+            }
+          },
+          {
+            "id": "guest_voice",
+            "name": "Guest",
+            "group": "Guest",
+            "allowsVideo": false,
+            "scopeType": "channel",
+            "scopeId": "guest",
+            "roleAccess": {
+              "guest": "readonly",
+              "member": "editor",
+              "moderator": "editor",
+              "admin": "editor",
+              "owner": "editor"
+            }
           }
         ]
       }
@@ -6081,7 +6219,7 @@
         {
           "appPackId": "gg.matterhorn.mosh",
           "appPackRange": "^1.0.0",
-          "appProtocolHash": "sha256-4852cb142eb79e597f8f1110bd29cb1303bde52320885c0566749fbfa077f568",
+          "appProtocolHash": "sha256-8cfcd33182c5cf80034f3023c4ee02cce9c867cbb59d0457124911762ed4b16e",
           "pluginIds": [
             "gg.matterhorn.examples.plugins.comments",
             "gg.matterhorn.examples.plugins.embeds",
@@ -6091,7 +6229,7 @@
             "gg.matterhorn.examples.plugins.screen-share",
             "gg.matterhorn.mosh.plugin"
           ],
-          "compositionSchemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
+          "compositionSchemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
         }
       ],
       "recommendedFor": {
@@ -6202,6 +6340,21 @@
                 "name": "general",
                 "topic": "Room coordination",
                 "group": "General",
+                "requiredRole": "member",
+                "scopeType": "channel",
+                "scopeId": "general",
+                "createdAt": 0,
+                "createdBy": "system",
+                "archivedAt": null
+              },
+              {
+                "id": "guest",
+                "name": "guest",
+                "topic": "Guest lobby",
+                "group": "Guest",
+                "requiredRole": "guest",
+                "scopeType": "channel",
+                "scopeId": "guest",
                 "createdAt": 0,
                 "createdBy": "system",
                 "archivedAt": null
@@ -6306,6 +6459,9 @@
                     "$expr": "$payload.group",
                     "fallback": null
                   },
+                  "requiredRole": "member",
+                  "scopeType": "channel",
+                  "scopeId": "$id:channel",
                   "createdAt": "$createdAt",
                   "createdBy": "$actor.memberId",
                   "archivedAt": null
@@ -7014,7 +7170,7 @@
             "readClass": "head",
             "integrityClass": "signature",
             "historyVisibility": {
-              "mode": "active-epoch-only"
+              "mode": "all"
             },
             "storage": "array",
             "partition": "channels"
@@ -7023,7 +7179,7 @@
             "readClass": "window",
             "integrityClass": "seq",
             "historyVisibility": {
-              "mode": "active-epoch-only"
+              "mode": "all"
             },
             "storage": "map",
             "partition": "messages"
@@ -7032,7 +7188,7 @@
             "readClass": "head",
             "integrityClass": "signature",
             "historyVisibility": {
-              "mode": "active-epoch-only"
+              "mode": "all"
             },
             "storage": "map",
             "partition": "guests"
@@ -7041,7 +7197,7 @@
             "readClass": "head",
             "integrityClass": "signature",
             "historyVisibility": {
-              "mode": "active-epoch-only"
+              "mode": "all"
             },
             "storage": "map",
             "partition": "callRoutes"
@@ -7050,7 +7206,7 @@
             "readClass": "head",
             "integrityClass": "signature",
             "historyVisibility": {
-              "mode": "active-epoch-only"
+              "mode": "all"
             },
             "storage": "array",
             "partition": "publicInvites"
@@ -7059,7 +7215,7 @@
             "readClass": "head",
             "integrityClass": "signature",
             "historyVisibility": {
-              "mode": "active-epoch-only"
+              "mode": "all"
             },
             "storage": "map",
             "partition": "joinRequests"
@@ -7068,7 +7224,7 @@
             "readClass": "head",
             "integrityClass": "signature",
             "historyVisibility": {
-              "mode": "active-epoch-only"
+              "mode": "all"
             },
             "storage": "map",
             "partition": "roleDefinitions"
@@ -7077,7 +7233,7 @@
             "readClass": "window",
             "integrityClass": "seq",
             "historyVisibility": {
-              "mode": "active-epoch-only"
+              "mode": "all"
             },
             "storage": "array",
             "partition": "activity"
@@ -7316,7 +7472,28 @@
               "group": "General",
               "allowsVideo": true,
               "scopeType": "channel",
-              "scopeId": "general"
+              "scopeId": "general",
+              "roleAccess": {
+                "member": "editor",
+                "moderator": "editor",
+                "admin": "editor",
+                "owner": "editor"
+              }
+            },
+            {
+              "id": "guest_voice",
+              "name": "Guest",
+              "group": "Guest",
+              "allowsVideo": false,
+              "scopeType": "channel",
+              "scopeId": "guest",
+              "roleAccess": {
+                "guest": "readonly",
+                "member": "editor",
+                "moderator": "editor",
+                "admin": "editor",
+                "owner": "editor"
+              }
             }
           ]
         }
@@ -8144,7 +8321,7 @@
         }
       }
     },
-    "schemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
+    "schemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
   },
   "artifacts": {
     "composition": {
@@ -8169,6 +8346,21 @@
                   "name": "general",
                   "topic": "Room coordination",
                   "group": "General",
+                  "requiredRole": "member",
+                  "scopeType": "channel",
+                  "scopeId": "general",
+                  "createdAt": 0,
+                  "createdBy": "system",
+                  "archivedAt": null
+                },
+                {
+                  "id": "guest",
+                  "name": "guest",
+                  "topic": "Guest lobby",
+                  "group": "Guest",
+                  "requiredRole": "guest",
+                  "scopeType": "channel",
+                  "scopeId": "guest",
                   "createdAt": 0,
                   "createdBy": "system",
                   "archivedAt": null
@@ -8273,6 +8465,9 @@
                       "$expr": "$payload.group",
                       "fallback": null
                     },
+                    "requiredRole": "member",
+                    "scopeType": "channel",
+                    "scopeId": "$id:channel",
                     "createdAt": "$createdAt",
                     "createdBy": "$actor.memberId",
                     "archivedAt": null
@@ -8981,7 +9176,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "array",
               "partition": "channels"
@@ -8990,7 +9185,7 @@
               "readClass": "window",
               "integrityClass": "seq",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "messages"
@@ -8999,7 +9194,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "guests"
@@ -9008,7 +9203,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "callRoutes"
@@ -9017,7 +9212,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "array",
               "partition": "publicInvites"
@@ -9026,7 +9221,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "joinRequests"
@@ -9035,7 +9230,7 @@
               "readClass": "head",
               "integrityClass": "signature",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "map",
               "partition": "roleDefinitions"
@@ -9044,7 +9239,7 @@
               "readClass": "window",
               "integrityClass": "seq",
               "historyVisibility": {
-                "mode": "active-epoch-only"
+                "mode": "all"
               },
               "storage": "array",
               "partition": "activity"
@@ -9283,7 +9478,28 @@
                 "group": "General",
                 "allowsVideo": true,
                 "scopeType": "channel",
-                "scopeId": "general"
+                "scopeId": "general",
+                "roleAccess": {
+                  "member": "editor",
+                  "moderator": "editor",
+                  "admin": "editor",
+                  "owner": "editor"
+                }
+              },
+              {
+                "id": "guest_voice",
+                "name": "Guest",
+                "group": "Guest",
+                "allowsVideo": false,
+                "scopeType": "channel",
+                "scopeId": "guest",
+                "roleAccess": {
+                  "guest": "readonly",
+                  "member": "editor",
+                  "moderator": "editor",
+                  "admin": "editor",
+                  "owner": "editor"
+                }
               }
             ]
           }
@@ -10111,7 +10327,7 @@
           }
         }
       },
-      "schemaHash": "sha256-6e5aa6c76d334cf60a10c2bfc64abcaee0fda9bc73398c3c151097887a1cae0c"
+      "schemaHash": "sha256-4cdfa17e1b9c0c67772f9a3b7cad1d2b2bbc203b6b8d327755a5797629e99e43"
     },
     "model": {
       "kind": "matterhorn.primary-model.schema",
@@ -10124,6 +10340,21 @@
               "name": "general",
               "topic": "Room coordination",
               "group": "General",
+              "requiredRole": "member",
+              "scopeType": "channel",
+              "scopeId": "general",
+              "createdAt": 0,
+              "createdBy": "system",
+              "archivedAt": null
+            },
+            {
+              "id": "guest",
+              "name": "guest",
+              "topic": "Guest lobby",
+              "group": "Guest",
+              "requiredRole": "guest",
+              "scopeType": "channel",
+              "scopeId": "guest",
               "createdAt": 0,
               "createdBy": "system",
               "archivedAt": null
@@ -10228,6 +10459,9 @@
                   "$expr": "$payload.group",
                   "fallback": null
                 },
+                "requiredRole": "member",
+                "scopeType": "channel",
+                "scopeId": "$id:channel",
                 "createdAt": "$createdAt",
                 "createdBy": "$actor.memberId",
                 "archivedAt": null
@@ -10936,7 +11170,7 @@
           "readClass": "head",
           "integrityClass": "signature",
           "historyVisibility": {
-            "mode": "active-epoch-only"
+            "mode": "all"
           },
           "storage": "array",
           "partition": "channels"
@@ -10945,7 +11179,7 @@
           "readClass": "window",
           "integrityClass": "seq",
           "historyVisibility": {
-            "mode": "active-epoch-only"
+            "mode": "all"
           },
           "storage": "map",
           "partition": "messages"
@@ -10954,7 +11188,7 @@
           "readClass": "head",
           "integrityClass": "signature",
           "historyVisibility": {
-            "mode": "active-epoch-only"
+            "mode": "all"
           },
           "storage": "map",
           "partition": "guests"
@@ -10963,7 +11197,7 @@
           "readClass": "head",
           "integrityClass": "signature",
           "historyVisibility": {
-            "mode": "active-epoch-only"
+            "mode": "all"
           },
           "storage": "map",
           "partition": "callRoutes"
@@ -10972,7 +11206,7 @@
           "readClass": "head",
           "integrityClass": "signature",
           "historyVisibility": {
-            "mode": "active-epoch-only"
+            "mode": "all"
           },
           "storage": "array",
           "partition": "publicInvites"
@@ -10981,7 +11215,7 @@
           "readClass": "head",
           "integrityClass": "signature",
           "historyVisibility": {
-            "mode": "active-epoch-only"
+            "mode": "all"
           },
           "storage": "map",
           "partition": "joinRequests"
@@ -10990,7 +11224,7 @@
           "readClass": "head",
           "integrityClass": "signature",
           "historyVisibility": {
-            "mode": "active-epoch-only"
+            "mode": "all"
           },
           "storage": "map",
           "partition": "roleDefinitions"
@@ -10999,7 +11233,7 @@
           "readClass": "window",
           "integrityClass": "seq",
           "historyVisibility": {
-            "mode": "active-epoch-only"
+            "mode": "all"
           },
           "storage": "array",
           "partition": "activity"

@@ -21,13 +21,13 @@ export function ChatPresenceRail() {
       memberPreferences={memberPreferences}
       memberRoles={live.state}
       canManageRoles={view.actorCanManageRoles}
-      onDirectMessage={actions.openDirectThreadForMember}
+      onDirectMessage={view.actorCanDirectMessage ? actions.openDirectThreadForMember : undefined}
       onMention={ui.queueComposerText}
       onOpenMemberProfile={ui.openMemberProfileDialog}
       onSetMemberBlock={ui.setMemberBlock}
       onSetMemberIgnore={ui.setMemberIgnore}
       onSetMemberRoles={(memberId) => actions.openManageDialog("members", memberId)}
-      onStartCall={actions.startDirectCall}
+      onStartCall={view.actorCanDirectMessage ? actions.startDirectCall : undefined}
     />
   );
 }

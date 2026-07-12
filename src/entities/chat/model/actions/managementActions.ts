@@ -5,6 +5,16 @@ import { assignedRoleIds } from "@entities/chat/model/roles";
 
 const DEFAULT_ROLE_GRANTS = [{ scopeType: "*", scopeId: "*", role: "viewer" }];
 const ARCHIVED_ROLE_GRANTS = [{ scopeType: "*", scopeId: "*", role: "none" }];
+const MEMBER_ROOM_ACCESS: RoomRoleAccess = {
+  member: "editor",
+  moderator: "editor",
+  admin: "editor",
+  owner: "editor"
+} as RoomRoleAccess;
+const GUEST_ROOM_ACCESS: RoomRoleAccess = {
+  guest: "readonly",
+  ...MEMBER_ROOM_ACCESS
+} as RoomRoleAccess;
 
 export function managementActions(input: ChatActionHandlersInput) {
   const { dispatch } = input.live;
@@ -31,7 +41,9 @@ export function managementActions(input: ChatActionHandlersInput) {
 
   async function createMediaRoom(room: { name: string; allowsVideo: boolean; group?: string; roleAccess?: RoomRoleAccess }) {
     const scoped = input.view.currentChannelId ? { scopeType: "channel", scopeId: input.view.currentChannelId } : {};
-    await dispatch("mediaRoomCreate", { name: room.name, allowsVideo: room.allowsVideo, group: room.group, roleAccess: room.roleAccess, ...scoped });
+    const roleAccess = room.roleAccess
+      || (input.view.currentChannelId === "guest" ? GUEST_ROOM_ACCESS : MEMBER_ROOM_ACCESS);
+    await dispatch("mediaRoomCreate", { name: room.name, allowsVideo: room.allowsVideo, group: room.group, roleAccess, ...scoped });
   }
 
   async function updateMediaRoomSettings(roomId: string, settings: { name?: string; group?: string | null; allowsVideo?: boolean; locked?: boolean; roleAccess?: RoomRoleAccess }) {

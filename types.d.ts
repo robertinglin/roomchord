@@ -7,6 +7,8 @@
  * ========================================================================== */
 
 
+import type { MatterhornRoomState } from "matterhorn-sdk/client";
+
 export namespace Mosh {
   export type Role = "guest" | "member" | "moderator" | "admin" | "owner";
   export type ChannelId = string & { readonly __brand: "ChannelId" };
@@ -87,6 +89,9 @@ export namespace Mosh {
     group: null | string;
     id: ChannelId;
     name: string;
+    requiredRole: string;
+    scopeId: string;
+    scopeType: string;
     topic: null | string;
     updatedAt?: number;
   }
@@ -168,7 +173,7 @@ export namespace Mosh {
     rank: number;
     systemRole: boolean;
   }
-  export interface State {
+  export interface State extends Omit<MatterhornRoomState, "members" | "presence"> {
     access: CoreAccessState;
     activity: Activity[];
     callRoutes: Record<string, CallRoute>;

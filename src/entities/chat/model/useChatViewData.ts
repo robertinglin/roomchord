@@ -42,9 +42,14 @@ export type ChatViewDataInput = {
 export function useChatViewData(input: ChatViewDataInput) {
   const { live, media } = input;
   const state = live.state;
+  const actorCanDirectMessage = live.can("directMessageSend");
   const channels = useMemo(() => (live.select.channels?.() || state.channels).filter((channel) => !channel.archivedAt), [live.select, state.channels]);
   const [directGroups, setDirectGroups] = useState<Awaited<ReturnType<MatterhornRoom<Mosh>["getDMs"]>>>([]);
   useEffect(() => {
+    if (!actorCanDirectMessage) {
+      setDirectGroups([]);
+      return;
+    }
     let cancelled = false;
     void live.getDMs().then((groups) => {
       if (!cancelled) setDirectGroups(groups);
@@ -56,9 +61,10 @@ export function useChatViewData(input: ChatViewDataInput) {
       cancelled = true;
       unsubscribe();
     };
-  }, [live, state.directMessages, state.directThreads]);
+  }, [actorCanDirectMessage, live, state.directMessages, state.directThreads]);
   const directGroupsByThreadId = useMemo(() => new Map(directGroups.map((group) => [group.thread.id, group])), [directGroups]);
   const threads = useMemo(() => {
+    if (!actorCanDirectMessage) return [];
     const visible = directGroups
       .filter((thread) => {
         if (thread.thread.archivedAt || thread.messages.length === 0) return false;
@@ -80,7 +86,7 @@ export function useChatViewData(input: ChatViewDataInput) {
       visible.push(activeCallThread);
     }
     return visible;
-  }, [directGroups, input.activeDirectCallMemberIds, input.closedDirectThreads, input.draftDirectThread, live.actor.memberId, state]);
+  }, [actorCanDirectMessage, directGroups, input.activeDirectCallMemberIds, input.closedDirectThreads, input.draftDirectThread, live.actor.memberId, state]);
   const memberNamesById = useMemo(() => memberNamesForState(state, live.actor, input.memberPreferences), [input.memberPreferences, live.actor, state.members, state.presence]);
   const memberAvatarsById = useMemo(() => memberAvatarsForState(state, live.actor), [live.actor, state.members, state.presence]);
   const topicUnreadCounts = useMemo(() => {
@@ -112,13 +118,18 @@ export function useChatViewData(input: ChatViewDataInput) {
   const actorCanManageRoles = live.can("roleCreate") || live.can("memberRoleAssign") || live.can("scopeRoleSet");
   const actorCanManageMembers = live.can("banMember") || live.can("moderateMember") || live.can("disableInvite") || live.can("approveJoinRequest");
   const actorCanManageAnything = actorCanManageRooms || actorCanCreateChannels || actorCanManageRoles || actorCanManageMembers;
+  const actorCanSendMessages = live.can("messageSend");
   const actorChatDisabled = memberChatDisabled(state, live.actor.memberId);
   const actorRoleIds = useMemo(() => assignedRoleIds(live.actor.memberId, live.actor.role, state), [live.actor.memberId, live.actor.role, state]);
   const effectiveVoicePreferences = useMemo(
     () => input.voiceSettingsOpen && !input.voicePreferences.deafened ? { ...input.voicePreferences, deafened: true } : input.voicePreferences,
     [input.voicePreferences, input.voiceSettingsOpen]
   );
-  const currentChannelId = input.activeChannelId || channels[0]?.id;
+  // Persisted navigation may still point at a channel that disappeared from
+  // the actor projection (for example, a guest carrying a previous `general`
+  // selection). Fall back to the first visible channel instead of rendering a
+  // hidden scope by id.
+  const currentChannelId = channels.find((channel) => channel.id === input.activeChannelId)?.id || channels[0]?.id;
   const currentThreadId = input.activeThreadId || threads[0]?.id;
   const activeChannel = channels.find((channel) => channel.id === currentChannelId);
   const activeThread = threads.find((thread) => thread.id === currentThreadId);
@@ -170,10 +181,12 @@ export function useChatViewData(input: ChatViewDataInput) {
     activeScreenShares,
     activeThread,
     actorCanCreateChannels,
+    actorCanDirectMessage,
     actorCanManageAnything,
     actorCanManageMembers,
     actorCanManageRoles,
     actorCanManageRooms,
+    actorCanSendMessages,
     actorChatDisabled,
     actorName,
     actorRoleIds,
@@ -187,7 +200,7 @@ export function useChatViewData(input: ChatViewDataInput) {
     feedSubtitle,
     feedTitle,
     forwardTargets,
-    hasDraftDirectMessages: input.draftDirectThread ? hasDirectMessages(state, input.draftDirectThread.id) : false,
+    hasDraftDirectMessages: actorCanDirectMessage && input.draftDirectThread ? hasDirectMessages(state, input.draftDirectThread.id) : false,
     joinedRoomId,
     memberAvatarsById,
     memberNamesById,

@@ -128,10 +128,10 @@ export function ChatSidebar({
               currentRoleIds: view.actorRoleIds,
               mutedVoiceParticipantIds,
               onCreate: (input) => actions.createMediaRoom({ name: input.name, group: input.group, allowsVideo: true }),
-              onDirectMessage: (memberId) => {
+              onDirectMessage: view.actorCanDirectMessage ? (memberId) => {
                 actions.openDirectThreadForMember(memberId);
                 handleNavigate();
-              },
+              } : undefined,
               onJoin: async (room, media) => {
                 await actions.selectMediaRoom(room, media);
                 handleNavigate();
@@ -145,23 +145,25 @@ export function ChatSidebar({
             }}
           />
 
-          <DirectMessages
-            threads={view.threads}
-            activeThreadId={view.showingDm ? view.currentThreadId : undefined}
-            currentUserId={live.actor.memberId}
-            memberNamesById={view.memberNamesById}
-            memberAvatarsById={view.memberAvatarsById}
-            unreadCounts={view.unreadCounts}
-            callPresenceByThreadId={directCallPresence}
-            onSelect={(threadId) => {
-              actions.resumeDirectCallThread(threadId);
-              handleNavigate();
-            }}
-            onClose={(threadId) => {
-              actions.closeDirectThread(threadId);
-              handleNavigate();
-            }}
-          />
+          {view.actorCanDirectMessage ? (
+            <DirectMessages
+              threads={view.threads}
+              activeThreadId={view.showingDm ? view.currentThreadId : undefined}
+              currentUserId={live.actor.memberId}
+              memberNamesById={view.memberNamesById}
+              memberAvatarsById={view.memberAvatarsById}
+              unreadCounts={view.unreadCounts}
+              callPresenceByThreadId={directCallPresence}
+              onSelect={(threadId) => {
+                actions.resumeDirectCallThread(threadId);
+                handleNavigate();
+              }}
+              onClose={(threadId) => {
+                actions.closeDirectThread(threadId);
+                handleNavigate();
+              }}
+            />
+          ) : null}
         </>
       }
       user={

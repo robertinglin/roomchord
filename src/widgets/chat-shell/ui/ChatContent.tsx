@@ -105,7 +105,7 @@ export function ChatContent() {
         voiceControlShareActive={screenOn}
         voiceControlVideoOn={videoOn}
         voiceControlError={directCalls.error}
-        onDirectMessage={actions.openDirectThreadForMember}
+        onDirectMessage={view.actorCanDirectMessage ? actions.openDirectThreadForMember : undefined}
         onStopWatchingScreenShare={directCalls.stopWatchingScreenShare}
         onToggleVoiceParticipantMute={ui.toggleVoiceParticipantMute}
         onWatchScreenShare={directCalls.watchScreenShare}
@@ -177,7 +177,7 @@ export function ChatContent() {
         voiceControlShareActive={shareActive}
         voiceControlVideoOn={videoOn}
         voiceControlError={media.error}
-        onDirectMessage={actions.openDirectThreadForMember}
+        onDirectMessage={view.actorCanDirectMessage ? actions.openDirectThreadForMember : undefined}
         onStopWatchingScreenShare={media.stopWatchingScreenShare}
         onToggleVoiceParticipantMute={ui.toggleVoiceParticipantMute}
         onWatchScreenShare={media.watchScreenShare}
@@ -198,7 +198,9 @@ export function ChatContent() {
       currentUserId={live.actor.memberId}
       mode={view.showingDm ? "dm" : "channel"}
       feedKey={view.showingDm ? `direct.thread:${view.currentThreadId || ""}` : `channel:${view.currentChannelId || ""}`}
-      disabled={view.actorChatDisabled || (view.showingDm ? !view.currentThreadId : !view.currentChannelId)}
+      disabled={view.actorChatDisabled || (view.showingDm
+        ? !view.actorCanDirectMessage || !view.currentThreadId
+        : !view.actorCanSendMessages || !view.currentChannelId)}
       onSend={(body) => view.showingDm ? actions.sendDirectMessage(body) : actions.sendChannelMessage(body)}
       onReply={view.showingDm ? undefined : actions.replyToMessage}
       onReact={view.showingDm ? undefined : actions.reactToMessage}
@@ -207,7 +209,7 @@ export function ChatContent() {
       onUnpin={view.showingDm || live.actor.role === "member" || !live.can("messagePin") ? undefined : actions.unpinMessage}
       onDelete={view.showingDm ? undefined : actions.deleteMessage}
       onEdit={view.showingDm ? undefined : actions.editMessage}
-      onDirectMessage={actions.openDirectThreadForMember}
+      onDirectMessage={view.actorCanDirectMessage ? actions.openDirectThreadForMember : undefined}
       canDeleteMessage={(message) => canDeleteMessage(live.actor, message, live.can("messagePin"))}
       canEditMessage={(message) => isMessageAuthor(live.actor, message)}
     />

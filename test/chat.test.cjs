@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
+const permissionsApi = require("matterhorn-sdk/permissions");
 const sdkApp = require("../mosh.cjs");
 const app = sdkApp.toMatterhornExports();
 
@@ -109,6 +110,11 @@ test("Chat app behavior runs through Matterhorn testing helpers", async () => {
   const channel = room.state.channels.find((item) => item.id === "channel_op_1_channelCreate");
   assert.equal(channel.name, "launch");
   assert.equal(channel.createdBy, "admin");
+  assert.equal(channel.requiredRole, "member");
+  assert.equal(channel.scopeType, "channel");
+  // The lightweight schema test room preserves `$id` expressions; the host
+  // interpreter resolves this to the created channel id at runtime.
+  assert.equal(channel.scopeId, "$id:channel");
   assert.equal(room.state.messages.message_op_2_messageSend.body, "Ready");
   assert.equal(room.state.messages.message_op_2_messageSend.authorId, "mina");
   assert.equal(expectOperation(room.operations, "messageSend").actor.memberId, "mina");
@@ -164,26 +170,82 @@ test("Chat schema declares moderation, author-only edits, and moderator deletes"
   assert.deepEqual(primaryOperation("message.unpin").authorize.roles, ["moderator"]);
 });
 
-test("Chat schema starts with default text channel and configured voice room", () => {
-  assert.deepEqual(app.compositionSchema.primaryPlugin.model.state.initial.channels[0], {
-    id: "general",
-    name: "general",
-    topic: "Room coordination",
-    group: "General",
-    createdAt: 0,
-    createdBy: "system",
-    archivedAt: null
-  });
+test("Chat schema starts with role-scoped member and guest channels and voice rooms", () => {
+  assert.deepEqual(app.compositionSchema.primaryPlugin.model.state.initial.channels, [
+    {
+      id: "general",
+      name: "general",
+      topic: "Room coordination",
+      group: "General",
+      requiredRole: "member",
+      scopeType: "channel",
+      scopeId: "general",
+      createdAt: 0,
+      createdBy: "system",
+      archivedAt: null
+    },
+    {
+      id: "guest",
+      name: "guest",
+      topic: "Guest lobby",
+      group: "Guest",
+      requiredRole: "guest",
+      scopeType: "channel",
+      scopeId: "guest",
+      createdAt: 0,
+      createdBy: "system",
+      archivedAt: null
+    }
+  ]);
+
+  const createFields = primaryOperation("channel.create").effects[0].fields;
+  assert.equal(createFields.requiredRole, "member");
+  assert.equal(createFields.scopeType, "channel");
+  assert.equal(createFields.scopeId, "$id:channel");
 
   const mediaRooms = app.compositionSchema.plugins.find((plugin) => plugin.key === "mediaRooms");
-  assert.deepEqual(mediaRooms.config.defaultRooms[0], {
-    id: "general_voice",
-    name: "General",
-    group: "General",
-    allowsVideo: true,
-    scopeType: "channel",
-    scopeId: "general"
-  });
+  assert.deepEqual(mediaRooms.config.defaultRooms, [
+    {
+      id: "general_voice",
+      name: "General",
+      group: "General",
+      allowsVideo: true,
+      scopeType: "channel",
+      scopeId: "general",
+      roleAccess: { member: "editor", moderator: "editor", admin: "editor", owner: "editor" }
+    },
+    {
+      id: "guest_voice",
+      name: "Guest",
+      group: "Guest",
+      allowsVideo: false,
+      scopeType: "channel",
+      scopeId: "guest",
+      roleAccess: { guest: "readonly", member: "editor", moderator: "editor", admin: "editor", owner: "editor" }
+    }
+  ]);
+});
+
+test("Chat guest projection exposes only the guest channel and guest-scoped room", () => {
+  const channels = app.compositionSchema.primaryPlugin.model.state.initial.channels;
+  const mediaRooms = app.compositionSchema.plugins.find((plugin) => plugin.key === "mediaRooms");
+  const state = {
+    channels,
+    messages: {
+      general: { id: "general", channelId: "general", body: "member message" },
+      guest: { id: "guest", channelId: "guest", body: "guest message" }
+    },
+    rooms: Object.fromEntries(mediaRooms.config.defaultRooms.map((room) => [room.id, room]))
+  };
+
+  const guest = permissionsApi.filterStateForActor(state, { memberId: "guest-user", role: "guest" });
+  assert.deepEqual(guest.channels.map((channel) => channel.id), ["guest"]);
+  assert.deepEqual(Object.keys(guest.messages), ["guest"]);
+  assert.deepEqual(Object.keys(guest.rooms), ["guest_voice"]);
+
+  const member = permissionsApi.filterStateForActor(state, { memberId: "member-user", role: "member" });
+  assert.deepEqual(member.channels.map((channel) => channel.id), ["general", "guest"]);
+  assert.deepEqual(Object.keys(member.rooms), ["general_voice", "guest_voice"]);
 });
 
 test("Chat runtime room applies primary message operations through Matterhorn", async () => {
@@ -205,6 +267,9 @@ test("Chat runtime room applies primary message operations through Matterhorn", 
 
   assert.equal(channel.topic, "Planning");
   assert.equal(channel.createdBy, "admin");
+  assert.equal(channel.requiredRole, "member");
+  assert.equal(channel.scopeType, "channel");
+  assert.equal(channel.scopeId, channel.id);
   assert.equal(message.authorId, "mina");
   assert.equal(operations.length, 2);
   assert.equal(operations[1].schemaAction, "messageSend");
@@ -310,6 +375,20 @@ test("Chat defineApp export does not depend on a demo sidecar", async () => {
   assert.equal(app.demoDefinition, undefined);
   assert.deepEqual(app.createDemoOperations("schema_demo_chat"), []);
   await assert.rejects(() => app.createDemo({ roomId: "schema_demo_chat" }), /does not define a demo/);
+});
+
+test("Chat UI removes direct-message controls and writing for actors below member", () => {
+  const view = fs.readFileSync(path.join(__dirname, "../src/entities/chat/model/useChatViewData.ts"), "utf8");
+  const content = fs.readFileSync(path.join(__dirname, "../src/widgets/chat-shell/ui/ChatContent.tsx"), "utf8");
+  const sidebar = fs.readFileSync(path.join(__dirname, "../src/widgets/chat-shell/ui/ChatSidebar.tsx"), "utf8");
+
+  assert.match(view, /const actorCanDirectMessage = live\.can\("directMessageSend"\)/);
+  assert.match(view, /const actorCanSendMessages = live\.can\("messageSend"\)/);
+  assert.match(view, /channels\.find\(\(channel\) => channel\.id === input\.activeChannelId\)\?\.id \|\| channels\[0\]\?\.id/);
+  assert.match(content, /!view\.actorCanDirectMessage \|\| !view\.currentThreadId/);
+  assert.match(content, /!view\.actorCanSendMessages \|\| !view\.currentChannelId/);
+  assert.match(content, /view\.actorCanDirectMessage \? actions\.openDirectThreadForMember : undefined/);
+  assert.match(sidebar, /view\.actorCanDirectMessage \? \(/);
 });
 
 test("Chat schema routes direct messages through a core host action", () => {
