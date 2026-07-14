@@ -49,6 +49,12 @@ const chat = defineModel({
       callRoutes: {},
       publicInvites: [],
       joinRequests: {},
+      access: {
+        version: 1,
+        scopes: {
+          "channel:guest": { scopeType: "channel", scopeId: "guest", role: "editor", canView: true, canEdit: true },
+        },
+      },
       // activity: [] and roleDefinitions are seeded by Matterhorn from `roles`.
     },
   },
@@ -118,7 +124,14 @@ const operations = {
 
   "channel.rename": action(
     {
-      authorize: { roles: ["moderator"] },
+      authorize: {
+        roles: ["moderator"],
+        scoped: {
+          scopeType: "channel",
+          record: { collection: "channels", idField: "channelId", scopeIdField: "scopeId" },
+          minimumLevel: "moderator",
+        },
+      },
       payload: {
         channelId: p.string({ max: 200 }),
         name: p.string({ max: 80 }).nullable().optional(),
@@ -144,7 +157,14 @@ const operations = {
 
   "channel.archive": action(
     {
-      authorize: { roles: ["moderator"] },
+      authorize: {
+        roles: ["moderator"],
+        scoped: {
+          scopeType: "channel",
+          record: { collection: "channels", idField: "channelId", scopeIdField: "scopeId" },
+          minimumLevel: "moderator",
+        },
+      },
       payload: { channelId: p.string({ max: 200 }) },
     },
     ({ ref, fx }) => ({
@@ -160,7 +180,10 @@ const operations = {
 
   "message.send": action(
     {
-      authorize: { roles: ["guest", "member"] },
+      authorize: {
+        roles: ["guest", "member"],
+        scoped: { scopeType: "channel", payloadScopeIdField: "channelId", minimumLevel: "editor" },
+      },
       payload: {
         channelId: p.string({ max: 200 }),
         body: p.string({ max: 4000 }),
@@ -175,6 +198,8 @@ const operations = {
           id: ref.newId("message"),
           fields: {
             channelId: ref.payload("channelId"),
+            scopeType: "channel",
+            scopeId: ref.payload("channelId"),
             body: ref.payload("body"),
             authorId: ref.actor("memberId"),
             createdAt: ref.now(),
@@ -195,7 +220,10 @@ const operations = {
 
   "message.reply": action(
     {
-      authorize: { roles: ["guest", "member"] },
+      authorize: {
+        roles: ["guest", "member"],
+        scoped: { scopeType: "channel", payloadScopeIdField: "channelId", minimumLevel: "editor" },
+      },
       payload: {
         channelId: p.string({ max: 200 }),
         replyToId: p.string({ max: 200 }),
@@ -210,6 +238,8 @@ const operations = {
           id: ref.newId("message"),
           fields: {
             channelId: ref.payload("channelId"),
+            scopeType: "channel",
+            scopeId: ref.payload("channelId"),
             replyToId: ref.payload("replyToId"),
             body: ref.payload("body"),
             authorId: ref.actor("memberId"),
@@ -230,7 +260,15 @@ const operations = {
 
   "message.edit": action(
     {
-      authorize: { roles: ["member"] },
+      authorize: {
+        roles: ["member"],
+        scoped: {
+          scopeType: "channel",
+          record: { collection: "messages", idField: "messageId", scopeIdField: "channelId", ownerField: "authorId" },
+          minimumLevel: "editor",
+          ownerAllowed: true,
+        },
+      },
       payload: {
         messageId: p.string({ max: 200 }),
         body: p.string({ max: 4000 }),
@@ -267,7 +305,14 @@ const operations = {
 
   "message.react": action(
     {
-      authorize: { roles: ["member"] },
+      authorize: {
+        roles: ["member"],
+        scoped: {
+          scopeType: "channel",
+          record: { collection: "messages", idField: "messageId", scopeIdField: "channelId" },
+          minimumLevel: "editor",
+        },
+      },
       payload: {
         messageId: p.string({ max: 200 }),
         emoji: p.string({ max: 64 }),
@@ -285,7 +330,14 @@ const operations = {
 
   "message.pin": action(
     {
-      authorize: { roles: ["moderator"] },
+      authorize: {
+        roles: ["moderator"],
+        scoped: {
+          scopeType: "channel",
+          record: { collection: "messages", idField: "messageId", scopeIdField: "channelId" },
+          minimumLevel: "moderator",
+        },
+      },
       payload: { messageId: p.string({ max: 200 }) },
     },
     ({ ref, fx }) => ({
@@ -301,7 +353,14 @@ const operations = {
 
   "message.unpin": action(
     {
-      authorize: { roles: ["moderator"] },
+      authorize: {
+        roles: ["moderator"],
+        scoped: {
+          scopeType: "channel",
+          record: { collection: "messages", idField: "messageId", scopeIdField: "channelId" },
+          minimumLevel: "moderator",
+        },
+      },
       payload: { messageId: p.string({ max: 200 }) },
     },
     ({ ref, fx }) => ({
@@ -317,7 +376,15 @@ const operations = {
 
   "message.delete": action(
     {
-      authorize: { roles: ["member"] },
+      authorize: {
+        roles: ["member"],
+        scoped: {
+          scopeType: "channel",
+          record: { collection: "messages", idField: "messageId", scopeIdField: "channelId", ownerField: "authorId" },
+          minimumLevel: "moderator",
+          ownerAllowed: true,
+        },
+      },
       payload: { messageId: p.string({ max: 200 }) },
     },
     ({ ref, fx, guard }) => ({
@@ -546,7 +613,7 @@ const operations = {
   ),
 
   // Custom Mosh role CRUD moved to Matterhorn core scoped access.
-  // SDK actions below delegate to access.role.define/assign/unassign and scope.role.set.
+  // SDK actions below delegate to Matterhorn's immutable scoped-role lifecycle.
 };
 
 /* ----- declarative notifications -----
@@ -694,17 +761,22 @@ const app = defineApp({
       plugin: "mediaRooms",
       type: "media.room.create",
       requiredRole: "moderator",
+      authorize: { scoped: { scopeType: "$payload.scopeType", scopeId: "$payload.scopeId", minimumLevel: "moderator" } },
     },
     mediaRoomUpdate: {
       plugin: "mediaRooms",
       type: "media.room.update",
       requiredRole: "moderator",
+      authorize: { scoped: { scopeType: "channel", record: { collection: "rooms", idField: "roomId", scopeIdField: "scopeId" }, minimumLevel: "moderator" } },
     },
     ...permissions.roleManagementActions({
       defineName: "roleCreate",
+      updateName: "roleUpdate",
       assignName: "memberRoleAssign",
       unassignName: "memberRoleUnassign",
-      scopeName: "scopeRoleSet",
+      tombstoneName: "roleTombstone",
+      overrideSetName: "scopeMemberOverrideSet",
+      overrideRemoveName: "scopeMemberOverrideRemove",
     }),
     moderateMember: {
       plugin: "primary",

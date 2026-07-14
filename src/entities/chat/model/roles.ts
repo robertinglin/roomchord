@@ -45,7 +45,7 @@ const ROLE_COLOR_IDS = new Set(["owner", "admin", "moderator", "mod", "member", 
 /** Resolve a role chip's {label,color} from role definitions, falling back to tokens. */
 export function roleChipFor(roleId: string | undefined, input?: RoleDefinitionsInput): { label: string; color?: string } | undefined {
   if (!roleId) return undefined;
-  const label = roleLabel(roleId, input);
+  const label = roleLabel(roleId, input) || roleId;
   const defs = roleDefinitions(input);
   const definition = Object.values(defs).find((role) => role.id === roleId);
   const color = definition?.color;
@@ -68,10 +68,26 @@ export function cleanRoleId(name: string) {
 
 type RoleDefinitionsInput = ChatState["roleDefinitions"] | Partial<Pick<ChatState, "roleDefinitions">>;
 
-function roleDefinitions(input?: RoleDefinitionsInput) {
+function roleDefinitions(input?: RoleDefinitionsInput): Record<string, RoleDefinition> {
   if (!input) return {};
-  if ("roleDefinitions" in input) return input.roleDefinitions || {};
-  return input;
+  const state = "roleDefinitions" in input ? input : undefined;
+  const definitions = (state?.roleDefinitions || (input as ChatState["roleDefinitions"])) as Record<string, RoleDefinition>;
+  const scopedRoles = (input as ChatState & {
+    scopedRoles?: { roles?: Record<string, { roleId?: string; name?: string; description?: string; color?: string; generation?: number; revision?: number; definitionHash?: string; rules?: unknown[] }> };
+  }).scopedRoles?.roles || {};
+  return {
+    ...definitions,
+    ...Object.fromEntries(Object.entries(scopedRoles).map(([id, role]) => [id, {
+      id: role.roleId || id,
+      name: role.name || role.roleId || id,
+      description: role.description || "",
+      color: role.color || "",
+      rank: 0,
+      systemRole: false,
+      archivedAt: null,
+      ...role,
+    }] as [string, RoleDefinition])),
+  };
 }
 
 export function activeRoles(input?: RoleDefinitionsInput) {

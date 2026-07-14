@@ -14,8 +14,8 @@ export type ShareId = Mosh.ShareId;
 export type ThreadId = Mosh.ThreadId;
 export type RoomMember = Mosh.Member & AvatarSource;
 export type Channel = Mosh.Channel;
-export type RoomRoleAccessLevel = Mosh.AccessLevel;
-export type RoomRoleAccess = Mosh.RoomRoleAccess;
+export type RoomRoleAccessLevel = "hidden" | "readonly" | "editor";
+export type RoomRoleAccess = Record<string, "readonly" | "editor">;
 
 export type Message = (Mosh.Message | Mosh.DirectMessage) & {
   authorName?: string;
@@ -28,7 +28,20 @@ export type DirectThread = Mosh.DirectThread;
 export type DirectMessageThread = Mosh.DirectMessageThread;
 
 export type MediaRoomParticipant = Mosh.MediaRoomParticipant;
-export type MediaRoom = Omit<Mosh.MediaRoom, "participants"> & {
+export type MediaRoom = {
+  id: RoomId;
+  name: string;
+  group: string | null;
+  allowsVideo: boolean;
+  scopeType?: string;
+  scopeId?: string;
+  locked: boolean;
+  spotlightMemberId?: MemberId | null;
+  archivedAt: number | null;
+  participantCount: number;
+  createdBy?: MemberId;
+  createdAt?: number;
+  roleAccess?: RoomRoleAccess;
   participants?: Record<string, MediaRoomParticipant> | string[];
 };
 
@@ -37,7 +50,16 @@ export type ScreenShare = Mosh.ScreenShare & {
   ownerName?: string;
 };
 
-export type Presence = Mosh.PresenceMember & AvatarSource;
+export type Presence = AvatarSource & {
+  memberId?: string;
+  name?: string;
+  status?: string;
+  activity?: string | null;
+  location?: string | null;
+  updatedAt?: number;
+  lastPingAt?: number;
+  visible?: boolean;
+};
 
 export type ChatEmbed = Mosh.Embed;
 export type CommentThread = Mosh.CommentThread;

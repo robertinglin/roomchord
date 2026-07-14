@@ -46,7 +46,8 @@ function participantForRoute(memberId: string, route: MemberCallRoute | undefine
   const member = state.members?.[memberId as keyof typeof state.members] as RoomMember | undefined;
   const presence = state.presence?.[memberId as keyof typeof state.presence];
   const presenceAvatar = presence as (typeof presence & AvatarSource) | undefined;
-  const name = route.name || member?.displayName || member?.name || presence?.name || memberId;
+  const presenceName = (presence as (typeof presence & { name?: string }) | undefined)?.name;
+  const name = route.name || member?.displayName || member?.name || presenceName || memberId;
   return {
     id: route.callClientId,
     name,

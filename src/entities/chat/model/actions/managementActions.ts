@@ -3,8 +3,7 @@ import type { ChannelId, MemberId, RoleId, RoomId, RoomRoleAccess } from "@entit
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
 import { assignedRoleIds } from "@entities/chat/model/roles";
 
-const DEFAULT_ROLE_GRANTS = [{ scopeType: "*", scopeId: "*", role: "viewer" }];
-const ARCHIVED_ROLE_GRANTS = [{ scopeType: "*", scopeId: "*", role: "none" }];
+const DEFAULT_ROLE_RULES = [{ scopeType: "channel", scopeId: "*", level: "viewer", allowOperations: [], denyOperations: [] }];
 const MEMBER_ROOM_ACCESS: RoomRoleAccess = {
   member: "editor",
   moderator: "editor",
@@ -15,12 +14,25 @@ const GUEST_ROOM_ACCESS: RoomRoleAccess = {
   guest: "readonly",
   ...MEMBER_ROOM_ACCESS
 } as RoomRoleAccess;
+type ScopedRoleRecord = {
+  roleId?: string;
+  generation?: number;
+  revision?: number;
+  definitionHash?: string;
+  name?: string;
+  description?: string;
+  color?: string;
+  rules?: unknown[];
+};
 
 export function managementActions(input: ChatActionHandlersInput) {
   const { dispatch } = input.live;
 
   function scopedRole(roleId: string) {
-    return Object.values(input.live.state.roleDefinitions || {}).find((role) => role.id === roleId);
+    const roles = (input.live.state as typeof input.live.state & {
+      scopedRoles?: { roles?: Record<string, ScopedRoleRecord> };
+    }).scopedRoles?.roles;
+    return roles?.[roleId] || Object.values(input.live.state.roleDefinitions || {}).find((role) => role.id === roleId);
   }
 
   function assignedRoleIdsForMember(memberId: string): string[] {
@@ -40,7 +52,7 @@ export function managementActions(input: ChatActionHandlersInput) {
   }
 
   async function createMediaRoom(room: { name: string; allowsVideo: boolean; group?: string; roleAccess?: RoomRoleAccess }) {
-    const scoped = input.view.currentChannelId ? { scopeType: "channel", scopeId: input.view.currentChannelId } : {};
+    const scoped = { scopeType: "channel", scopeId: input.view.currentChannelId || "general" };
     const roleAccess = room.roleAccess
       || (input.view.currentChannelId === "guest" ? GUEST_ROOM_ACCESS : MEMBER_ROOM_ACCESS);
     await dispatch("mediaRoomCreate", { name: room.name, allowsVideo: room.allowsVideo, group: room.group, roleAccess, ...scoped });
@@ -55,40 +67,52 @@ export function managementActions(input: ChatActionHandlersInput) {
   }
 
   async function createRole(role: { roleId: string; name: string; description?: string; color?: string }) {
-    await dispatch("roleCreate", { ...role, roleId: role.roleId as RoleId, synthetic: false, grants: DEFAULT_ROLE_GRANTS });
+    await dispatch("roleCreate", { ...role, roleId: role.roleId as RoleId, rules: DEFAULT_ROLE_RULES });
   }
 
   async function updateRole(roleId: string, role: { name?: string; description?: string; color?: string }) {
     const current = scopedRole(roleId);
-    await dispatch("roleCreate", {
+    const scoped = current as ScopedRoleRecord | undefined;
+    if (!scoped?.generation || !scoped.revision || !scoped.definitionHash) return;
+    await dispatch("roleUpdate", {
       roleId: roleId as RoleId,
-      name: role.name || current?.name || roleId,
-      description: role.description ?? current?.description,
-      color: role.color ?? current?.color,
-      grants: DEFAULT_ROLE_GRANTS
+      generation: scoped.generation,
+      revision: scoped.revision,
+      previousHash: scoped.definitionHash,
+      name: role.name || scoped.name || roleId,
+      description: role.description ?? scoped.description,
+      color: role.color ?? scoped.color,
+      rules: scoped.rules || DEFAULT_ROLE_RULES
     });
   }
 
   async function archiveRole(roleId: string) {
     const current = scopedRole(roleId);
-    await dispatch("roleCreate", {
+    const scoped = current as ScopedRoleRecord | undefined;
+    if (!scoped?.generation) return;
+    await dispatch("roleTombstone", {
       roleId: roleId as RoleId,
-      name: current?.name || roleId,
-      description: current?.description,
-      color: current?.color,
-      grants: ARCHIVED_ROLE_GRANTS,
-      archivedAt: Date.now()
+      generation: scoped.generation,
+      reason: "Role retired"
     });
   }
 
   async function assignMemberRoles(memberId: string, roleIds: string[], _displayName?: string) {
     const next = new Set(roleIds.filter(Boolean));
-    const current = new Set(assignedRoleIdsForMember(memberId));
+    const current = new Set(assignedRoleIdsForMember(memberId).filter((roleId) => roleId !== "guest" && roleId !== "member" && roleId !== "moderator" && roleId !== "admin" && roleId !== "owner"));
     for (const roleId of current) {
-      if (!next.has(roleId)) await dispatch("memberRoleUnassign", { target: memberId, roleId: roleId as RoleId });
+      if (!next.has(roleId)) {
+        const role = scopedRole(roleId);
+        const scoped = role as ScopedRoleRecord | undefined;
+        if (scoped?.generation) await dispatch("memberRoleUnassign", { memberId, roleId: roleId as RoleId, generation: scoped.generation });
+      }
     }
     for (const roleId of next) {
-      if (!current.has(roleId)) await dispatch("memberRoleAssign", { target: memberId, roleId: roleId as RoleId });
+      if (!current.has(roleId)) {
+        const role = scopedRole(roleId);
+        const scoped = role as ScopedRoleRecord | undefined;
+        if (scoped?.generation) await dispatch("memberRoleAssign", { memberId, roleId: roleId as RoleId, generation: scoped.generation });
+      }
     }
   }
 

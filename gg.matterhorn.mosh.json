@@ -14,17 +14,17 @@
       "name": "Matterhorn Schema Builder",
       "publicKey": "rk_pub_schema_builder"
     },
-    "matterhornVersion": ">=0.1 <0.2",
+    "matterhornVersion": "^0.1.4",
     "hostPack": {
       "url": "workspace:matterhorn-mosh#hostPack",
-      "integrity": "sha256-9cd4650c838d0a77a42fbc111752a650e4521bd148ec219090e3b3497efcd341"
+      "integrity": "sha256-48df3a303ad6bfdc254ad3c8b3ecd7eee95153eb86c124173a2e512dea1776dc"
     },
     "playerPacks": [
       {
         "id": "gg.matterhorn.mosh.player",
         "name": "Mosh Player",
         "url": "workspace:matterhorn-mosh#playerPack",
-        "integrity": "sha256-c711c48e80eadb63df88560d10aca3e688ba931cb41961f5ab4dee37596e11d4",
+        "integrity": "sha256-0ec6d3393765a9326ff7d8b1c9bda8eb1a7448850614f5c7930fb32f6e58de59",
         "recommendedFor": {
           "devices": [
             "desktop",
@@ -38,11 +38,11 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-c0f511443d8de2619848d088841519ea50d99a500082a7c67d1ac59f7138c14b",
-      "operationSchemaHash": "sha256-b7c18181fff6547709fd8eccfcb151db005d6b188bd19c531cc02dd2d59efb81",
-      "stateSchemaHash": "sha256-34e67621f967c25d0327717a749bf8c007bf6afd0e6aa6e09ba6450a6f25fd82",
-      "pluginGraphHash": "sha256-dd10ce33cbf2d63c5576188f95dfbb4bcb7ab507b10b8f4f67f5038f96e4593f",
-      "compositionSchemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
+      "appProtocolHash": "sha256-581203128b17ce494481e48e4debeb128167dc955b4ef6f277c166fa3b67dfc8",
+      "operationSchemaHash": "sha256-30dcc354892a41e840017ed551b928fc0c4b1177971cf728a33f60cc3792504f",
+      "stateSchemaHash": "sha256-6ede487e05cab425a518f26a4af7ee7ac525488af75a2b3d7e11dde69cb08480",
+      "pluginGraphHash": "sha256-c8b05647734e50cecd7620d3104e281ce5e928136f73cdec6a33098f1ce71ed1",
+      "compositionSchemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
     },
     "composition": {
       "kind": "matterhorn.app-composition.schema",
@@ -91,6 +91,18 @@
               "callRoutes": {},
               "publicInvites": [],
               "joinRequests": {},
+              "access": {
+                "version": 1,
+                "scopes": {
+                  "channel:guest": {
+                    "scopeType": "channel",
+                    "scopeId": "guest",
+                    "role": "editor",
+                    "canView": true,
+                    "canEdit": true
+                  }
+                }
+              },
               "roleDefinitions": {
                 "guest": {
                   "id": "guest",
@@ -200,7 +212,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "channels",
+                    "idField": "channelId",
+                    "scopeIdField": "scopeId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -248,7 +269,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "channels",
+                    "idField": "channelId",
+                    "scopeIdField": "scopeId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -277,7 +307,12 @@
                 "roles": [
                   "guest",
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "payloadScopeIdField": "channelId",
+                  "minimumLevel": "editor"
+                }
               },
               "payload": {
                 "required": {
@@ -341,6 +376,8 @@
                   "idPrefix": "message",
                   "fields": {
                     "channelId": "$payload.channelId",
+                    "scopeType": "channel",
+                    "scopeId": "$payload.channelId",
                     "body": "$payload.body",
                     "authorId": "$actor.memberId",
                     "createdAt": "$createdAt",
@@ -365,7 +402,12 @@
                 "roles": [
                   "guest",
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "payloadScopeIdField": "channelId",
+                  "minimumLevel": "editor"
+                }
               },
               "payload": {
                 "required": {
@@ -430,6 +472,8 @@
                   "idPrefix": "message",
                   "fields": {
                     "channelId": "$payload.channelId",
+                    "scopeType": "channel",
+                    "scopeId": "$payload.channelId",
                     "replyToId": "$payload.replyToId",
                     "body": "$payload.body",
                     "authorId": "$actor.memberId",
@@ -450,7 +494,18 @@
               "authorize": {
                 "roles": [
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId",
+                    "ownerField": "authorId"
+                  },
+                  "minimumLevel": "editor",
+                  "ownerAllowed": true
+                }
               },
               "payload": {
                 "required": {
@@ -510,7 +565,16 @@
               "authorize": {
                 "roles": [
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId"
+                  },
+                  "minimumLevel": "editor"
+                }
               },
               "payload": {
                 "required": {
@@ -539,7 +603,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -568,7 +641,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -597,7 +679,18 @@
               "authorize": {
                 "roles": [
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId",
+                    "ownerField": "authorId"
+                  },
+                  "minimumLevel": "moderator",
+                  "ownerAllowed": true
+                }
               },
               "payload": {
                 "required": {
@@ -1006,6 +1099,15 @@
               "storage": "map",
               "partition": "joinRequests"
             },
+            "access": {
+              "readClass": "full-fold",
+              "integrityClass": "signature",
+              "historyVisibility": {
+                "mode": "all"
+              },
+              "storage": "map",
+              "partition": "access"
+            },
             "roleDefinitions": {
               "readClass": "head",
               "integrityClass": "signature",
@@ -1032,13 +1134,224 @@
           "key": "comments",
           "id": "gg.matterhorn.examples.plugins.comments",
           "version": "1.0.0",
-          "required": true
+          "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "threads": {},
+                "comments": {},
+                "activity": []
+              }
+            },
+            "operations": {
+              "comments.thread.create": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "threads",
+                    "idPrefix": "thread",
+                    "fields": {
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "title": "$payload.title",
+                      "visibility": "$payload.visibility",
+                      "createdBy": "$actor.memberId",
+                      "createdByName": "$actor.displayName",
+                      "createdAt": "$createdAt",
+                      "resolved": false
+                    }
+                  }
+                ]
+              },
+              "comments.add": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "record": {
+                      "collection": "threads",
+                      "idField": "threadId"
+                    },
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "comments",
+                    "idPrefix": "comment",
+                    "fields": {
+                      "threadId": "$payload.threadId",
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "parentId": "$payload.parentId",
+                      "body": "$payload.body",
+                      "authorId": "$actor.memberId",
+                      "authorName": "$actor.displayName",
+                      "createdAt": "$createdAt",
+                      "updatedAt": "$createdAt",
+                      "reactions": {}
+                    }
+                  }
+                ]
+              },
+              "comments.edit": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "comments",
+                      "idField": "commentId",
+                      "ownerField": "authorId"
+                    },
+                    "minimumLevel": "moderator",
+                    "ownerAllowed": true
+                  }
+                },
+                "guards": [
+                  {
+                    "kind": "recordOwnerOrRole",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "ownerField": "authorId",
+                    "roles": [
+                      "moderator"
+                    ]
+                  }
+                ],
+                "effects": [
+                  {
+                    "kind": "updateRecord",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "fields": {
+                      "body": "$payload.body",
+                      "editedAt": "$createdAt",
+                      "updatedAt": "$createdAt"
+                    }
+                  }
+                ]
+              },
+              "comments.react": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "comments",
+                      "idField": "commentId"
+                    },
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "toggleReaction",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "emojiField": "emoji"
+                  }
+                ]
+              },
+              "comments.delete": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "comments",
+                      "idField": "commentId",
+                      "ownerField": "authorId"
+                    },
+                    "minimumLevel": "moderator",
+                    "ownerAllowed": true
+                  }
+                },
+                "guards": [
+                  {
+                    "kind": "recordOwnerOrRole",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "ownerField": "authorId",
+                    "roles": [
+                      "moderator"
+                    ]
+                  }
+                ],
+                "effects": [
+                  {
+                    "kind": "markRecord",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "fields": {
+                      "body": "",
+                      "deletedAt": "$createdAt",
+                      "deleteReason": "$payload.reason"
+                    }
+                  }
+                ]
+              },
+              "comments.resolve": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "threads",
+                      "idField": "threadId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "updateRecord",
+                    "collection": "threads",
+                    "id": "$payload.threadId",
+                    "fields": {
+                      "resolved": "$payload.resolved",
+                      "resolvedAt": "$createdAt",
+                      "resolvedBy": "$actor.memberId"
+                    }
+                  }
+                ]
+              }
+            },
+            "views": {},
+            "publicView": {
+              "kind": "state"
+            }
+          }
         },
         {
           "key": "presence",
           "id": "gg.matterhorn.examples.plugins.presence",
           "version": "1.0.0",
-          "required": true
+          "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "members": {},
+                "activity": []
+              }
+            },
+            "nonReplayableOperations": [
+              "presence.update",
+              "presence.ping",
+              "presence.clear"
+            ],
+            "operations": {}
+          }
         },
         {
           "key": "mediaRooms",
@@ -1065,6 +1378,14 @@
                     "name": {
                       "type": "string",
                       "max": 100
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "max": 80
+                    },
+                    "scopeId": {
+                      "type": "string",
+                      "max": 160
                     }
                   },
                   "optional": {
@@ -1077,31 +1398,15 @@
                       "max": 80,
                       "nullable": true,
                       "nonEmpty": false
-                    },
-                    "scopeType": {
-                      "type": "string",
-                      "max": 80
-                    },
-                    "scopeId": {
-                      "type": "string",
-                      "max": 160
-                    },
-                    "roleAccess": {
-                      "type": "record",
-                      "values": {
-                        "type": "enum",
-                        "values": [
-                          "editor",
-                          "readonly"
-                        ]
-                      }
                     }
                   }
                 },
                 "authorize": {
-                  "roles": [
-                    "moderator"
-                  ]
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "effects": [
                   {
@@ -1114,7 +1419,6 @@
                       "allowsVideo": "$payload.allowsVideo",
                       "scopeType": "$payload.scopeType",
                       "scopeId": "$payload.scopeId",
-                      "roleAccess": "$payload.roleAccess",
                       "createdBy": "$actor.memberId",
                       "createdAt": "$createdAt",
                       "locked": false,
@@ -1163,23 +1467,17 @@
                       "max": 80,
                       "nullable": true,
                       "nonEmpty": false
-                    },
-                    "roleAccess": {
-                      "type": "record",
-                      "values": {
-                        "type": "enum",
-                        "values": [
-                          "editor",
-                          "readonly"
-                        ]
-                      }
                     }
                   }
                 },
                 "authorize": {
-                  "roles": [
-                    "moderator"
-                  ]
+                  "scoped": {
+                    "record": {
+                      "collection": "rooms",
+                      "idField": "roomId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "effects": [
                   {
@@ -1192,7 +1490,6 @@
                       "spotlightMemberId": "$payload.spotlightMemberId",
                       "name": "$payload.name",
                       "group": "$payload.group",
-                      "roleAccess": "$payload.roleAccess",
                       "updatedAt": "$createdAt"
                     }
                   },
@@ -1218,9 +1515,13 @@
                   }
                 },
                 "authorize": {
-                  "roles": [
-                    "moderator"
-                  ]
+                  "scoped": {
+                    "record": {
+                      "collection": "rooms",
+                      "idField": "roomId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "effects": [
                   {
@@ -1302,7 +1603,81 @@
           "key": "screenShare",
           "id": "gg.matterhorn.examples.plugins.screen-share",
           "version": "1.0.0",
-          "required": true
+          "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "shares": {},
+                "activity": []
+              }
+            },
+            "operations": {
+              "screenshare.start": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "shares",
+                    "idPrefix": "share",
+                    "fields": {
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "roomId": "$payload.roomId",
+                      "title": "$payload.title",
+                      "presenterId": "$actor.memberId",
+                      "presenterName": "$actor.displayName",
+                      "startedAt": "$createdAt"
+                    }
+                  }
+                ]
+              },
+              "screenshare.stop": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "shares",
+                      "idField": "shareId",
+                      "ownerField": "presenterId"
+                    },
+                    "minimumLevel": "moderator",
+                    "ownerAllowed": true
+                  }
+                },
+                "guards": [
+                  {
+                    "kind": "recordOwnerOrRole",
+                    "collection": "shares",
+                    "id": "$payload.shareId",
+                    "ownerField": "presenterId",
+                    "roles": [
+                      "moderator"
+                    ]
+                  }
+                ],
+                "effects": [
+                  {
+                    "kind": "markRecord",
+                    "collection": "shares",
+                    "id": "$payload.shareId",
+                    "fields": {
+                      "stoppedAt": "$createdAt",
+                      "stoppedBy": "$actor.memberId"
+                    }
+                  }
+                ]
+              }
+            }
+          }
         },
         {
           "key": "embeds",
@@ -1446,9 +1821,15 @@
               "parentId"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId"
+                },
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -1464,9 +1845,15 @@
               "reason"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId",
+                  "ownerField": "authorId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -1480,9 +1867,15 @@
               "body"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId",
+                  "ownerField": "authorId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -1496,9 +1889,13 @@
               "emoji"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId"
+                },
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -1514,9 +1911,13 @@
               "resolved"
             ],
             "authorize": {
-              "roles": [
-                "moderator"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId"
+                },
+                "minimumLevel": "moderator"
+              }
             }
           }
         },
@@ -1534,9 +1935,11 @@
               "visibility"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -1601,9 +2004,13 @@
               }
             },
             "authorize": {
-              "roles": [
-                "moderator"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId"
+                },
+                "minimumLevel": "moderator"
+              }
             }
           }
         },
@@ -1646,9 +2053,13 @@
               }
             },
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId"
+                },
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -1664,9 +2075,13 @@
               }
             },
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId"
+                },
+                "minimumLevel": "viewer"
+              }
             }
           }
         },
@@ -1690,9 +2105,11 @@
               "title"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -1705,9 +2122,15 @@
               "shareId"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "shares",
+                  "idField": "shareId",
+                  "ownerField": "presenterId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -1727,9 +2150,11 @@
               "note"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -1742,9 +2167,15 @@
               "embedId"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "embeds",
+                  "idField": "embedId",
+                  "ownerField": "addedBy"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -1774,15 +2205,16 @@
               "roleId": {
                 "type": "string",
                 "max": 120
+              },
+              "rules": {
+                "type": "array",
+                "max": 256
               }
             },
             "optional": {
               "name": {
                 "type": "string",
                 "max": 120
-              },
-              "grants": {
-                "type": "array"
               },
               "description": {
                 "type": "string",
@@ -1794,27 +2226,55 @@
                 "max": 40,
                 "nullable": true
               },
-              "rank": {
-                "type": "number",
-                "min": 0,
-                "max": 100
-              },
-              "archivedAt": {
-                "type": "number",
-                "min": 0
-              },
-              "synthetic": {
-                "type": "boolean"
-              },
-              "when": {
-                "type": "object"
-              },
-              "gates": {
-                "type": "array"
-              },
               "reason": {
                 "type": "string",
                 "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "roleUpdate",
+          "plugin": "core",
+          "type": "access.role.update",
+          "payloadSchema": {
+            "required": {
+              "roleId": {
+                "type": "string",
+                "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
+              },
+              "revision": {
+                "type": "number",
+                "min": 1
+              },
+              "previousHash": {
+                "type": "string",
+                "max": 80
+              },
+              "rules": {
+                "type": "array",
+                "max": 256
+              }
+            },
+            "optional": {
+              "name": {
+                "type": "string",
+                "max": 120
+              },
+              "description": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              },
+              "color": {
+                "type": "string",
+                "max": 40,
                 "nullable": true
               }
             }
@@ -1827,16 +2287,24 @@
           "type": "access.role.assign",
           "payloadSchema": {
             "required": {
-              "target": {
+              "memberId": {
                 "type": "string",
                 "max": 240
               },
               "roleId": {
                 "type": "string",
                 "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
               }
             },
             "optional": {
+              "expiresAt": {
+                "type": "number",
+                "min": 0
+              },
               "reason": {
                 "type": "string",
                 "max": 500,
@@ -1852,13 +2320,17 @@
           "type": "access.role.unassign",
           "payloadSchema": {
             "required": {
-              "target": {
+              "memberId": {
                 "type": "string",
                 "max": 240
               },
               "roleId": {
                 "type": "string",
                 "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
               }
             },
             "optional": {
@@ -1872,11 +2344,88 @@
           "requiredRole": "admin"
         },
         {
-          "name": "scopeRoleSet",
+          "name": "roleTombstone",
           "plugin": "core",
-          "type": "scope.role.set",
+          "type": "access.role.tombstone",
           "payloadSchema": {
             "required": {
+              "roleId": {
+                "type": "string",
+                "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeMemberOverrideSet",
+          "plugin": "core",
+          "type": "scope.member.override.set",
+          "payloadSchema": {
+            "required": {
+              "memberId": {
+                "type": "string",
+                "max": 240
+              },
+              "scopeType": {
+                "type": "string",
+                "max": 80
+              },
+              "scopeId": {
+                "type": "string",
+                "max": 180
+              },
+              "level": {
+                "type": "enum",
+                "values": [
+                  "none",
+                  "viewer",
+                  "editor",
+                  "moderator",
+                  "admin",
+                  "owner"
+                ]
+              },
+              "allowOperations": {
+                "type": "array",
+                "max": 128
+              },
+              "denyOperations": {
+                "type": "array",
+                "max": 128
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeMemberOverrideRemove",
+          "plugin": "core",
+          "type": "scope.member.override.remove",
+          "payloadSchema": {
+            "required": {
+              "memberId": {
+                "type": "string",
+                "max": 240
+              },
               "scopeType": {
                 "type": "string",
                 "max": 80
@@ -1887,33 +2436,6 @@
               }
             },
             "optional": {
-              "target": {
-                "type": "string",
-                "max": 240,
-                "nullable": true
-              },
-              "role": {
-                "type": "enum",
-                "values": [
-                  "none",
-                  "viewer",
-                  "editor",
-                  "moderator",
-                  "admin",
-                  "owner"
-                ]
-              },
-              "defaultRole": {
-                "type": "enum",
-                "values": [
-                  "none",
-                  "viewer",
-                  "editor",
-                  "moderator",
-                  "admin",
-                  "owner"
-                ]
-              },
               "reason": {
                 "type": "string",
                 "max": 500,
@@ -1921,7 +2443,7 @@
               }
             }
           },
-          "requiredRole": "moderator"
+          "requiredRole": "admin"
         },
         {
           "name": "moderateMember",
@@ -2121,7 +2643,7 @@
           }
         }
       },
-      "schemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
+      "schemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
     },
     "capabilities": {
       "required": [
@@ -2193,8 +2715,8 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-c0f511443d8de2619848d088841519ea50d99a500082a7c67d1ac59f7138c14b",
-      "pluginGraphHash": "sha256-dd10ce33cbf2d63c5576188f95dfbb4bcb7ab507b10b8f4f67f5038f96e4593f"
+      "appProtocolHash": "sha256-581203128b17ce494481e48e4debeb128167dc955b4ef6f277c166fa3b67dfc8",
+      "pluginGraphHash": "sha256-c8b05647734e50cecd7620d3104e281ce5e928136f73cdec6a33098f1ce71ed1"
     },
     "runtime": {
       "minMatterhornVersion": "0.1.0",
@@ -2210,7 +2732,7 @@
       ]
     },
     "composition": {
-      "schemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc",
+      "schemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54",
       "primaryPlugin": {
         "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
@@ -2250,6 +2772,18 @@
               "callRoutes": {},
               "publicInvites": [],
               "joinRequests": {},
+              "access": {
+                "version": 1,
+                "scopes": {
+                  "channel:guest": {
+                    "scopeType": "channel",
+                    "scopeId": "guest",
+                    "role": "editor",
+                    "canView": true,
+                    "canEdit": true
+                  }
+                }
+              },
               "roleDefinitions": {
                 "guest": {
                   "id": "guest",
@@ -2359,7 +2893,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "channels",
+                    "idField": "channelId",
+                    "scopeIdField": "scopeId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -2407,7 +2950,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "channels",
+                    "idField": "channelId",
+                    "scopeIdField": "scopeId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -2436,7 +2988,12 @@
                 "roles": [
                   "guest",
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "payloadScopeIdField": "channelId",
+                  "minimumLevel": "editor"
+                }
               },
               "payload": {
                 "required": {
@@ -2500,6 +3057,8 @@
                   "idPrefix": "message",
                   "fields": {
                     "channelId": "$payload.channelId",
+                    "scopeType": "channel",
+                    "scopeId": "$payload.channelId",
                     "body": "$payload.body",
                     "authorId": "$actor.memberId",
                     "createdAt": "$createdAt",
@@ -2524,7 +3083,12 @@
                 "roles": [
                   "guest",
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "payloadScopeIdField": "channelId",
+                  "minimumLevel": "editor"
+                }
               },
               "payload": {
                 "required": {
@@ -2589,6 +3153,8 @@
                   "idPrefix": "message",
                   "fields": {
                     "channelId": "$payload.channelId",
+                    "scopeType": "channel",
+                    "scopeId": "$payload.channelId",
                     "replyToId": "$payload.replyToId",
                     "body": "$payload.body",
                     "authorId": "$actor.memberId",
@@ -2609,7 +3175,18 @@
               "authorize": {
                 "roles": [
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId",
+                    "ownerField": "authorId"
+                  },
+                  "minimumLevel": "editor",
+                  "ownerAllowed": true
+                }
               },
               "payload": {
                 "required": {
@@ -2669,7 +3246,16 @@
               "authorize": {
                 "roles": [
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId"
+                  },
+                  "minimumLevel": "editor"
+                }
               },
               "payload": {
                 "required": {
@@ -2698,7 +3284,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -2727,7 +3322,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -2756,7 +3360,18 @@
               "authorize": {
                 "roles": [
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId",
+                    "ownerField": "authorId"
+                  },
+                  "minimumLevel": "moderator",
+                  "ownerAllowed": true
+                }
               },
               "payload": {
                 "required": {
@@ -3165,6 +3780,15 @@
               "storage": "map",
               "partition": "joinRequests"
             },
+            "access": {
+              "readClass": "full-fold",
+              "integrityClass": "signature",
+              "historyVisibility": {
+                "mode": "all"
+              },
+              "storage": "map",
+              "partition": "access"
+            },
             "roleDefinitions": {
               "readClass": "head",
               "integrityClass": "signature",
@@ -3191,13 +3815,224 @@
           "key": "comments",
           "id": "gg.matterhorn.examples.plugins.comments",
           "version": "1.0.0",
-          "required": true
+          "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "threads": {},
+                "comments": {},
+                "activity": []
+              }
+            },
+            "operations": {
+              "comments.thread.create": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "threads",
+                    "idPrefix": "thread",
+                    "fields": {
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "title": "$payload.title",
+                      "visibility": "$payload.visibility",
+                      "createdBy": "$actor.memberId",
+                      "createdByName": "$actor.displayName",
+                      "createdAt": "$createdAt",
+                      "resolved": false
+                    }
+                  }
+                ]
+              },
+              "comments.add": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "record": {
+                      "collection": "threads",
+                      "idField": "threadId"
+                    },
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "comments",
+                    "idPrefix": "comment",
+                    "fields": {
+                      "threadId": "$payload.threadId",
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "parentId": "$payload.parentId",
+                      "body": "$payload.body",
+                      "authorId": "$actor.memberId",
+                      "authorName": "$actor.displayName",
+                      "createdAt": "$createdAt",
+                      "updatedAt": "$createdAt",
+                      "reactions": {}
+                    }
+                  }
+                ]
+              },
+              "comments.edit": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "comments",
+                      "idField": "commentId",
+                      "ownerField": "authorId"
+                    },
+                    "minimumLevel": "moderator",
+                    "ownerAllowed": true
+                  }
+                },
+                "guards": [
+                  {
+                    "kind": "recordOwnerOrRole",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "ownerField": "authorId",
+                    "roles": [
+                      "moderator"
+                    ]
+                  }
+                ],
+                "effects": [
+                  {
+                    "kind": "updateRecord",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "fields": {
+                      "body": "$payload.body",
+                      "editedAt": "$createdAt",
+                      "updatedAt": "$createdAt"
+                    }
+                  }
+                ]
+              },
+              "comments.react": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "comments",
+                      "idField": "commentId"
+                    },
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "toggleReaction",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "emojiField": "emoji"
+                  }
+                ]
+              },
+              "comments.delete": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "comments",
+                      "idField": "commentId",
+                      "ownerField": "authorId"
+                    },
+                    "minimumLevel": "moderator",
+                    "ownerAllowed": true
+                  }
+                },
+                "guards": [
+                  {
+                    "kind": "recordOwnerOrRole",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "ownerField": "authorId",
+                    "roles": [
+                      "moderator"
+                    ]
+                  }
+                ],
+                "effects": [
+                  {
+                    "kind": "markRecord",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "fields": {
+                      "body": "",
+                      "deletedAt": "$createdAt",
+                      "deleteReason": "$payload.reason"
+                    }
+                  }
+                ]
+              },
+              "comments.resolve": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "threads",
+                      "idField": "threadId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "updateRecord",
+                    "collection": "threads",
+                    "id": "$payload.threadId",
+                    "fields": {
+                      "resolved": "$payload.resolved",
+                      "resolvedAt": "$createdAt",
+                      "resolvedBy": "$actor.memberId"
+                    }
+                  }
+                ]
+              }
+            },
+            "views": {},
+            "publicView": {
+              "kind": "state"
+            }
+          }
         },
         {
           "key": "presence",
           "id": "gg.matterhorn.examples.plugins.presence",
           "version": "1.0.0",
-          "required": true
+          "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "members": {},
+                "activity": []
+              }
+            },
+            "nonReplayableOperations": [
+              "presence.update",
+              "presence.ping",
+              "presence.clear"
+            ],
+            "operations": {}
+          }
         },
         {
           "key": "mediaRooms",
@@ -3224,6 +4059,14 @@
                     "name": {
                       "type": "string",
                       "max": 100
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "max": 80
+                    },
+                    "scopeId": {
+                      "type": "string",
+                      "max": 160
                     }
                   },
                   "optional": {
@@ -3236,31 +4079,15 @@
                       "max": 80,
                       "nullable": true,
                       "nonEmpty": false
-                    },
-                    "scopeType": {
-                      "type": "string",
-                      "max": 80
-                    },
-                    "scopeId": {
-                      "type": "string",
-                      "max": 160
-                    },
-                    "roleAccess": {
-                      "type": "record",
-                      "values": {
-                        "type": "enum",
-                        "values": [
-                          "editor",
-                          "readonly"
-                        ]
-                      }
                     }
                   }
                 },
                 "authorize": {
-                  "roles": [
-                    "moderator"
-                  ]
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "effects": [
                   {
@@ -3273,7 +4100,6 @@
                       "allowsVideo": "$payload.allowsVideo",
                       "scopeType": "$payload.scopeType",
                       "scopeId": "$payload.scopeId",
-                      "roleAccess": "$payload.roleAccess",
                       "createdBy": "$actor.memberId",
                       "createdAt": "$createdAt",
                       "locked": false,
@@ -3322,23 +4148,17 @@
                       "max": 80,
                       "nullable": true,
                       "nonEmpty": false
-                    },
-                    "roleAccess": {
-                      "type": "record",
-                      "values": {
-                        "type": "enum",
-                        "values": [
-                          "editor",
-                          "readonly"
-                        ]
-                      }
                     }
                   }
                 },
                 "authorize": {
-                  "roles": [
-                    "moderator"
-                  ]
+                  "scoped": {
+                    "record": {
+                      "collection": "rooms",
+                      "idField": "roomId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "effects": [
                   {
@@ -3351,7 +4171,6 @@
                       "spotlightMemberId": "$payload.spotlightMemberId",
                       "name": "$payload.name",
                       "group": "$payload.group",
-                      "roleAccess": "$payload.roleAccess",
                       "updatedAt": "$createdAt"
                     }
                   },
@@ -3377,9 +4196,13 @@
                   }
                 },
                 "authorize": {
-                  "roles": [
-                    "moderator"
-                  ]
+                  "scoped": {
+                    "record": {
+                      "collection": "rooms",
+                      "idField": "roomId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "effects": [
                   {
@@ -3461,7 +4284,81 @@
           "key": "screenShare",
           "id": "gg.matterhorn.examples.plugins.screen-share",
           "version": "1.0.0",
-          "required": true
+          "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "shares": {},
+                "activity": []
+              }
+            },
+            "operations": {
+              "screenshare.start": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "shares",
+                    "idPrefix": "share",
+                    "fields": {
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "roomId": "$payload.roomId",
+                      "title": "$payload.title",
+                      "presenterId": "$actor.memberId",
+                      "presenterName": "$actor.displayName",
+                      "startedAt": "$createdAt"
+                    }
+                  }
+                ]
+              },
+              "screenshare.stop": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "shares",
+                      "idField": "shareId",
+                      "ownerField": "presenterId"
+                    },
+                    "minimumLevel": "moderator",
+                    "ownerAllowed": true
+                  }
+                },
+                "guards": [
+                  {
+                    "kind": "recordOwnerOrRole",
+                    "collection": "shares",
+                    "id": "$payload.shareId",
+                    "ownerField": "presenterId",
+                    "roles": [
+                      "moderator"
+                    ]
+                  }
+                ],
+                "effects": [
+                  {
+                    "kind": "markRecord",
+                    "collection": "shares",
+                    "id": "$payload.shareId",
+                    "fields": {
+                      "stoppedAt": "$createdAt",
+                      "stoppedBy": "$actor.memberId"
+                    }
+                  }
+                ]
+              }
+            }
+          }
         },
         {
           "key": "embeds",
@@ -3606,9 +4503,15 @@
               "parentId"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId"
+                },
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -3624,9 +4527,15 @@
               "reason"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId",
+                  "ownerField": "authorId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -3640,9 +4549,15 @@
               "body"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId",
+                  "ownerField": "authorId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -3656,9 +4571,13 @@
               "emoji"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId"
+                },
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -3674,9 +4593,13 @@
               "resolved"
             ],
             "authorize": {
-              "roles": [
-                "moderator"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId"
+                },
+                "minimumLevel": "moderator"
+              }
             }
           }
         },
@@ -3694,9 +4617,11 @@
               "visibility"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -3761,9 +4686,13 @@
               }
             },
             "authorize": {
-              "roles": [
-                "moderator"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId"
+                },
+                "minimumLevel": "moderator"
+              }
             }
           }
         },
@@ -3806,9 +4735,13 @@
               }
             },
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId"
+                },
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -3824,9 +4757,13 @@
               }
             },
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId"
+                },
+                "minimumLevel": "viewer"
+              }
             }
           }
         },
@@ -3850,9 +4787,11 @@
               "title"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -3865,9 +4804,15 @@
               "shareId"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "shares",
+                  "idField": "shareId",
+                  "ownerField": "presenterId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -3887,9 +4832,11 @@
               "note"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -3902,9 +4849,15 @@
               "embedId"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "embeds",
+                  "idField": "embedId",
+                  "ownerField": "addedBy"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -3934,15 +4887,16 @@
               "roleId": {
                 "type": "string",
                 "max": 120
+              },
+              "rules": {
+                "type": "array",
+                "max": 256
               }
             },
             "optional": {
               "name": {
                 "type": "string",
                 "max": 120
-              },
-              "grants": {
-                "type": "array"
               },
               "description": {
                 "type": "string",
@@ -3954,27 +4908,55 @@
                 "max": 40,
                 "nullable": true
               },
-              "rank": {
-                "type": "number",
-                "min": 0,
-                "max": 100
-              },
-              "archivedAt": {
-                "type": "number",
-                "min": 0
-              },
-              "synthetic": {
-                "type": "boolean"
-              },
-              "when": {
-                "type": "object"
-              },
-              "gates": {
-                "type": "array"
-              },
               "reason": {
                 "type": "string",
                 "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "roleUpdate",
+          "plugin": "core",
+          "type": "access.role.update",
+          "payloadSchema": {
+            "required": {
+              "roleId": {
+                "type": "string",
+                "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
+              },
+              "revision": {
+                "type": "number",
+                "min": 1
+              },
+              "previousHash": {
+                "type": "string",
+                "max": 80
+              },
+              "rules": {
+                "type": "array",
+                "max": 256
+              }
+            },
+            "optional": {
+              "name": {
+                "type": "string",
+                "max": 120
+              },
+              "description": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              },
+              "color": {
+                "type": "string",
+                "max": 40,
                 "nullable": true
               }
             }
@@ -3987,16 +4969,24 @@
           "type": "access.role.assign",
           "payloadSchema": {
             "required": {
-              "target": {
+              "memberId": {
                 "type": "string",
                 "max": 240
               },
               "roleId": {
                 "type": "string",
                 "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
               }
             },
             "optional": {
+              "expiresAt": {
+                "type": "number",
+                "min": 0
+              },
               "reason": {
                 "type": "string",
                 "max": 500,
@@ -4012,13 +5002,17 @@
           "type": "access.role.unassign",
           "payloadSchema": {
             "required": {
-              "target": {
+              "memberId": {
                 "type": "string",
                 "max": 240
               },
               "roleId": {
                 "type": "string",
                 "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
               }
             },
             "optional": {
@@ -4032,11 +5026,88 @@
           "requiredRole": "admin"
         },
         {
-          "name": "scopeRoleSet",
+          "name": "roleTombstone",
           "plugin": "core",
-          "type": "scope.role.set",
+          "type": "access.role.tombstone",
           "payloadSchema": {
             "required": {
+              "roleId": {
+                "type": "string",
+                "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeMemberOverrideSet",
+          "plugin": "core",
+          "type": "scope.member.override.set",
+          "payloadSchema": {
+            "required": {
+              "memberId": {
+                "type": "string",
+                "max": 240
+              },
+              "scopeType": {
+                "type": "string",
+                "max": 80
+              },
+              "scopeId": {
+                "type": "string",
+                "max": 180
+              },
+              "level": {
+                "type": "enum",
+                "values": [
+                  "none",
+                  "viewer",
+                  "editor",
+                  "moderator",
+                  "admin",
+                  "owner"
+                ]
+              },
+              "allowOperations": {
+                "type": "array",
+                "max": 128
+              },
+              "denyOperations": {
+                "type": "array",
+                "max": 128
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeMemberOverrideRemove",
+          "plugin": "core",
+          "type": "scope.member.override.remove",
+          "payloadSchema": {
+            "required": {
+              "memberId": {
+                "type": "string",
+                "max": 240
+              },
               "scopeType": {
                 "type": "string",
                 "max": 80
@@ -4047,33 +5118,6 @@
               }
             },
             "optional": {
-              "target": {
-                "type": "string",
-                "max": 240,
-                "nullable": true
-              },
-              "role": {
-                "type": "enum",
-                "values": [
-                  "none",
-                  "viewer",
-                  "editor",
-                  "moderator",
-                  "admin",
-                  "owner"
-                ]
-              },
-              "defaultRole": {
-                "type": "enum",
-                "values": [
-                  "none",
-                  "viewer",
-                  "editor",
-                  "moderator",
-                  "admin",
-                  "owner"
-                ]
-              },
               "reason": {
                 "type": "string",
                 "max": 500,
@@ -4081,7 +5125,7 @@
               }
             }
           },
-          "requiredRole": "moderator"
+          "requiredRole": "admin"
         },
         {
           "name": "moderateMember",
@@ -4319,6 +5363,18 @@
                 "callRoutes": {},
                 "publicInvites": [],
                 "joinRequests": {},
+                "access": {
+                  "version": 1,
+                  "scopes": {
+                    "channel:guest": {
+                      "scopeType": "channel",
+                      "scopeId": "guest",
+                      "role": "editor",
+                      "canView": true,
+                      "canEdit": true
+                    }
+                  }
+                },
                 "roleDefinitions": {
                   "guest": {
                     "id": "guest",
@@ -4428,7 +5484,16 @@
                 "authorize": {
                   "roles": [
                     "moderator"
-                  ]
+                  ],
+                  "scoped": {
+                    "scopeType": "channel",
+                    "record": {
+                      "collection": "channels",
+                      "idField": "channelId",
+                      "scopeIdField": "scopeId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "payload": {
                   "required": {
@@ -4476,7 +5541,16 @@
                 "authorize": {
                   "roles": [
                     "moderator"
-                  ]
+                  ],
+                  "scoped": {
+                    "scopeType": "channel",
+                    "record": {
+                      "collection": "channels",
+                      "idField": "channelId",
+                      "scopeIdField": "scopeId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "payload": {
                   "required": {
@@ -4505,7 +5579,12 @@
                   "roles": [
                     "guest",
                     "member"
-                  ]
+                  ],
+                  "scoped": {
+                    "scopeType": "channel",
+                    "payloadScopeIdField": "channelId",
+                    "minimumLevel": "editor"
+                  }
                 },
                 "payload": {
                   "required": {
@@ -4569,6 +5648,8 @@
                     "idPrefix": "message",
                     "fields": {
                       "channelId": "$payload.channelId",
+                      "scopeType": "channel",
+                      "scopeId": "$payload.channelId",
                       "body": "$payload.body",
                       "authorId": "$actor.memberId",
                       "createdAt": "$createdAt",
@@ -4593,7 +5674,12 @@
                   "roles": [
                     "guest",
                     "member"
-                  ]
+                  ],
+                  "scoped": {
+                    "scopeType": "channel",
+                    "payloadScopeIdField": "channelId",
+                    "minimumLevel": "editor"
+                  }
                 },
                 "payload": {
                   "required": {
@@ -4658,6 +5744,8 @@
                     "idPrefix": "message",
                     "fields": {
                       "channelId": "$payload.channelId",
+                      "scopeType": "channel",
+                      "scopeId": "$payload.channelId",
                       "replyToId": "$payload.replyToId",
                       "body": "$payload.body",
                       "authorId": "$actor.memberId",
@@ -4678,7 +5766,18 @@
                 "authorize": {
                   "roles": [
                     "member"
-                  ]
+                  ],
+                  "scoped": {
+                    "scopeType": "channel",
+                    "record": {
+                      "collection": "messages",
+                      "idField": "messageId",
+                      "scopeIdField": "channelId",
+                      "ownerField": "authorId"
+                    },
+                    "minimumLevel": "editor",
+                    "ownerAllowed": true
+                  }
                 },
                 "payload": {
                   "required": {
@@ -4738,7 +5837,16 @@
                 "authorize": {
                   "roles": [
                     "member"
-                  ]
+                  ],
+                  "scoped": {
+                    "scopeType": "channel",
+                    "record": {
+                      "collection": "messages",
+                      "idField": "messageId",
+                      "scopeIdField": "channelId"
+                    },
+                    "minimumLevel": "editor"
+                  }
                 },
                 "payload": {
                   "required": {
@@ -4767,7 +5875,16 @@
                 "authorize": {
                   "roles": [
                     "moderator"
-                  ]
+                  ],
+                  "scoped": {
+                    "scopeType": "channel",
+                    "record": {
+                      "collection": "messages",
+                      "idField": "messageId",
+                      "scopeIdField": "channelId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "payload": {
                   "required": {
@@ -4796,7 +5913,16 @@
                 "authorize": {
                   "roles": [
                     "moderator"
-                  ]
+                  ],
+                  "scoped": {
+                    "scopeType": "channel",
+                    "record": {
+                      "collection": "messages",
+                      "idField": "messageId",
+                      "scopeIdField": "channelId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "payload": {
                   "required": {
@@ -4825,7 +5951,18 @@
                 "authorize": {
                   "roles": [
                     "member"
-                  ]
+                  ],
+                  "scoped": {
+                    "scopeType": "channel",
+                    "record": {
+                      "collection": "messages",
+                      "idField": "messageId",
+                      "scopeIdField": "channelId",
+                      "ownerField": "authorId"
+                    },
+                    "minimumLevel": "moderator",
+                    "ownerAllowed": true
+                  }
                 },
                 "payload": {
                   "required": {
@@ -5234,6 +6371,15 @@
                 "storage": "map",
                 "partition": "joinRequests"
               },
+              "access": {
+                "readClass": "full-fold",
+                "integrityClass": "signature",
+                "historyVisibility": {
+                  "mode": "all"
+                },
+                "storage": "map",
+                "partition": "access"
+              },
               "roleDefinitions": {
                 "readClass": "head",
                 "integrityClass": "signature",
@@ -5260,13 +6406,224 @@
             "key": "comments",
             "id": "gg.matterhorn.examples.plugins.comments",
             "version": "1.0.0",
-            "required": true
+            "required": true,
+            "model": {
+              "kind": "matterhorn.primary-model.schema",
+              "schemaVersion": 1,
+              "state": {
+                "initial": {
+                  "threads": {},
+                  "comments": {},
+                  "activity": []
+                }
+              },
+              "operations": {
+                "comments.thread.create": {
+                  "payload": {},
+                  "authorize": {
+                    "scoped": {
+                      "payloadScopeTypeField": "scopeType",
+                      "payloadScopeIdField": "scopeId",
+                      "minimumLevel": "editor"
+                    }
+                  },
+                  "effects": [
+                    {
+                      "kind": "createRecord",
+                      "collection": "threads",
+                      "idPrefix": "thread",
+                      "fields": {
+                        "scopeType": "$payload.scopeType",
+                        "scopeId": "$payload.scopeId",
+                        "title": "$payload.title",
+                        "visibility": "$payload.visibility",
+                        "createdBy": "$actor.memberId",
+                        "createdByName": "$actor.displayName",
+                        "createdAt": "$createdAt",
+                        "resolved": false
+                      }
+                    }
+                  ]
+                },
+                "comments.add": {
+                  "payload": {},
+                  "authorize": {
+                    "scoped": {
+                      "payloadScopeTypeField": "scopeType",
+                      "payloadScopeIdField": "scopeId",
+                      "record": {
+                        "collection": "threads",
+                        "idField": "threadId"
+                      },
+                      "minimumLevel": "editor"
+                    }
+                  },
+                  "effects": [
+                    {
+                      "kind": "createRecord",
+                      "collection": "comments",
+                      "idPrefix": "comment",
+                      "fields": {
+                        "threadId": "$payload.threadId",
+                        "scopeType": "$payload.scopeType",
+                        "scopeId": "$payload.scopeId",
+                        "parentId": "$payload.parentId",
+                        "body": "$payload.body",
+                        "authorId": "$actor.memberId",
+                        "authorName": "$actor.displayName",
+                        "createdAt": "$createdAt",
+                        "updatedAt": "$createdAt",
+                        "reactions": {}
+                      }
+                    }
+                  ]
+                },
+                "comments.edit": {
+                  "payload": {},
+                  "authorize": {
+                    "scoped": {
+                      "record": {
+                        "collection": "comments",
+                        "idField": "commentId",
+                        "ownerField": "authorId"
+                      },
+                      "minimumLevel": "moderator",
+                      "ownerAllowed": true
+                    }
+                  },
+                  "guards": [
+                    {
+                      "kind": "recordOwnerOrRole",
+                      "collection": "comments",
+                      "id": "$payload.commentId",
+                      "ownerField": "authorId",
+                      "roles": [
+                        "moderator"
+                      ]
+                    }
+                  ],
+                  "effects": [
+                    {
+                      "kind": "updateRecord",
+                      "collection": "comments",
+                      "id": "$payload.commentId",
+                      "fields": {
+                        "body": "$payload.body",
+                        "editedAt": "$createdAt",
+                        "updatedAt": "$createdAt"
+                      }
+                    }
+                  ]
+                },
+                "comments.react": {
+                  "payload": {},
+                  "authorize": {
+                    "scoped": {
+                      "record": {
+                        "collection": "comments",
+                        "idField": "commentId"
+                      },
+                      "minimumLevel": "editor"
+                    }
+                  },
+                  "effects": [
+                    {
+                      "kind": "toggleReaction",
+                      "collection": "comments",
+                      "id": "$payload.commentId",
+                      "emojiField": "emoji"
+                    }
+                  ]
+                },
+                "comments.delete": {
+                  "payload": {},
+                  "authorize": {
+                    "scoped": {
+                      "record": {
+                        "collection": "comments",
+                        "idField": "commentId",
+                        "ownerField": "authorId"
+                      },
+                      "minimumLevel": "moderator",
+                      "ownerAllowed": true
+                    }
+                  },
+                  "guards": [
+                    {
+                      "kind": "recordOwnerOrRole",
+                      "collection": "comments",
+                      "id": "$payload.commentId",
+                      "ownerField": "authorId",
+                      "roles": [
+                        "moderator"
+                      ]
+                    }
+                  ],
+                  "effects": [
+                    {
+                      "kind": "markRecord",
+                      "collection": "comments",
+                      "id": "$payload.commentId",
+                      "fields": {
+                        "body": "",
+                        "deletedAt": "$createdAt",
+                        "deleteReason": "$payload.reason"
+                      }
+                    }
+                  ]
+                },
+                "comments.resolve": {
+                  "payload": {},
+                  "authorize": {
+                    "scoped": {
+                      "record": {
+                        "collection": "threads",
+                        "idField": "threadId"
+                      },
+                      "minimumLevel": "moderator"
+                    }
+                  },
+                  "effects": [
+                    {
+                      "kind": "updateRecord",
+                      "collection": "threads",
+                      "id": "$payload.threadId",
+                      "fields": {
+                        "resolved": "$payload.resolved",
+                        "resolvedAt": "$createdAt",
+                        "resolvedBy": "$actor.memberId"
+                      }
+                    }
+                  ]
+                }
+              },
+              "views": {},
+              "publicView": {
+                "kind": "state"
+              }
+            }
           },
           {
             "key": "presence",
             "id": "gg.matterhorn.examples.plugins.presence",
             "version": "1.0.0",
-            "required": true
+            "required": true,
+            "model": {
+              "kind": "matterhorn.primary-model.schema",
+              "schemaVersion": 1,
+              "state": {
+                "initial": {
+                  "members": {},
+                  "activity": []
+                }
+              },
+              "nonReplayableOperations": [
+                "presence.update",
+                "presence.ping",
+                "presence.clear"
+              ],
+              "operations": {}
+            }
           },
           {
             "key": "mediaRooms",
@@ -5293,6 +6650,14 @@
                       "name": {
                         "type": "string",
                         "max": 100
+                      },
+                      "scopeType": {
+                        "type": "string",
+                        "max": 80
+                      },
+                      "scopeId": {
+                        "type": "string",
+                        "max": 160
                       }
                     },
                     "optional": {
@@ -5305,31 +6670,15 @@
                         "max": 80,
                         "nullable": true,
                         "nonEmpty": false
-                      },
-                      "scopeType": {
-                        "type": "string",
-                        "max": 80
-                      },
-                      "scopeId": {
-                        "type": "string",
-                        "max": 160
-                      },
-                      "roleAccess": {
-                        "type": "record",
-                        "values": {
-                          "type": "enum",
-                          "values": [
-                            "editor",
-                            "readonly"
-                          ]
-                        }
                       }
                     }
                   },
                   "authorize": {
-                    "roles": [
-                      "moderator"
-                    ]
+                    "scoped": {
+                      "payloadScopeTypeField": "scopeType",
+                      "payloadScopeIdField": "scopeId",
+                      "minimumLevel": "moderator"
+                    }
                   },
                   "effects": [
                     {
@@ -5342,7 +6691,6 @@
                         "allowsVideo": "$payload.allowsVideo",
                         "scopeType": "$payload.scopeType",
                         "scopeId": "$payload.scopeId",
-                        "roleAccess": "$payload.roleAccess",
                         "createdBy": "$actor.memberId",
                         "createdAt": "$createdAt",
                         "locked": false,
@@ -5391,23 +6739,17 @@
                         "max": 80,
                         "nullable": true,
                         "nonEmpty": false
-                      },
-                      "roleAccess": {
-                        "type": "record",
-                        "values": {
-                          "type": "enum",
-                          "values": [
-                            "editor",
-                            "readonly"
-                          ]
-                        }
                       }
                     }
                   },
                   "authorize": {
-                    "roles": [
-                      "moderator"
-                    ]
+                    "scoped": {
+                      "record": {
+                        "collection": "rooms",
+                        "idField": "roomId"
+                      },
+                      "minimumLevel": "moderator"
+                    }
                   },
                   "effects": [
                     {
@@ -5420,7 +6762,6 @@
                         "spotlightMemberId": "$payload.spotlightMemberId",
                         "name": "$payload.name",
                         "group": "$payload.group",
-                        "roleAccess": "$payload.roleAccess",
                         "updatedAt": "$createdAt"
                       }
                     },
@@ -5446,9 +6787,13 @@
                     }
                   },
                   "authorize": {
-                    "roles": [
-                      "moderator"
-                    ]
+                    "scoped": {
+                      "record": {
+                        "collection": "rooms",
+                        "idField": "roomId"
+                      },
+                      "minimumLevel": "moderator"
+                    }
                   },
                   "effects": [
                     {
@@ -5530,7 +6875,81 @@
             "key": "screenShare",
             "id": "gg.matterhorn.examples.plugins.screen-share",
             "version": "1.0.0",
-            "required": true
+            "required": true,
+            "model": {
+              "kind": "matterhorn.primary-model.schema",
+              "schemaVersion": 1,
+              "state": {
+                "initial": {
+                  "shares": {},
+                  "activity": []
+                }
+              },
+              "operations": {
+                "screenshare.start": {
+                  "payload": {},
+                  "authorize": {
+                    "scoped": {
+                      "payloadScopeTypeField": "scopeType",
+                      "payloadScopeIdField": "scopeId",
+                      "minimumLevel": "editor"
+                    }
+                  },
+                  "effects": [
+                    {
+                      "kind": "createRecord",
+                      "collection": "shares",
+                      "idPrefix": "share",
+                      "fields": {
+                        "scopeType": "$payload.scopeType",
+                        "scopeId": "$payload.scopeId",
+                        "roomId": "$payload.roomId",
+                        "title": "$payload.title",
+                        "presenterId": "$actor.memberId",
+                        "presenterName": "$actor.displayName",
+                        "startedAt": "$createdAt"
+                      }
+                    }
+                  ]
+                },
+                "screenshare.stop": {
+                  "payload": {},
+                  "authorize": {
+                    "scoped": {
+                      "record": {
+                        "collection": "shares",
+                        "idField": "shareId",
+                        "ownerField": "presenterId"
+                      },
+                      "minimumLevel": "moderator",
+                      "ownerAllowed": true
+                    }
+                  },
+                  "guards": [
+                    {
+                      "kind": "recordOwnerOrRole",
+                      "collection": "shares",
+                      "id": "$payload.shareId",
+                      "ownerField": "presenterId",
+                      "roles": [
+                        "moderator"
+                      ]
+                    }
+                  ],
+                  "effects": [
+                    {
+                      "kind": "markRecord",
+                      "collection": "shares",
+                      "id": "$payload.shareId",
+                      "fields": {
+                        "stoppedAt": "$createdAt",
+                        "stoppedBy": "$actor.memberId"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
           },
           {
             "key": "embeds",
@@ -5674,9 +7093,15 @@
                 "parentId"
               ],
               "authorize": {
-                "roles": [
-                  "member"
-                ]
+                "scoped": {
+                  "payloadScopeTypeField": "scopeType",
+                  "payloadScopeIdField": "scopeId",
+                  "record": {
+                    "collection": "threads",
+                    "idField": "threadId"
+                  },
+                  "minimumLevel": "editor"
+                }
               }
             }
           },
@@ -5692,9 +7117,15 @@
                 "reason"
               ],
               "authorize": {
-                "roles": [
-                  "member"
-                ]
+                "scoped": {
+                  "record": {
+                    "collection": "comments",
+                    "idField": "commentId",
+                    "ownerField": "authorId"
+                  },
+                  "minimumLevel": "moderator",
+                  "ownerAllowed": true
+                }
               }
             }
           },
@@ -5708,9 +7139,15 @@
                 "body"
               ],
               "authorize": {
-                "roles": [
-                  "member"
-                ]
+                "scoped": {
+                  "record": {
+                    "collection": "comments",
+                    "idField": "commentId",
+                    "ownerField": "authorId"
+                  },
+                  "minimumLevel": "moderator",
+                  "ownerAllowed": true
+                }
               }
             }
           },
@@ -5724,9 +7161,13 @@
                 "emoji"
               ],
               "authorize": {
-                "roles": [
-                  "member"
-                ]
+                "scoped": {
+                  "record": {
+                    "collection": "comments",
+                    "idField": "commentId"
+                  },
+                  "minimumLevel": "editor"
+                }
               }
             }
           },
@@ -5742,9 +7183,13 @@
                 "resolved"
               ],
               "authorize": {
-                "roles": [
-                  "moderator"
-                ]
+                "scoped": {
+                  "record": {
+                    "collection": "threads",
+                    "idField": "threadId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               }
             }
           },
@@ -5762,9 +7207,11 @@
                 "visibility"
               ],
               "authorize": {
-                "roles": [
-                  "member"
-                ]
+                "scoped": {
+                  "payloadScopeTypeField": "scopeType",
+                  "payloadScopeIdField": "scopeId",
+                  "minimumLevel": "editor"
+                }
               }
             }
           },
@@ -5829,9 +7276,13 @@
                 }
               },
               "authorize": {
-                "roles": [
-                  "moderator"
-                ]
+                "scoped": {
+                  "record": {
+                    "collection": "rooms",
+                    "idField": "roomId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               }
             }
           },
@@ -5874,9 +7325,13 @@
                 }
               },
               "authorize": {
-                "roles": [
-                  "member"
-                ]
+                "scoped": {
+                  "record": {
+                    "collection": "rooms",
+                    "idField": "roomId"
+                  },
+                  "minimumLevel": "editor"
+                }
               }
             }
           },
@@ -5892,9 +7347,13 @@
                 }
               },
               "authorize": {
-                "roles": [
-                  "member"
-                ]
+                "scoped": {
+                  "record": {
+                    "collection": "rooms",
+                    "idField": "roomId"
+                  },
+                  "minimumLevel": "viewer"
+                }
               }
             }
           },
@@ -5918,9 +7377,11 @@
                 "title"
               ],
               "authorize": {
-                "roles": [
-                  "member"
-                ]
+                "scoped": {
+                  "payloadScopeTypeField": "scopeType",
+                  "payloadScopeIdField": "scopeId",
+                  "minimumLevel": "editor"
+                }
               }
             }
           },
@@ -5933,9 +7394,15 @@
                 "shareId"
               ],
               "authorize": {
-                "roles": [
-                  "member"
-                ]
+                "scoped": {
+                  "record": {
+                    "collection": "shares",
+                    "idField": "shareId",
+                    "ownerField": "presenterId"
+                  },
+                  "minimumLevel": "moderator",
+                  "ownerAllowed": true
+                }
               }
             }
           },
@@ -5955,9 +7422,11 @@
                 "note"
               ],
               "authorize": {
-                "roles": [
-                  "member"
-                ]
+                "scoped": {
+                  "payloadScopeTypeField": "scopeType",
+                  "payloadScopeIdField": "scopeId",
+                  "minimumLevel": "editor"
+                }
               }
             }
           },
@@ -5970,9 +7439,15 @@
                 "embedId"
               ],
               "authorize": {
-                "roles": [
-                  "member"
-                ]
+                "scoped": {
+                  "record": {
+                    "collection": "embeds",
+                    "idField": "embedId",
+                    "ownerField": "addedBy"
+                  },
+                  "minimumLevel": "moderator",
+                  "ownerAllowed": true
+                }
               }
             }
           },
@@ -6002,15 +7477,16 @@
                 "roleId": {
                   "type": "string",
                   "max": 120
+                },
+                "rules": {
+                  "type": "array",
+                  "max": 256
                 }
               },
               "optional": {
                 "name": {
                   "type": "string",
                   "max": 120
-                },
-                "grants": {
-                  "type": "array"
                 },
                 "description": {
                   "type": "string",
@@ -6022,27 +7498,55 @@
                   "max": 40,
                   "nullable": true
                 },
-                "rank": {
-                  "type": "number",
-                  "min": 0,
-                  "max": 100
-                },
-                "archivedAt": {
-                  "type": "number",
-                  "min": 0
-                },
-                "synthetic": {
-                  "type": "boolean"
-                },
-                "when": {
-                  "type": "object"
-                },
-                "gates": {
-                  "type": "array"
-                },
                 "reason": {
                   "type": "string",
                   "max": 500,
+                  "nullable": true
+                }
+              }
+            },
+            "requiredRole": "admin"
+          },
+          {
+            "name": "roleUpdate",
+            "plugin": "core",
+            "type": "access.role.update",
+            "payloadSchema": {
+              "required": {
+                "roleId": {
+                  "type": "string",
+                  "max": 120
+                },
+                "generation": {
+                  "type": "number",
+                  "min": 1
+                },
+                "revision": {
+                  "type": "number",
+                  "min": 1
+                },
+                "previousHash": {
+                  "type": "string",
+                  "max": 80
+                },
+                "rules": {
+                  "type": "array",
+                  "max": 256
+                }
+              },
+              "optional": {
+                "name": {
+                  "type": "string",
+                  "max": 120
+                },
+                "description": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true
+                },
+                "color": {
+                  "type": "string",
+                  "max": 40,
                   "nullable": true
                 }
               }
@@ -6055,16 +7559,24 @@
             "type": "access.role.assign",
             "payloadSchema": {
               "required": {
-                "target": {
+                "memberId": {
                   "type": "string",
                   "max": 240
                 },
                 "roleId": {
                   "type": "string",
                   "max": 120
+                },
+                "generation": {
+                  "type": "number",
+                  "min": 1
                 }
               },
               "optional": {
+                "expiresAt": {
+                  "type": "number",
+                  "min": 0
+                },
                 "reason": {
                   "type": "string",
                   "max": 500,
@@ -6080,13 +7592,17 @@
             "type": "access.role.unassign",
             "payloadSchema": {
               "required": {
-                "target": {
+                "memberId": {
                   "type": "string",
                   "max": 240
                 },
                 "roleId": {
                   "type": "string",
                   "max": 120
+                },
+                "generation": {
+                  "type": "number",
+                  "min": 1
                 }
               },
               "optional": {
@@ -6100,11 +7616,88 @@
             "requiredRole": "admin"
           },
           {
-            "name": "scopeRoleSet",
+            "name": "roleTombstone",
             "plugin": "core",
-            "type": "scope.role.set",
+            "type": "access.role.tombstone",
             "payloadSchema": {
               "required": {
+                "roleId": {
+                  "type": "string",
+                  "max": 120
+                },
+                "generation": {
+                  "type": "number",
+                  "min": 1
+                }
+              },
+              "optional": {
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true
+                }
+              }
+            },
+            "requiredRole": "admin"
+          },
+          {
+            "name": "scopeMemberOverrideSet",
+            "plugin": "core",
+            "type": "scope.member.override.set",
+            "payloadSchema": {
+              "required": {
+                "memberId": {
+                  "type": "string",
+                  "max": 240
+                },
+                "scopeType": {
+                  "type": "string",
+                  "max": 80
+                },
+                "scopeId": {
+                  "type": "string",
+                  "max": 180
+                },
+                "level": {
+                  "type": "enum",
+                  "values": [
+                    "none",
+                    "viewer",
+                    "editor",
+                    "moderator",
+                    "admin",
+                    "owner"
+                  ]
+                },
+                "allowOperations": {
+                  "type": "array",
+                  "max": 128
+                },
+                "denyOperations": {
+                  "type": "array",
+                  "max": 128
+                }
+              },
+              "optional": {
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true
+                }
+              }
+            },
+            "requiredRole": "admin"
+          },
+          {
+            "name": "scopeMemberOverrideRemove",
+            "plugin": "core",
+            "type": "scope.member.override.remove",
+            "payloadSchema": {
+              "required": {
+                "memberId": {
+                  "type": "string",
+                  "max": 240
+                },
                 "scopeType": {
                   "type": "string",
                   "max": 80
@@ -6115,33 +7708,6 @@
                 }
               },
               "optional": {
-                "target": {
-                  "type": "string",
-                  "max": 240,
-                  "nullable": true
-                },
-                "role": {
-                  "type": "enum",
-                  "values": [
-                    "none",
-                    "viewer",
-                    "editor",
-                    "moderator",
-                    "admin",
-                    "owner"
-                  ]
-                },
-                "defaultRole": {
-                  "type": "enum",
-                  "values": [
-                    "none",
-                    "viewer",
-                    "editor",
-                    "moderator",
-                    "admin",
-                    "owner"
-                  ]
-                },
                 "reason": {
                   "type": "string",
                   "max": 500,
@@ -6149,7 +7715,7 @@
                 }
               }
             },
-            "requiredRole": "moderator"
+            "requiredRole": "admin"
           },
           {
             "name": "moderateMember",
@@ -6349,7 +7915,7 @@
             }
           }
         },
-        "schemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
+        "schemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
       }
     },
     {
@@ -6455,7 +8021,7 @@
         {
           "appPackId": "gg.matterhorn.mosh",
           "appPackRange": "^1.0.0",
-          "appProtocolHash": "sha256-c0f511443d8de2619848d088841519ea50d99a500082a7c67d1ac59f7138c14b",
+          "appProtocolHash": "sha256-581203128b17ce494481e48e4debeb128167dc955b4ef6f277c166fa3b67dfc8",
           "pluginIds": [
             "gg.matterhorn.examples.plugins.comments",
             "gg.matterhorn.examples.plugins.embeds",
@@ -6465,7 +8031,7 @@
             "gg.matterhorn.examples.plugins.screen-share",
             "gg.matterhorn.mosh.plugin"
           ],
-          "compositionSchemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
+          "compositionSchemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
         }
       ],
       "recommendedFor": {
@@ -6601,6 +8167,18 @@
             "callRoutes": {},
             "publicInvites": [],
             "joinRequests": {},
+            "access": {
+              "version": 1,
+              "scopes": {
+                "channel:guest": {
+                  "scopeType": "channel",
+                  "scopeId": "guest",
+                  "role": "editor",
+                  "canView": true,
+                  "canEdit": true
+                }
+              }
+            },
             "roleDefinitions": {
               "guest": {
                 "id": "guest",
@@ -6710,7 +8288,16 @@
             "authorize": {
               "roles": [
                 "moderator"
-              ]
+              ],
+              "scoped": {
+                "scopeType": "channel",
+                "record": {
+                  "collection": "channels",
+                  "idField": "channelId",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
             },
             "payload": {
               "required": {
@@ -6758,7 +8345,16 @@
             "authorize": {
               "roles": [
                 "moderator"
-              ]
+              ],
+              "scoped": {
+                "scopeType": "channel",
+                "record": {
+                  "collection": "channels",
+                  "idField": "channelId",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
             },
             "payload": {
               "required": {
@@ -6787,7 +8383,12 @@
               "roles": [
                 "guest",
                 "member"
-              ]
+              ],
+              "scoped": {
+                "scopeType": "channel",
+                "payloadScopeIdField": "channelId",
+                "minimumLevel": "editor"
+              }
             },
             "payload": {
               "required": {
@@ -6851,6 +8452,8 @@
                 "idPrefix": "message",
                 "fields": {
                   "channelId": "$payload.channelId",
+                  "scopeType": "channel",
+                  "scopeId": "$payload.channelId",
                   "body": "$payload.body",
                   "authorId": "$actor.memberId",
                   "createdAt": "$createdAt",
@@ -6875,7 +8478,12 @@
               "roles": [
                 "guest",
                 "member"
-              ]
+              ],
+              "scoped": {
+                "scopeType": "channel",
+                "payloadScopeIdField": "channelId",
+                "minimumLevel": "editor"
+              }
             },
             "payload": {
               "required": {
@@ -6940,6 +8548,8 @@
                 "idPrefix": "message",
                 "fields": {
                   "channelId": "$payload.channelId",
+                  "scopeType": "channel",
+                  "scopeId": "$payload.channelId",
                   "replyToId": "$payload.replyToId",
                   "body": "$payload.body",
                   "authorId": "$actor.memberId",
@@ -6960,7 +8570,18 @@
             "authorize": {
               "roles": [
                 "member"
-              ]
+              ],
+              "scoped": {
+                "scopeType": "channel",
+                "record": {
+                  "collection": "messages",
+                  "idField": "messageId",
+                  "scopeIdField": "channelId",
+                  "ownerField": "authorId"
+                },
+                "minimumLevel": "editor",
+                "ownerAllowed": true
+              }
             },
             "payload": {
               "required": {
@@ -7020,7 +8641,16 @@
             "authorize": {
               "roles": [
                 "member"
-              ]
+              ],
+              "scoped": {
+                "scopeType": "channel",
+                "record": {
+                  "collection": "messages",
+                  "idField": "messageId",
+                  "scopeIdField": "channelId"
+                },
+                "minimumLevel": "editor"
+              }
             },
             "payload": {
               "required": {
@@ -7049,7 +8679,16 @@
             "authorize": {
               "roles": [
                 "moderator"
-              ]
+              ],
+              "scoped": {
+                "scopeType": "channel",
+                "record": {
+                  "collection": "messages",
+                  "idField": "messageId",
+                  "scopeIdField": "channelId"
+                },
+                "minimumLevel": "moderator"
+              }
             },
             "payload": {
               "required": {
@@ -7078,7 +8717,16 @@
             "authorize": {
               "roles": [
                 "moderator"
-              ]
+              ],
+              "scoped": {
+                "scopeType": "channel",
+                "record": {
+                  "collection": "messages",
+                  "idField": "messageId",
+                  "scopeIdField": "channelId"
+                },
+                "minimumLevel": "moderator"
+              }
             },
             "payload": {
               "required": {
@@ -7107,7 +8755,18 @@
             "authorize": {
               "roles": [
                 "member"
-              ]
+              ],
+              "scoped": {
+                "scopeType": "channel",
+                "record": {
+                  "collection": "messages",
+                  "idField": "messageId",
+                  "scopeIdField": "channelId",
+                  "ownerField": "authorId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             },
             "payload": {
               "required": {
@@ -7516,6 +9175,15 @@
             "storage": "map",
             "partition": "joinRequests"
           },
+          "access": {
+            "readClass": "full-fold",
+            "integrityClass": "signature",
+            "historyVisibility": {
+              "mode": "all"
+            },
+            "storage": "map",
+            "partition": "access"
+          },
           "roleDefinitions": {
             "readClass": "head",
             "integrityClass": "signature",
@@ -7542,13 +9210,224 @@
         "key": "comments",
         "id": "gg.matterhorn.examples.plugins.comments",
         "version": "1.0.0",
-        "required": true
+        "required": true,
+        "model": {
+          "kind": "matterhorn.primary-model.schema",
+          "schemaVersion": 1,
+          "state": {
+            "initial": {
+              "threads": {},
+              "comments": {},
+              "activity": []
+            }
+          },
+          "operations": {
+            "comments.thread.create": {
+              "payload": {},
+              "authorize": {
+                "scoped": {
+                  "payloadScopeTypeField": "scopeType",
+                  "payloadScopeIdField": "scopeId",
+                  "minimumLevel": "editor"
+                }
+              },
+              "effects": [
+                {
+                  "kind": "createRecord",
+                  "collection": "threads",
+                  "idPrefix": "thread",
+                  "fields": {
+                    "scopeType": "$payload.scopeType",
+                    "scopeId": "$payload.scopeId",
+                    "title": "$payload.title",
+                    "visibility": "$payload.visibility",
+                    "createdBy": "$actor.memberId",
+                    "createdByName": "$actor.displayName",
+                    "createdAt": "$createdAt",
+                    "resolved": false
+                  }
+                }
+              ]
+            },
+            "comments.add": {
+              "payload": {},
+              "authorize": {
+                "scoped": {
+                  "payloadScopeTypeField": "scopeType",
+                  "payloadScopeIdField": "scopeId",
+                  "record": {
+                    "collection": "threads",
+                    "idField": "threadId"
+                  },
+                  "minimumLevel": "editor"
+                }
+              },
+              "effects": [
+                {
+                  "kind": "createRecord",
+                  "collection": "comments",
+                  "idPrefix": "comment",
+                  "fields": {
+                    "threadId": "$payload.threadId",
+                    "scopeType": "$payload.scopeType",
+                    "scopeId": "$payload.scopeId",
+                    "parentId": "$payload.parentId",
+                    "body": "$payload.body",
+                    "authorId": "$actor.memberId",
+                    "authorName": "$actor.displayName",
+                    "createdAt": "$createdAt",
+                    "updatedAt": "$createdAt",
+                    "reactions": {}
+                  }
+                }
+              ]
+            },
+            "comments.edit": {
+              "payload": {},
+              "authorize": {
+                "scoped": {
+                  "record": {
+                    "collection": "comments",
+                    "idField": "commentId",
+                    "ownerField": "authorId"
+                  },
+                  "minimumLevel": "moderator",
+                  "ownerAllowed": true
+                }
+              },
+              "guards": [
+                {
+                  "kind": "recordOwnerOrRole",
+                  "collection": "comments",
+                  "id": "$payload.commentId",
+                  "ownerField": "authorId",
+                  "roles": [
+                    "moderator"
+                  ]
+                }
+              ],
+              "effects": [
+                {
+                  "kind": "updateRecord",
+                  "collection": "comments",
+                  "id": "$payload.commentId",
+                  "fields": {
+                    "body": "$payload.body",
+                    "editedAt": "$createdAt",
+                    "updatedAt": "$createdAt"
+                  }
+                }
+              ]
+            },
+            "comments.react": {
+              "payload": {},
+              "authorize": {
+                "scoped": {
+                  "record": {
+                    "collection": "comments",
+                    "idField": "commentId"
+                  },
+                  "minimumLevel": "editor"
+                }
+              },
+              "effects": [
+                {
+                  "kind": "toggleReaction",
+                  "collection": "comments",
+                  "id": "$payload.commentId",
+                  "emojiField": "emoji"
+                }
+              ]
+            },
+            "comments.delete": {
+              "payload": {},
+              "authorize": {
+                "scoped": {
+                  "record": {
+                    "collection": "comments",
+                    "idField": "commentId",
+                    "ownerField": "authorId"
+                  },
+                  "minimumLevel": "moderator",
+                  "ownerAllowed": true
+                }
+              },
+              "guards": [
+                {
+                  "kind": "recordOwnerOrRole",
+                  "collection": "comments",
+                  "id": "$payload.commentId",
+                  "ownerField": "authorId",
+                  "roles": [
+                    "moderator"
+                  ]
+                }
+              ],
+              "effects": [
+                {
+                  "kind": "markRecord",
+                  "collection": "comments",
+                  "id": "$payload.commentId",
+                  "fields": {
+                    "body": "",
+                    "deletedAt": "$createdAt",
+                    "deleteReason": "$payload.reason"
+                  }
+                }
+              ]
+            },
+            "comments.resolve": {
+              "payload": {},
+              "authorize": {
+                "scoped": {
+                  "record": {
+                    "collection": "threads",
+                    "idField": "threadId"
+                  },
+                  "minimumLevel": "moderator"
+                }
+              },
+              "effects": [
+                {
+                  "kind": "updateRecord",
+                  "collection": "threads",
+                  "id": "$payload.threadId",
+                  "fields": {
+                    "resolved": "$payload.resolved",
+                    "resolvedAt": "$createdAt",
+                    "resolvedBy": "$actor.memberId"
+                  }
+                }
+              ]
+            }
+          },
+          "views": {},
+          "publicView": {
+            "kind": "state"
+          }
+        }
       },
       {
         "key": "presence",
         "id": "gg.matterhorn.examples.plugins.presence",
         "version": "1.0.0",
-        "required": true
+        "required": true,
+        "model": {
+          "kind": "matterhorn.primary-model.schema",
+          "schemaVersion": 1,
+          "state": {
+            "initial": {
+              "members": {},
+              "activity": []
+            }
+          },
+          "nonReplayableOperations": [
+            "presence.update",
+            "presence.ping",
+            "presence.clear"
+          ],
+          "operations": {}
+        }
       },
       {
         "key": "mediaRooms",
@@ -7575,6 +9454,14 @@
                   "name": {
                     "type": "string",
                     "max": 100
+                  },
+                  "scopeType": {
+                    "type": "string",
+                    "max": 80
+                  },
+                  "scopeId": {
+                    "type": "string",
+                    "max": 160
                   }
                 },
                 "optional": {
@@ -7587,31 +9474,15 @@
                     "max": 80,
                     "nullable": true,
                     "nonEmpty": false
-                  },
-                  "scopeType": {
-                    "type": "string",
-                    "max": 80
-                  },
-                  "scopeId": {
-                    "type": "string",
-                    "max": 160
-                  },
-                  "roleAccess": {
-                    "type": "record",
-                    "values": {
-                      "type": "enum",
-                      "values": [
-                        "editor",
-                        "readonly"
-                      ]
-                    }
                   }
                 }
               },
               "authorize": {
-                "roles": [
-                  "moderator"
-                ]
+                "scoped": {
+                  "payloadScopeTypeField": "scopeType",
+                  "payloadScopeIdField": "scopeId",
+                  "minimumLevel": "moderator"
+                }
               },
               "effects": [
                 {
@@ -7624,7 +9495,6 @@
                     "allowsVideo": "$payload.allowsVideo",
                     "scopeType": "$payload.scopeType",
                     "scopeId": "$payload.scopeId",
-                    "roleAccess": "$payload.roleAccess",
                     "createdBy": "$actor.memberId",
                     "createdAt": "$createdAt",
                     "locked": false,
@@ -7673,23 +9543,17 @@
                     "max": 80,
                     "nullable": true,
                     "nonEmpty": false
-                  },
-                  "roleAccess": {
-                    "type": "record",
-                    "values": {
-                      "type": "enum",
-                      "values": [
-                        "editor",
-                        "readonly"
-                      ]
-                    }
                   }
                 }
               },
               "authorize": {
-                "roles": [
-                  "moderator"
-                ]
+                "scoped": {
+                  "record": {
+                    "collection": "rooms",
+                    "idField": "roomId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "effects": [
                 {
@@ -7702,7 +9566,6 @@
                     "spotlightMemberId": "$payload.spotlightMemberId",
                     "name": "$payload.name",
                     "group": "$payload.group",
-                    "roleAccess": "$payload.roleAccess",
                     "updatedAt": "$createdAt"
                   }
                 },
@@ -7728,9 +9591,13 @@
                 }
               },
               "authorize": {
-                "roles": [
-                  "moderator"
-                ]
+                "scoped": {
+                  "record": {
+                    "collection": "rooms",
+                    "idField": "roomId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "effects": [
                 {
@@ -7812,7 +9679,81 @@
         "key": "screenShare",
         "id": "gg.matterhorn.examples.plugins.screen-share",
         "version": "1.0.0",
-        "required": true
+        "required": true,
+        "model": {
+          "kind": "matterhorn.primary-model.schema",
+          "schemaVersion": 1,
+          "state": {
+            "initial": {
+              "shares": {},
+              "activity": []
+            }
+          },
+          "operations": {
+            "screenshare.start": {
+              "payload": {},
+              "authorize": {
+                "scoped": {
+                  "payloadScopeTypeField": "scopeType",
+                  "payloadScopeIdField": "scopeId",
+                  "minimumLevel": "editor"
+                }
+              },
+              "effects": [
+                {
+                  "kind": "createRecord",
+                  "collection": "shares",
+                  "idPrefix": "share",
+                  "fields": {
+                    "scopeType": "$payload.scopeType",
+                    "scopeId": "$payload.scopeId",
+                    "roomId": "$payload.roomId",
+                    "title": "$payload.title",
+                    "presenterId": "$actor.memberId",
+                    "presenterName": "$actor.displayName",
+                    "startedAt": "$createdAt"
+                  }
+                }
+              ]
+            },
+            "screenshare.stop": {
+              "payload": {},
+              "authorize": {
+                "scoped": {
+                  "record": {
+                    "collection": "shares",
+                    "idField": "shareId",
+                    "ownerField": "presenterId"
+                  },
+                  "minimumLevel": "moderator",
+                  "ownerAllowed": true
+                }
+              },
+              "guards": [
+                {
+                  "kind": "recordOwnerOrRole",
+                  "collection": "shares",
+                  "id": "$payload.shareId",
+                  "ownerField": "presenterId",
+                  "roles": [
+                    "moderator"
+                  ]
+                }
+              ],
+              "effects": [
+                {
+                  "kind": "markRecord",
+                  "collection": "shares",
+                  "id": "$payload.shareId",
+                  "fields": {
+                    "stoppedAt": "$createdAt",
+                    "stoppedBy": "$actor.memberId"
+                  }
+                }
+              ]
+            }
+          }
+        }
       },
       {
         "key": "embeds",
@@ -7956,9 +9897,15 @@
             "parentId"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "payloadScopeTypeField": "scopeType",
+              "payloadScopeIdField": "scopeId",
+              "record": {
+                "collection": "threads",
+                "idField": "threadId"
+              },
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -7974,9 +9921,15 @@
             "reason"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "comments",
+                "idField": "commentId",
+                "ownerField": "authorId"
+              },
+              "minimumLevel": "moderator",
+              "ownerAllowed": true
+            }
           }
         }
       },
@@ -7990,9 +9943,15 @@
             "body"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "comments",
+                "idField": "commentId",
+                "ownerField": "authorId"
+              },
+              "minimumLevel": "moderator",
+              "ownerAllowed": true
+            }
           }
         }
       },
@@ -8006,9 +9965,13 @@
             "emoji"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "comments",
+                "idField": "commentId"
+              },
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -8024,9 +9987,13 @@
             "resolved"
           ],
           "authorize": {
-            "roles": [
-              "moderator"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "threads",
+                "idField": "threadId"
+              },
+              "minimumLevel": "moderator"
+            }
           }
         }
       },
@@ -8044,9 +10011,11 @@
             "visibility"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "payloadScopeTypeField": "scopeType",
+              "payloadScopeIdField": "scopeId",
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -8111,9 +10080,13 @@
             }
           },
           "authorize": {
-            "roles": [
-              "moderator"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "rooms",
+                "idField": "roomId"
+              },
+              "minimumLevel": "moderator"
+            }
           }
         }
       },
@@ -8156,9 +10129,13 @@
             }
           },
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "rooms",
+                "idField": "roomId"
+              },
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -8174,9 +10151,13 @@
             }
           },
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "rooms",
+                "idField": "roomId"
+              },
+              "minimumLevel": "viewer"
+            }
           }
         }
       },
@@ -8200,9 +10181,11 @@
             "title"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "payloadScopeTypeField": "scopeType",
+              "payloadScopeIdField": "scopeId",
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -8215,9 +10198,15 @@
             "shareId"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "shares",
+                "idField": "shareId",
+                "ownerField": "presenterId"
+              },
+              "minimumLevel": "moderator",
+              "ownerAllowed": true
+            }
           }
         }
       },
@@ -8237,9 +10226,11 @@
             "note"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "payloadScopeTypeField": "scopeType",
+              "payloadScopeIdField": "scopeId",
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -8252,9 +10243,15 @@
             "embedId"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "embeds",
+                "idField": "embedId",
+                "ownerField": "addedBy"
+              },
+              "minimumLevel": "moderator",
+              "ownerAllowed": true
+            }
           }
         }
       },
@@ -8284,15 +10281,16 @@
             "roleId": {
               "type": "string",
               "max": 120
+            },
+            "rules": {
+              "type": "array",
+              "max": 256
             }
           },
           "optional": {
             "name": {
               "type": "string",
               "max": 120
-            },
-            "grants": {
-              "type": "array"
             },
             "description": {
               "type": "string",
@@ -8304,27 +10302,55 @@
               "max": 40,
               "nullable": true
             },
-            "rank": {
-              "type": "number",
-              "min": 0,
-              "max": 100
-            },
-            "archivedAt": {
-              "type": "number",
-              "min": 0
-            },
-            "synthetic": {
-              "type": "boolean"
-            },
-            "when": {
-              "type": "object"
-            },
-            "gates": {
-              "type": "array"
-            },
             "reason": {
               "type": "string",
               "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      {
+        "name": "roleUpdate",
+        "plugin": "core",
+        "type": "access.role.update",
+        "payloadSchema": {
+          "required": {
+            "roleId": {
+              "type": "string",
+              "max": 120
+            },
+            "generation": {
+              "type": "number",
+              "min": 1
+            },
+            "revision": {
+              "type": "number",
+              "min": 1
+            },
+            "previousHash": {
+              "type": "string",
+              "max": 80
+            },
+            "rules": {
+              "type": "array",
+              "max": 256
+            }
+          },
+          "optional": {
+            "name": {
+              "type": "string",
+              "max": 120
+            },
+            "description": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            },
+            "color": {
+              "type": "string",
+              "max": 40,
               "nullable": true
             }
           }
@@ -8337,16 +10363,24 @@
         "type": "access.role.assign",
         "payloadSchema": {
           "required": {
-            "target": {
+            "memberId": {
               "type": "string",
               "max": 240
             },
             "roleId": {
               "type": "string",
               "max": 120
+            },
+            "generation": {
+              "type": "number",
+              "min": 1
             }
           },
           "optional": {
+            "expiresAt": {
+              "type": "number",
+              "min": 0
+            },
             "reason": {
               "type": "string",
               "max": 500,
@@ -8362,13 +10396,17 @@
         "type": "access.role.unassign",
         "payloadSchema": {
           "required": {
-            "target": {
+            "memberId": {
               "type": "string",
               "max": 240
             },
             "roleId": {
               "type": "string",
               "max": 120
+            },
+            "generation": {
+              "type": "number",
+              "min": 1
             }
           },
           "optional": {
@@ -8382,11 +10420,88 @@
         "requiredRole": "admin"
       },
       {
-        "name": "scopeRoleSet",
+        "name": "roleTombstone",
         "plugin": "core",
-        "type": "scope.role.set",
+        "type": "access.role.tombstone",
         "payloadSchema": {
           "required": {
+            "roleId": {
+              "type": "string",
+              "max": 120
+            },
+            "generation": {
+              "type": "number",
+              "min": 1
+            }
+          },
+          "optional": {
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      {
+        "name": "scopeMemberOverrideSet",
+        "plugin": "core",
+        "type": "scope.member.override.set",
+        "payloadSchema": {
+          "required": {
+            "memberId": {
+              "type": "string",
+              "max": 240
+            },
+            "scopeType": {
+              "type": "string",
+              "max": 80
+            },
+            "scopeId": {
+              "type": "string",
+              "max": 180
+            },
+            "level": {
+              "type": "enum",
+              "values": [
+                "none",
+                "viewer",
+                "editor",
+                "moderator",
+                "admin",
+                "owner"
+              ]
+            },
+            "allowOperations": {
+              "type": "array",
+              "max": 128
+            },
+            "denyOperations": {
+              "type": "array",
+              "max": 128
+            }
+          },
+          "optional": {
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      {
+        "name": "scopeMemberOverrideRemove",
+        "plugin": "core",
+        "type": "scope.member.override.remove",
+        "payloadSchema": {
+          "required": {
+            "memberId": {
+              "type": "string",
+              "max": 240
+            },
             "scopeType": {
               "type": "string",
               "max": 80
@@ -8397,33 +10512,6 @@
             }
           },
           "optional": {
-            "target": {
-              "type": "string",
-              "max": 240,
-              "nullable": true
-            },
-            "role": {
-              "type": "enum",
-              "values": [
-                "none",
-                "viewer",
-                "editor",
-                "moderator",
-                "admin",
-                "owner"
-              ]
-            },
-            "defaultRole": {
-              "type": "enum",
-              "values": [
-                "none",
-                "viewer",
-                "editor",
-                "moderator",
-                "admin",
-                "owner"
-              ]
-            },
             "reason": {
               "type": "string",
               "max": 500,
@@ -8431,7 +10519,7 @@
             }
           }
         },
-        "requiredRole": "moderator"
+        "requiredRole": "admin"
       },
       {
         "name": "moderateMember",
@@ -8631,7 +10719,7 @@
         }
       }
     },
-    "schemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
+    "schemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
   },
   "artifacts": {
     "composition": {
@@ -8681,6 +10769,18 @@
               "callRoutes": {},
               "publicInvites": [],
               "joinRequests": {},
+              "access": {
+                "version": 1,
+                "scopes": {
+                  "channel:guest": {
+                    "scopeType": "channel",
+                    "scopeId": "guest",
+                    "role": "editor",
+                    "canView": true,
+                    "canEdit": true
+                  }
+                }
+              },
               "roleDefinitions": {
                 "guest": {
                   "id": "guest",
@@ -8790,7 +10890,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "channels",
+                    "idField": "channelId",
+                    "scopeIdField": "scopeId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -8838,7 +10947,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "channels",
+                    "idField": "channelId",
+                    "scopeIdField": "scopeId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -8867,7 +10985,12 @@
                 "roles": [
                   "guest",
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "payloadScopeIdField": "channelId",
+                  "minimumLevel": "editor"
+                }
               },
               "payload": {
                 "required": {
@@ -8931,6 +11054,8 @@
                   "idPrefix": "message",
                   "fields": {
                     "channelId": "$payload.channelId",
+                    "scopeType": "channel",
+                    "scopeId": "$payload.channelId",
                     "body": "$payload.body",
                     "authorId": "$actor.memberId",
                     "createdAt": "$createdAt",
@@ -8955,7 +11080,12 @@
                 "roles": [
                   "guest",
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "payloadScopeIdField": "channelId",
+                  "minimumLevel": "editor"
+                }
               },
               "payload": {
                 "required": {
@@ -9020,6 +11150,8 @@
                   "idPrefix": "message",
                   "fields": {
                     "channelId": "$payload.channelId",
+                    "scopeType": "channel",
+                    "scopeId": "$payload.channelId",
                     "replyToId": "$payload.replyToId",
                     "body": "$payload.body",
                     "authorId": "$actor.memberId",
@@ -9040,7 +11172,18 @@
               "authorize": {
                 "roles": [
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId",
+                    "ownerField": "authorId"
+                  },
+                  "minimumLevel": "editor",
+                  "ownerAllowed": true
+                }
               },
               "payload": {
                 "required": {
@@ -9100,7 +11243,16 @@
               "authorize": {
                 "roles": [
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId"
+                  },
+                  "minimumLevel": "editor"
+                }
               },
               "payload": {
                 "required": {
@@ -9129,7 +11281,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -9158,7 +11319,16 @@
               "authorize": {
                 "roles": [
                   "moderator"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId"
+                  },
+                  "minimumLevel": "moderator"
+                }
               },
               "payload": {
                 "required": {
@@ -9187,7 +11357,18 @@
               "authorize": {
                 "roles": [
                   "member"
-                ]
+                ],
+                "scoped": {
+                  "scopeType": "channel",
+                  "record": {
+                    "collection": "messages",
+                    "idField": "messageId",
+                    "scopeIdField": "channelId",
+                    "ownerField": "authorId"
+                  },
+                  "minimumLevel": "moderator",
+                  "ownerAllowed": true
+                }
               },
               "payload": {
                 "required": {
@@ -9596,6 +11777,15 @@
               "storage": "map",
               "partition": "joinRequests"
             },
+            "access": {
+              "readClass": "full-fold",
+              "integrityClass": "signature",
+              "historyVisibility": {
+                "mode": "all"
+              },
+              "storage": "map",
+              "partition": "access"
+            },
             "roleDefinitions": {
               "readClass": "head",
               "integrityClass": "signature",
@@ -9622,13 +11812,224 @@
           "key": "comments",
           "id": "gg.matterhorn.examples.plugins.comments",
           "version": "1.0.0",
-          "required": true
+          "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "threads": {},
+                "comments": {},
+                "activity": []
+              }
+            },
+            "operations": {
+              "comments.thread.create": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "threads",
+                    "idPrefix": "thread",
+                    "fields": {
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "title": "$payload.title",
+                      "visibility": "$payload.visibility",
+                      "createdBy": "$actor.memberId",
+                      "createdByName": "$actor.displayName",
+                      "createdAt": "$createdAt",
+                      "resolved": false
+                    }
+                  }
+                ]
+              },
+              "comments.add": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "record": {
+                      "collection": "threads",
+                      "idField": "threadId"
+                    },
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "comments",
+                    "idPrefix": "comment",
+                    "fields": {
+                      "threadId": "$payload.threadId",
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "parentId": "$payload.parentId",
+                      "body": "$payload.body",
+                      "authorId": "$actor.memberId",
+                      "authorName": "$actor.displayName",
+                      "createdAt": "$createdAt",
+                      "updatedAt": "$createdAt",
+                      "reactions": {}
+                    }
+                  }
+                ]
+              },
+              "comments.edit": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "comments",
+                      "idField": "commentId",
+                      "ownerField": "authorId"
+                    },
+                    "minimumLevel": "moderator",
+                    "ownerAllowed": true
+                  }
+                },
+                "guards": [
+                  {
+                    "kind": "recordOwnerOrRole",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "ownerField": "authorId",
+                    "roles": [
+                      "moderator"
+                    ]
+                  }
+                ],
+                "effects": [
+                  {
+                    "kind": "updateRecord",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "fields": {
+                      "body": "$payload.body",
+                      "editedAt": "$createdAt",
+                      "updatedAt": "$createdAt"
+                    }
+                  }
+                ]
+              },
+              "comments.react": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "comments",
+                      "idField": "commentId"
+                    },
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "toggleReaction",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "emojiField": "emoji"
+                  }
+                ]
+              },
+              "comments.delete": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "comments",
+                      "idField": "commentId",
+                      "ownerField": "authorId"
+                    },
+                    "minimumLevel": "moderator",
+                    "ownerAllowed": true
+                  }
+                },
+                "guards": [
+                  {
+                    "kind": "recordOwnerOrRole",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "ownerField": "authorId",
+                    "roles": [
+                      "moderator"
+                    ]
+                  }
+                ],
+                "effects": [
+                  {
+                    "kind": "markRecord",
+                    "collection": "comments",
+                    "id": "$payload.commentId",
+                    "fields": {
+                      "body": "",
+                      "deletedAt": "$createdAt",
+                      "deleteReason": "$payload.reason"
+                    }
+                  }
+                ]
+              },
+              "comments.resolve": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "threads",
+                      "idField": "threadId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "updateRecord",
+                    "collection": "threads",
+                    "id": "$payload.threadId",
+                    "fields": {
+                      "resolved": "$payload.resolved",
+                      "resolvedAt": "$createdAt",
+                      "resolvedBy": "$actor.memberId"
+                    }
+                  }
+                ]
+              }
+            },
+            "views": {},
+            "publicView": {
+              "kind": "state"
+            }
+          }
         },
         {
           "key": "presence",
           "id": "gg.matterhorn.examples.plugins.presence",
           "version": "1.0.0",
-          "required": true
+          "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "members": {},
+                "activity": []
+              }
+            },
+            "nonReplayableOperations": [
+              "presence.update",
+              "presence.ping",
+              "presence.clear"
+            ],
+            "operations": {}
+          }
         },
         {
           "key": "mediaRooms",
@@ -9655,6 +12056,14 @@
                     "name": {
                       "type": "string",
                       "max": 100
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "max": 80
+                    },
+                    "scopeId": {
+                      "type": "string",
+                      "max": 160
                     }
                   },
                   "optional": {
@@ -9667,31 +12076,15 @@
                       "max": 80,
                       "nullable": true,
                       "nonEmpty": false
-                    },
-                    "scopeType": {
-                      "type": "string",
-                      "max": 80
-                    },
-                    "scopeId": {
-                      "type": "string",
-                      "max": 160
-                    },
-                    "roleAccess": {
-                      "type": "record",
-                      "values": {
-                        "type": "enum",
-                        "values": [
-                          "editor",
-                          "readonly"
-                        ]
-                      }
                     }
                   }
                 },
                 "authorize": {
-                  "roles": [
-                    "moderator"
-                  ]
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "effects": [
                   {
@@ -9704,7 +12097,6 @@
                       "allowsVideo": "$payload.allowsVideo",
                       "scopeType": "$payload.scopeType",
                       "scopeId": "$payload.scopeId",
-                      "roleAccess": "$payload.roleAccess",
                       "createdBy": "$actor.memberId",
                       "createdAt": "$createdAt",
                       "locked": false,
@@ -9753,23 +12145,17 @@
                       "max": 80,
                       "nullable": true,
                       "nonEmpty": false
-                    },
-                    "roleAccess": {
-                      "type": "record",
-                      "values": {
-                        "type": "enum",
-                        "values": [
-                          "editor",
-                          "readonly"
-                        ]
-                      }
                     }
                   }
                 },
                 "authorize": {
-                  "roles": [
-                    "moderator"
-                  ]
+                  "scoped": {
+                    "record": {
+                      "collection": "rooms",
+                      "idField": "roomId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "effects": [
                   {
@@ -9782,7 +12168,6 @@
                       "spotlightMemberId": "$payload.spotlightMemberId",
                       "name": "$payload.name",
                       "group": "$payload.group",
-                      "roleAccess": "$payload.roleAccess",
                       "updatedAt": "$createdAt"
                     }
                   },
@@ -9808,9 +12193,13 @@
                   }
                 },
                 "authorize": {
-                  "roles": [
-                    "moderator"
-                  ]
+                  "scoped": {
+                    "record": {
+                      "collection": "rooms",
+                      "idField": "roomId"
+                    },
+                    "minimumLevel": "moderator"
+                  }
                 },
                 "effects": [
                   {
@@ -9892,7 +12281,81 @@
           "key": "screenShare",
           "id": "gg.matterhorn.examples.plugins.screen-share",
           "version": "1.0.0",
-          "required": true
+          "required": true,
+          "model": {
+            "kind": "matterhorn.primary-model.schema",
+            "schemaVersion": 1,
+            "state": {
+              "initial": {
+                "shares": {},
+                "activity": []
+              }
+            },
+            "operations": {
+              "screenshare.start": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "payloadScopeTypeField": "scopeType",
+                    "payloadScopeIdField": "scopeId",
+                    "minimumLevel": "editor"
+                  }
+                },
+                "effects": [
+                  {
+                    "kind": "createRecord",
+                    "collection": "shares",
+                    "idPrefix": "share",
+                    "fields": {
+                      "scopeType": "$payload.scopeType",
+                      "scopeId": "$payload.scopeId",
+                      "roomId": "$payload.roomId",
+                      "title": "$payload.title",
+                      "presenterId": "$actor.memberId",
+                      "presenterName": "$actor.displayName",
+                      "startedAt": "$createdAt"
+                    }
+                  }
+                ]
+              },
+              "screenshare.stop": {
+                "payload": {},
+                "authorize": {
+                  "scoped": {
+                    "record": {
+                      "collection": "shares",
+                      "idField": "shareId",
+                      "ownerField": "presenterId"
+                    },
+                    "minimumLevel": "moderator",
+                    "ownerAllowed": true
+                  }
+                },
+                "guards": [
+                  {
+                    "kind": "recordOwnerOrRole",
+                    "collection": "shares",
+                    "id": "$payload.shareId",
+                    "ownerField": "presenterId",
+                    "roles": [
+                      "moderator"
+                    ]
+                  }
+                ],
+                "effects": [
+                  {
+                    "kind": "markRecord",
+                    "collection": "shares",
+                    "id": "$payload.shareId",
+                    "fields": {
+                      "stoppedAt": "$createdAt",
+                      "stoppedBy": "$actor.memberId"
+                    }
+                  }
+                ]
+              }
+            }
+          }
         },
         {
           "key": "embeds",
@@ -10036,9 +12499,15 @@
               "parentId"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId"
+                },
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -10054,9 +12523,15 @@
               "reason"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId",
+                  "ownerField": "authorId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -10070,9 +12545,15 @@
               "body"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId",
+                  "ownerField": "authorId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -10086,9 +12567,13 @@
               "emoji"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId"
+                },
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -10104,9 +12589,13 @@
               "resolved"
             ],
             "authorize": {
-              "roles": [
-                "moderator"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId"
+                },
+                "minimumLevel": "moderator"
+              }
             }
           }
         },
@@ -10124,9 +12613,11 @@
               "visibility"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -10191,9 +12682,13 @@
               }
             },
             "authorize": {
-              "roles": [
-                "moderator"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId"
+                },
+                "minimumLevel": "moderator"
+              }
             }
           }
         },
@@ -10236,9 +12731,13 @@
               }
             },
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId"
+                },
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -10254,9 +12753,13 @@
               }
             },
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId"
+                },
+                "minimumLevel": "viewer"
+              }
             }
           }
         },
@@ -10280,9 +12783,11 @@
               "title"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -10295,9 +12800,15 @@
               "shareId"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "shares",
+                  "idField": "shareId",
+                  "ownerField": "presenterId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -10317,9 +12828,11 @@
               "note"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
             }
           }
         },
@@ -10332,9 +12845,15 @@
               "embedId"
             ],
             "authorize": {
-              "roles": [
-                "member"
-              ]
+              "scoped": {
+                "record": {
+                  "collection": "embeds",
+                  "idField": "embedId",
+                  "ownerField": "addedBy"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
             }
           }
         },
@@ -10364,15 +12883,16 @@
               "roleId": {
                 "type": "string",
                 "max": 120
+              },
+              "rules": {
+                "type": "array",
+                "max": 256
               }
             },
             "optional": {
               "name": {
                 "type": "string",
                 "max": 120
-              },
-              "grants": {
-                "type": "array"
               },
               "description": {
                 "type": "string",
@@ -10384,27 +12904,55 @@
                 "max": 40,
                 "nullable": true
               },
-              "rank": {
-                "type": "number",
-                "min": 0,
-                "max": 100
-              },
-              "archivedAt": {
-                "type": "number",
-                "min": 0
-              },
-              "synthetic": {
-                "type": "boolean"
-              },
-              "when": {
-                "type": "object"
-              },
-              "gates": {
-                "type": "array"
-              },
               "reason": {
                 "type": "string",
                 "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "roleUpdate",
+          "plugin": "core",
+          "type": "access.role.update",
+          "payloadSchema": {
+            "required": {
+              "roleId": {
+                "type": "string",
+                "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
+              },
+              "revision": {
+                "type": "number",
+                "min": 1
+              },
+              "previousHash": {
+                "type": "string",
+                "max": 80
+              },
+              "rules": {
+                "type": "array",
+                "max": 256
+              }
+            },
+            "optional": {
+              "name": {
+                "type": "string",
+                "max": 120
+              },
+              "description": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              },
+              "color": {
+                "type": "string",
+                "max": 40,
                 "nullable": true
               }
             }
@@ -10417,16 +12965,24 @@
           "type": "access.role.assign",
           "payloadSchema": {
             "required": {
-              "target": {
+              "memberId": {
                 "type": "string",
                 "max": 240
               },
               "roleId": {
                 "type": "string",
                 "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
               }
             },
             "optional": {
+              "expiresAt": {
+                "type": "number",
+                "min": 0
+              },
               "reason": {
                 "type": "string",
                 "max": 500,
@@ -10442,13 +12998,17 @@
           "type": "access.role.unassign",
           "payloadSchema": {
             "required": {
-              "target": {
+              "memberId": {
                 "type": "string",
                 "max": 240
               },
               "roleId": {
                 "type": "string",
                 "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
               }
             },
             "optional": {
@@ -10462,11 +13022,88 @@
           "requiredRole": "admin"
         },
         {
-          "name": "scopeRoleSet",
+          "name": "roleTombstone",
           "plugin": "core",
-          "type": "scope.role.set",
+          "type": "access.role.tombstone",
           "payloadSchema": {
             "required": {
+              "roleId": {
+                "type": "string",
+                "max": 120
+              },
+              "generation": {
+                "type": "number",
+                "min": 1
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeMemberOverrideSet",
+          "plugin": "core",
+          "type": "scope.member.override.set",
+          "payloadSchema": {
+            "required": {
+              "memberId": {
+                "type": "string",
+                "max": 240
+              },
+              "scopeType": {
+                "type": "string",
+                "max": 80
+              },
+              "scopeId": {
+                "type": "string",
+                "max": 180
+              },
+              "level": {
+                "type": "enum",
+                "values": [
+                  "none",
+                  "viewer",
+                  "editor",
+                  "moderator",
+                  "admin",
+                  "owner"
+                ]
+              },
+              "allowOperations": {
+                "type": "array",
+                "max": 128
+              },
+              "denyOperations": {
+                "type": "array",
+                "max": 128
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 500,
+                "nullable": true
+              }
+            }
+          },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeMemberOverrideRemove",
+          "plugin": "core",
+          "type": "scope.member.override.remove",
+          "payloadSchema": {
+            "required": {
+              "memberId": {
+                "type": "string",
+                "max": 240
+              },
               "scopeType": {
                 "type": "string",
                 "max": 80
@@ -10477,33 +13114,6 @@
               }
             },
             "optional": {
-              "target": {
-                "type": "string",
-                "max": 240,
-                "nullable": true
-              },
-              "role": {
-                "type": "enum",
-                "values": [
-                  "none",
-                  "viewer",
-                  "editor",
-                  "moderator",
-                  "admin",
-                  "owner"
-                ]
-              },
-              "defaultRole": {
-                "type": "enum",
-                "values": [
-                  "none",
-                  "viewer",
-                  "editor",
-                  "moderator",
-                  "admin",
-                  "owner"
-                ]
-              },
               "reason": {
                 "type": "string",
                 "max": 500,
@@ -10511,7 +13121,7 @@
               }
             }
           },
-          "requiredRole": "moderator"
+          "requiredRole": "admin"
         },
         {
           "name": "moderateMember",
@@ -10711,7 +13321,7 @@
           }
         }
       },
-      "schemaHash": "sha256-40637a9c76230930523f47a2d561c40c6a75027e74552ecd27863ebec69cc4fc"
+      "schemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
     },
     "model": {
       "kind": "matterhorn.primary-model.schema",
@@ -10749,6 +13359,18 @@
           "callRoutes": {},
           "publicInvites": [],
           "joinRequests": {},
+          "access": {
+            "version": 1,
+            "scopes": {
+              "channel:guest": {
+                "scopeType": "channel",
+                "scopeId": "guest",
+                "role": "editor",
+                "canView": true,
+                "canEdit": true
+              }
+            }
+          },
           "roleDefinitions": {
             "guest": {
               "id": "guest",
@@ -10858,7 +13480,16 @@
           "authorize": {
             "roles": [
               "moderator"
-            ]
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "channels",
+                "idField": "channelId",
+                "scopeIdField": "scopeId"
+              },
+              "minimumLevel": "moderator"
+            }
           },
           "payload": {
             "required": {
@@ -10906,7 +13537,16 @@
           "authorize": {
             "roles": [
               "moderator"
-            ]
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "channels",
+                "idField": "channelId",
+                "scopeIdField": "scopeId"
+              },
+              "minimumLevel": "moderator"
+            }
           },
           "payload": {
             "required": {
@@ -10935,7 +13575,12 @@
             "roles": [
               "guest",
               "member"
-            ]
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "payloadScopeIdField": "channelId",
+              "minimumLevel": "editor"
+            }
           },
           "payload": {
             "required": {
@@ -10999,6 +13644,8 @@
               "idPrefix": "message",
               "fields": {
                 "channelId": "$payload.channelId",
+                "scopeType": "channel",
+                "scopeId": "$payload.channelId",
                 "body": "$payload.body",
                 "authorId": "$actor.memberId",
                 "createdAt": "$createdAt",
@@ -11023,7 +13670,12 @@
             "roles": [
               "guest",
               "member"
-            ]
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "payloadScopeIdField": "channelId",
+              "minimumLevel": "editor"
+            }
           },
           "payload": {
             "required": {
@@ -11088,6 +13740,8 @@
               "idPrefix": "message",
               "fields": {
                 "channelId": "$payload.channelId",
+                "scopeType": "channel",
+                "scopeId": "$payload.channelId",
                 "replyToId": "$payload.replyToId",
                 "body": "$payload.body",
                 "authorId": "$actor.memberId",
@@ -11108,7 +13762,18 @@
           "authorize": {
             "roles": [
               "member"
-            ]
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "messages",
+                "idField": "messageId",
+                "scopeIdField": "channelId",
+                "ownerField": "authorId"
+              },
+              "minimumLevel": "editor",
+              "ownerAllowed": true
+            }
           },
           "payload": {
             "required": {
@@ -11168,7 +13833,16 @@
           "authorize": {
             "roles": [
               "member"
-            ]
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "messages",
+                "idField": "messageId",
+                "scopeIdField": "channelId"
+              },
+              "minimumLevel": "editor"
+            }
           },
           "payload": {
             "required": {
@@ -11197,7 +13871,16 @@
           "authorize": {
             "roles": [
               "moderator"
-            ]
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "messages",
+                "idField": "messageId",
+                "scopeIdField": "channelId"
+              },
+              "minimumLevel": "moderator"
+            }
           },
           "payload": {
             "required": {
@@ -11226,7 +13909,16 @@
           "authorize": {
             "roles": [
               "moderator"
-            ]
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "messages",
+                "idField": "messageId",
+                "scopeIdField": "channelId"
+              },
+              "minimumLevel": "moderator"
+            }
           },
           "payload": {
             "required": {
@@ -11255,7 +13947,18 @@
           "authorize": {
             "roles": [
               "member"
-            ]
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "messages",
+                "idField": "messageId",
+                "scopeIdField": "channelId",
+                "ownerField": "authorId"
+              },
+              "minimumLevel": "moderator",
+              "ownerAllowed": true
+            }
           },
           "payload": {
             "required": {
@@ -11664,6 +14367,15 @@
           "storage": "map",
           "partition": "joinRequests"
         },
+        "access": {
+          "readClass": "full-fold",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "map",
+          "partition": "access"
+        },
         "roleDefinitions": {
           "readClass": "head",
           "integrityClass": "signature",
@@ -11774,9 +14486,15 @@
             "parentId"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "payloadScopeTypeField": "scopeType",
+              "payloadScopeIdField": "scopeId",
+              "record": {
+                "collection": "threads",
+                "idField": "threadId"
+              },
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -11791,9 +14509,15 @@
             "reason"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "comments",
+                "idField": "commentId",
+                "ownerField": "authorId"
+              },
+              "minimumLevel": "moderator",
+              "ownerAllowed": true
+            }
           }
         }
       },
@@ -11806,9 +14530,15 @@
             "body"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "comments",
+                "idField": "commentId",
+                "ownerField": "authorId"
+              },
+              "minimumLevel": "moderator",
+              "ownerAllowed": true
+            }
           }
         }
       },
@@ -11821,9 +14551,13 @@
             "emoji"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "comments",
+                "idField": "commentId"
+              },
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -11838,9 +14572,13 @@
             "resolved"
           ],
           "authorize": {
-            "roles": [
-              "moderator"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "threads",
+                "idField": "threadId"
+              },
+              "minimumLevel": "moderator"
+            }
           }
         }
       },
@@ -11857,9 +14595,11 @@
             "visibility"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "payloadScopeTypeField": "scopeType",
+              "payloadScopeIdField": "scopeId",
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -11920,9 +14660,13 @@
             }
           },
           "authorize": {
-            "roles": [
-              "moderator"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "rooms",
+                "idField": "roomId"
+              },
+              "minimumLevel": "moderator"
+            }
           }
         }
       },
@@ -11963,9 +14707,13 @@
             }
           },
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "rooms",
+                "idField": "roomId"
+              },
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -11980,9 +14728,13 @@
             }
           },
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "rooms",
+                "idField": "roomId"
+              },
+              "minimumLevel": "viewer"
+            }
           }
         }
       },
@@ -12004,9 +14756,11 @@
             "title"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "payloadScopeTypeField": "scopeType",
+              "payloadScopeIdField": "scopeId",
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -12018,9 +14772,15 @@
             "shareId"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "shares",
+                "idField": "shareId",
+                "ownerField": "presenterId"
+              },
+              "minimumLevel": "moderator",
+              "ownerAllowed": true
+            }
           }
         }
       },
@@ -12039,9 +14799,11 @@
             "note"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "payloadScopeTypeField": "scopeType",
+              "payloadScopeIdField": "scopeId",
+              "minimumLevel": "editor"
+            }
           }
         }
       },
@@ -12053,9 +14815,15 @@
             "embedId"
           ],
           "authorize": {
-            "roles": [
-              "member"
-            ]
+            "scoped": {
+              "record": {
+                "collection": "embeds",
+                "idField": "embedId",
+                "ownerField": "addedBy"
+              },
+              "minimumLevel": "moderator",
+              "ownerAllowed": true
+            }
           }
         }
       },
@@ -12083,15 +14851,16 @@
             "roleId": {
               "type": "string",
               "max": 120
+            },
+            "rules": {
+              "type": "array",
+              "max": 256
             }
           },
           "optional": {
             "name": {
               "type": "string",
               "max": 120
-            },
-            "grants": {
-              "type": "array"
             },
             "description": {
               "type": "string",
@@ -12103,27 +14872,54 @@
               "max": 40,
               "nullable": true
             },
-            "rank": {
-              "type": "number",
-              "min": 0,
-              "max": 100
-            },
-            "archivedAt": {
-              "type": "number",
-              "min": 0
-            },
-            "synthetic": {
-              "type": "boolean"
-            },
-            "when": {
-              "type": "object"
-            },
-            "gates": {
-              "type": "array"
-            },
             "reason": {
               "type": "string",
               "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      "roleUpdate": {
+        "plugin": "core",
+        "type": "access.role.update",
+        "payloadSchema": {
+          "required": {
+            "roleId": {
+              "type": "string",
+              "max": 120
+            },
+            "generation": {
+              "type": "number",
+              "min": 1
+            },
+            "revision": {
+              "type": "number",
+              "min": 1
+            },
+            "previousHash": {
+              "type": "string",
+              "max": 80
+            },
+            "rules": {
+              "type": "array",
+              "max": 256
+            }
+          },
+          "optional": {
+            "name": {
+              "type": "string",
+              "max": 120
+            },
+            "description": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            },
+            "color": {
+              "type": "string",
+              "max": 40,
               "nullable": true
             }
           }
@@ -12135,16 +14931,24 @@
         "type": "access.role.assign",
         "payloadSchema": {
           "required": {
-            "target": {
+            "memberId": {
               "type": "string",
               "max": 240
             },
             "roleId": {
               "type": "string",
               "max": 120
+            },
+            "generation": {
+              "type": "number",
+              "min": 1
             }
           },
           "optional": {
+            "expiresAt": {
+              "type": "number",
+              "min": 0
+            },
             "reason": {
               "type": "string",
               "max": 500,
@@ -12159,13 +14963,17 @@
         "type": "access.role.unassign",
         "payloadSchema": {
           "required": {
-            "target": {
+            "memberId": {
               "type": "string",
               "max": 240
             },
             "roleId": {
               "type": "string",
               "max": 120
+            },
+            "generation": {
+              "type": "number",
+              "min": 1
             }
           },
           "optional": {
@@ -12178,11 +14986,86 @@
         },
         "requiredRole": "admin"
       },
-      "scopeRoleSet": {
+      "roleTombstone": {
         "plugin": "core",
-        "type": "scope.role.set",
+        "type": "access.role.tombstone",
         "payloadSchema": {
           "required": {
+            "roleId": {
+              "type": "string",
+              "max": 120
+            },
+            "generation": {
+              "type": "number",
+              "min": 1
+            }
+          },
+          "optional": {
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      "scopeMemberOverrideSet": {
+        "plugin": "core",
+        "type": "scope.member.override.set",
+        "payloadSchema": {
+          "required": {
+            "memberId": {
+              "type": "string",
+              "max": 240
+            },
+            "scopeType": {
+              "type": "string",
+              "max": 80
+            },
+            "scopeId": {
+              "type": "string",
+              "max": 180
+            },
+            "level": {
+              "type": "enum",
+              "values": [
+                "none",
+                "viewer",
+                "editor",
+                "moderator",
+                "admin",
+                "owner"
+              ]
+            },
+            "allowOperations": {
+              "type": "array",
+              "max": 128
+            },
+            "denyOperations": {
+              "type": "array",
+              "max": 128
+            }
+          },
+          "optional": {
+            "reason": {
+              "type": "string",
+              "max": 500,
+              "nullable": true
+            }
+          }
+        },
+        "requiredRole": "admin"
+      },
+      "scopeMemberOverrideRemove": {
+        "plugin": "core",
+        "type": "scope.member.override.remove",
+        "payloadSchema": {
+          "required": {
+            "memberId": {
+              "type": "string",
+              "max": 240
+            },
             "scopeType": {
               "type": "string",
               "max": 80
@@ -12193,33 +15076,6 @@
             }
           },
           "optional": {
-            "target": {
-              "type": "string",
-              "max": 240,
-              "nullable": true
-            },
-            "role": {
-              "type": "enum",
-              "values": [
-                "none",
-                "viewer",
-                "editor",
-                "moderator",
-                "admin",
-                "owner"
-              ]
-            },
-            "defaultRole": {
-              "type": "enum",
-              "values": [
-                "none",
-                "viewer",
-                "editor",
-                "moderator",
-                "admin",
-                "owner"
-              ]
-            },
             "reason": {
               "type": "string",
               "max": 500,
@@ -12227,7 +15083,7 @@
             }
           }
         },
-        "requiredRole": "moderator"
+        "requiredRole": "admin"
       },
       "moderateMember": {
         "plugin": "primary",

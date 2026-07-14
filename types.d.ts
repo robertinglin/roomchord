@@ -7,8 +7,6 @@
  * ========================================================================== */
 
 
-import type { MatterhornRoomState } from "matterhorn-sdk/client";
-
 export namespace Mosh {
   export type Role = "guest" | "member" | "moderator" | "admin" | "owner";
   export type ChannelId = string & { readonly __brand: "ChannelId" };
@@ -23,9 +21,7 @@ export namespace Mosh {
   export type Reactions = Record<string, MemberId[]>;
   export type ScopeType = "channel" | (string & {});
   export interface ScopeRef { scopeType: ScopeType; scopeId: string; }
-  export type RoleAccessGrant = "editor" | "readonly";
-  export type RoomRoleAccess = Record<RoleId, RoleAccessGrant>;
-  export type AccessLevel = "hidden" | RoleAccessGrant;
+  export type AccessLevel = "hidden" | "readonly" | "editor";
   export type PresenceStatus = "online" | "idle" | "dnd" | "offline" | (string & {});
   export interface MediaFlags { audio?: boolean; video?: boolean; screen?: boolean; }
   export interface MessageEmbed { id?: EmbedId; url: string; provider?: string; kind?: string; title?: string; thumbnailUrl?: string; renderMode?: string; }
@@ -36,7 +32,7 @@ export namespace Mosh {
   /** From the mediaRooms plugin. */
   export interface MediaRoomParticipant { memberId: MemberId; name?: string; media?: MediaFlags; joinedAt?: number; }
   /** From the mediaRooms plugin. */
-  export interface MediaRoom { id: RoomId; name: string; group: string | null; allowsVideo: boolean; scopeType?: ScopeType; scopeId?: string; roleAccess: RoomRoleAccess; locked: boolean; spotlightMemberId?: MemberId | null; archivedAt: number | null; participants: Record<MemberId, MediaRoomParticipant>; participantCount: number; createdBy?: MemberId; createdAt?: number; }
+  export interface MediaRoom { id: RoomId; name: string; group: string | null; allowsVideo: boolean; scopeType: ScopeType; scopeId: string; locked: boolean; spotlightMemberId?: MemberId | null; archivedAt: number | null; participants: Record<MemberId, MediaRoomParticipant>; participantCount: number; createdBy?: MemberId; createdAt?: number; }
 
   /** From the presence plugin. */
   export interface PresenceMember { memberId: MemberId; name?: string; status: PresenceStatus; activity: string | null; location: string | null; updatedAt?: number; lastPingAt?: number; visible?: boolean; avatarUrl?: string; }
@@ -64,8 +60,15 @@ export namespace Mosh {
   export interface DirectThread { id: ThreadId; protocol?: string; userIds: MemberId[]; topicKey?: string; topic: string | null; createdAt: number; archivedAt: number | null; }
   /** From matterhorn.core direct messages. */
   export interface DirectMessage { id: MessageId; protocol?: string; threadId: ThreadId; userIds?: MemberId[]; topicKey?: string; authorId: MemberId; body: string; reactions: Reactions; embeds: MessageEmbed[]; replyToId?: MessageId | null; pinnedAt?: number | null; pinnedBy?: MemberId | null; editedAt?: number | null; deletedAt?: number | null; deletedBy?: MemberId | null; createdAt: number; encrypted?: boolean; }
+  export interface RoomPresence { memberId?: MemberId; status?: string; activity?: string; updatedAt?: number; lastPingAt?: number; visible?: boolean; avatar?: string; avatarUrl?: string; profileImageUrl?: string; }
   export interface Actor { memberId: MemberId; deviceId: string; role: Role | (string & {}); displayName?: string; avatar?: string; avatarUrl?: string; profileImageUrl?: string; }
   export interface Activity { id: string; operationId?: string; actorId?: MemberId; actorName?: string; message: string; createdAt?: number; }
+  /**
+   * From primary model collection `access`.
+   */
+  export interface Acces {
+    "channel:guest": { canEdit: boolean; canView: boolean; role: string; scopeId: string; scopeType: string };
+  }
   /**
    * From primary model collection `callRoutes`.
    */
@@ -150,6 +153,8 @@ export namespace Mosh {
     pinnedBy: MemberId | null;
     reactions: Reactions;
     replyToId: MessageId | null;
+    scopeId: string;
+    scopeType: string;
   }
   /**
    * From primary model collection `publicInvites`.
@@ -173,7 +178,7 @@ export namespace Mosh {
     rank: number;
     systemRole: boolean;
   }
-  export interface State extends Omit<MatterhornRoomState, "members" | "presence"> {
+  export interface State {
     access: CoreAccessState;
     activity: Activity[];
     callRoutes: Record<string, CallRoute>;
@@ -185,9 +190,9 @@ export namespace Mosh {
     embeds: Record<EmbedId, Embed>;
     guests: Record<string, Guest>;
     joinRequests: Record<string, JoinRequest>;
-    members: Record<MemberId, Member>;
+    members: Record<string, Member>;
     messages: Record<MessageId, Message>;
-    presence: Record<MemberId, PresenceMember>;
+    presence: Record<string, RoomPresence>;
     publicInvites: PublicInvite[];
     reactions: Record<string, ScopedReaction>;
     roleDefinitions: Record<RoleId, RoleDefinition>;
@@ -309,7 +314,6 @@ export namespace Mosh {
      */
     messageUnpin: { messageId: MessageId };
     /**
-     * Requires `member` role.
      * body: string
      * threadId: string
      * scopeType: string
@@ -318,31 +322,26 @@ export namespace Mosh {
      */
     commentsAdd: { body: string; threadId?: ThreadId; parentId?: CommentId } & Partial<ScopeRef>;
     /**
-     * Requires `member` role.
      * commentId: string
      * reason: string
      */
     commentsDelete: { commentId: CommentId; reason?: string };
     /**
-     * Requires `member` role.
      * commentId: string
      * body: string
      */
     commentsEdit: { commentId: CommentId; body: string };
     /**
-     * Requires `member` role.
      * commentId: string
      * emoji: string
      */
     commentsReact: { commentId: CommentId; emoji: string };
     /**
-     * Requires `moderator` role.
      * threadId: string
      * resolved: string
      */
     commentsResolve: { threadId: ThreadId; resolved?: boolean };
     /**
-     * Requires `member` role.
      * scopeType: string
      * scopeId: string
      * title: string
@@ -367,28 +366,24 @@ export namespace Mosh {
      */
     presenceUpdate: { status: PresenceStatus; activity?: string; location?: string };
     /**
-     * Requires `moderator` role.
      * roomId: string, <= 200
      */
     mediaRoomArchive: { roomId: RoomId };
     /**
      * Requires `moderator` role.
      * name: string, <= 100
-     * allowsVideo: boolean
-     * group: string, <= 80, nullable, omit to leave unchanged; null to clear
      * scopeType: string, <= 80
      * scopeId: string, <= 160
-     * roleAccess: record
+     * allowsVideo: boolean
+     * group: string, <= 80, nullable, omit to leave unchanged; null to clear
      */
-    mediaRoomCreate: { name: string; allowsVideo?: boolean; group?: null | string; roleAccess?: RoomRoleAccess } & Partial<ScopeRef>;
+    mediaRoomCreate: { name: string; allowsVideo?: boolean; group?: null | string } & ScopeRef;
     /**
-     * Requires `member` role.
      * roomId: string, <= 200
      * media: object
      */
     mediaRoomJoin: { roomId: RoomId; media?: MediaFlags };
     /**
-     * Requires `member` role.
      * roomId: string, <= 200
      */
     mediaRoomLeave: { roomId: RoomId };
@@ -400,11 +395,9 @@ export namespace Mosh {
      * spotlightMemberId: string, <= 120
      * name: string, <= 100
      * group: string, <= 80, nullable, omit to leave unchanged; null to clear
-     * roleAccess: record
      */
-    mediaRoomUpdate: { roomId: RoomId; locked?: boolean; allowsVideo?: boolean; spotlightMemberId?: MemberId; name?: string; group?: null | string; roleAccess?: RoomRoleAccess };
+    mediaRoomUpdate: { roomId: RoomId; locked?: boolean; allowsVideo?: boolean; spotlightMemberId?: MemberId; name?: string; group?: null | string };
     /**
-     * Requires `member` role.
      * scopeType: string
      * scopeId: string
      * roomId: string
@@ -412,12 +405,10 @@ export namespace Mosh {
      */
     screenshareStart: { roomId?: RoomId; title?: string } & ScopeRef;
     /**
-     * Requires `member` role.
      * shareId: string
      */
     screenshareStop: { shareId: ShareId };
     /**
-     * Requires `member` role.
      * scopeType: string
      * scopeId: string
      * url: string
@@ -427,7 +418,6 @@ export namespace Mosh {
      */
     embedAdd: { url: string; title?: string; provider?: string; note?: string } & ScopeRef;
     /**
-     * Requires `member` role.
      * embedId: string
      */
     embedRemove: { embedId: EmbedId };
@@ -441,42 +431,68 @@ export namespace Mosh {
     /**
      * Requires `admin` role.
      * roleId: string, <= 120
+     * rules: array, <= 256
      * name: string, <= 120
-     * grants: array
      * description: string, <= 500, nullable, omit to leave unchanged; null to clear
      * color: string, <= 40, nullable, omit to leave unchanged; null to clear
-     * rank: number, >= 0, <= 100
-     * archivedAt: number, >= 0
-     * synthetic: boolean
-     * when: object
-     * gates: array
      * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
      */
-    roleCreate: { roleId: RoleId; name?: string; grants?: unknown[]; description?: null | string; color?: null | string; rank?: number; archivedAt?: number; synthetic?: boolean; when?: { [key: string]: unknown }; gates?: unknown[]; reason?: null | string };
+    roleCreate: { roleId: RoleId; rules: unknown[]; name?: string; description?: null | string; color?: null | string; reason?: null | string };
     /**
      * Requires `admin` role.
-     * target: string, <= 240
      * roleId: string, <= 120
-     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     * generation: number, >= 1
+     * revision: number, >= 1
+     * previousHash: string, <= 80
+     * rules: array, <= 256
+     * name: string, <= 120
+     * description: string, <= 500, nullable, omit to leave unchanged; null to clear
+     * color: string, <= 40, nullable, omit to leave unchanged; null to clear
      */
-    memberRoleAssign: { target: string; roleId: RoleId; reason?: null | string };
+    roleUpdate: { roleId: RoleId; generation: number; revision: number; previousHash: string; rules: unknown[]; name?: string; description?: null | string; color?: null | string };
     /**
      * Requires `admin` role.
-     * target: string, <= 240
+     * memberId: string, <= 240
      * roleId: string, <= 120
+     * generation: number, >= 1
+     * expiresAt: number, >= 0
      * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
      */
-    memberRoleUnassign: { target: string; roleId: RoleId; reason?: null | string };
+    memberRoleAssign: { memberId: MemberId; roleId: RoleId; generation: number; expiresAt?: number; reason?: null | string };
     /**
-     * Requires `moderator` role.
+     * Requires `admin` role.
+     * memberId: string, <= 240
+     * roleId: string, <= 120
+     * generation: number, >= 1
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    memberRoleUnassign: { memberId: MemberId; roleId: RoleId; generation: number; reason?: null | string };
+    /**
+     * Requires `admin` role.
+     * roleId: string, <= 120
+     * generation: number, >= 1
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    roleTombstone: { roleId: RoleId; generation: number; reason?: null | string };
+    /**
+     * Requires `admin` role.
+     * memberId: string, <= 240
      * scopeType: string, <= 80
      * scopeId: string, <= 180
-     * target: string, <= 240, nullable, omit to leave unchanged; null to clear
-     * role: enum
-     * defaultRole: enum
+     * level: enum
+     * allowOperations: array, <= 128
+     * denyOperations: array, <= 128
      * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
      */
-    scopeRoleSet: { target?: null | string; role?: "none" | "viewer" | "editor" | "moderator" | "admin" | "owner"; defaultRole?: "none" | "viewer" | "editor" | "moderator" | "admin" | "owner"; reason?: null | string } & ScopeRef;
+    scopeMemberOverrideSet: { memberId: MemberId; level: "none" | "viewer" | "editor" | "moderator" | "admin" | "owner"; allowOperations: unknown[]; denyOperations: unknown[]; reason?: null | string } & ScopeRef;
+    /**
+     * Requires `admin` role.
+     * memberId: string, <= 240
+     * scopeType: string, <= 80
+     * scopeId: string, <= 180
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    scopeMemberOverrideRemove: { memberId: MemberId; reason?: null | string } & ScopeRef;
     /**
      * Requires `admin` role.
      * memberId: string, <= 200
@@ -574,9 +590,12 @@ export namespace Mosh {
     embedRemove: "embed.remove";
     reactionToggle: "reaction.toggle";
     roleCreate: "access.role.define";
+    roleUpdate: "access.role.update";
     memberRoleAssign: "access.role.assign";
     memberRoleUnassign: "access.role.unassign";
-    scopeRoleSet: "scope.role.set";
+    roleTombstone: "access.role.tombstone";
+    scopeMemberOverrideSet: "scope.member.override.set";
+    scopeMemberOverrideRemove: "scope.member.override.remove";
     moderateMember: "member.moderate";
     updateMemberCall: "member.call.update";
     banMember: "member.ban";
