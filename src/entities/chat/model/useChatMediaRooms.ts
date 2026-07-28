@@ -36,6 +36,8 @@ function actorAvatar(actor: Actor) {
 export function useChatMediaRooms(input: Input) {
   const bridge = useMemo(() => mediaBridgeFromHost(input.live.media), [input.live.media]);
   const clientId = bridge?.clientId || input.live.actor.memberId;
+  const actorName = input.live.actor.displayName || input.live.actor.memberId;
+  const actorProfileAvatar = actorAvatar(input.live.actor);
   const [sfuState, setSfuState] = useState<SfuCallState>({ status: "unavailable", remoteStreams: [] });
   const [meshState, setMeshState] = useState<SfuCallState>({ status: "idle", remoteStreams: [] });
   const [voiceTokens, setVoiceTokens] = useState<MatterhornEphemeralToken[]>(() => bridge?.getEphemeralTokens?.().filter((token) => token.kind === "media-room.join") || []);
@@ -144,7 +146,7 @@ export function useChatMediaRooms(input: Input) {
     if (!bridge) {
       return undefined;
     }
-    const profile = { id: clientId, name: input.live.actor.displayName || input.live.actor.memberId, avatar: actorAvatar(input.live.actor) };
+    const profile = { id: clientId, name: actorName, avatar: actorProfileAvatar };
     const sfu = new SfuCallController({
       roomName: input.roomName,
       profile,
@@ -209,7 +211,7 @@ export function useChatMediaRooms(input: Input) {
       setMeshState({ status: "idle", remoteStreams: [] });
       setSfuState({ status: "unavailable", remoteStreams: [] });
     };
-  }, [bridge, clientId, input.live.actor, input.roomName]);
+  }, [actorName, actorProfileAvatar, bridge, clientId, input.roomName]);
 
   useEffect(() => {
     const nextTokens = () => bridge?.getEphemeralTokens?.().filter((token) => token.kind === "media-room.join") || [];

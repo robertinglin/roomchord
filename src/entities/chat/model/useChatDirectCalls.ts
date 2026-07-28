@@ -103,6 +103,7 @@ function removePeerCallListener(peer: unknown, handler: (call: PeerJsMediaConnec
 
 export function useChatDirectCalls(input: Input) {
   const bridge = useMemo(() => mediaBridgeFromHost(input.live.media), [input.live.media]);
+  const canPublishCallRoute = input.live.can("updateMemberCall");
   const actorMemberId = input.actor.memberId;
   const actorDisplayName = actorName(input.actor);
   const actorProfileAvatar = actorAvatar(input.actor);
@@ -185,7 +186,7 @@ export function useChatDirectCalls(input: Input) {
 
   const publishLocalCallRoute = useCallback(() => {
     const direct = directRef.current;
-    if (!bridge || !direct) return;
+    if (!bridge || !canPublishCallRoute || !direct) return;
     const peerId = bridge.getMediaPeer?.()?.id;
     if (!peerId) {
       return;
@@ -217,7 +218,7 @@ export function useChatDirectCalls(input: Input) {
       publishedKeyRef.current = "";
       setError(publishError instanceof Error ? publishError.message : "Could not publish call route.");
     });
-  }, [actorDisplayName, actorMemberId, actorProfileAvatar, bridge, clientId, input.live.actions, input.state]);
+  }, [actorDisplayName, actorMemberId, actorProfileAvatar, bridge, canPublishCallRoute, clientId, input.live.actions, input.state]);
 
   useEffect(() => {
     if (!bridge) return undefined;

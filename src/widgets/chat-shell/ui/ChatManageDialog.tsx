@@ -1,5 +1,6 @@
 import React from "react";
 import type { CallMediaSettings } from "matterhorn-sdk/browser/types";
+import type { MatterhornManagementSnapshot } from "matterhorn-sdk/browser/management";
 import { useChatRuntime } from "@entities/chat/model/chatRuntime";
 import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
 import { mediaWithVoicePreferences, type VoicePreferences } from "@entities/chat/model/localVoicePreferences";
@@ -12,6 +13,7 @@ export function ChatManageDialog() {
   const memberPreferences = useChatUiStore((value) => value.memberPreferences);
   const localMediaSettings = useChatUiStore((value) => value.localMediaSettings);
   const voicePreferences = useChatUiStore((value) => value.voicePreferences);
+  const [managementSnapshot, setManagementSnapshot] = React.useState<MatterhornManagementSnapshot>();
   const mediaBeforeSettings = React.useRef<CallMediaSettings | undefined>(undefined);
   const latestVoicePreferences = React.useRef(voicePreferences);
   const audioSettingsOpen = manageDialog?.tab === "audio";
@@ -52,6 +54,8 @@ export function ChatManageDialog() {
     latestVoicePreferences.current = voicePreferences;
   }, [voicePreferences]);
 
+  React.useEffect(() => live.management.subscribe(setManagementSnapshot), [live.management]);
+
   React.useEffect(() => {
     ui.setVoiceSettingsOpen(Boolean(audioSettingsOpen));
     if (!audioSettingsOpen || !activeVoiceRoom) {
@@ -81,6 +85,7 @@ export function ChatManageDialog() {
       roomName={roomName}
       canCreateChannels={view.actorCanCreateChannels}
       canManageMembers={view.actorCanManageMembers}
+      managementSnapshot={managementSnapshot}
       canManageRooms={view.actorCanManageRooms}
       canManageRoles={view.actorCanManageRoles}
       initialTab={manageDialog.tab}

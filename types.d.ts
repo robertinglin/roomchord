@@ -58,8 +58,10 @@ export namespace Mosh {
 
   /** From matterhorn.core direct messages. */
   export interface DirectThread { id: ThreadId; protocol?: string; userIds: MemberId[]; topicKey?: string; topic: string | null; createdAt: number; archivedAt: number | null; }
-  /** From matterhorn.core direct messages. */
-  export interface DirectMessage { id: MessageId; protocol?: string; threadId: ThreadId; userIds?: MemberId[]; topicKey?: string; authorId: MemberId; body: string; reactions: Reactions; embeds: MessageEmbed[]; replyToId?: MessageId | null; pinnedAt?: number | null; pinnedBy?: MemberId | null; editedAt?: number | null; deletedAt?: number | null; deletedBy?: MemberId | null; createdAt: number; encrypted?: boolean; }
+  /** Raw encrypted state shape from matterhorn.core direct messages. */
+  export interface DirectMessageRecord { id: MessageId; protocol?: string; threadId?: ThreadId; userIds?: MemberId[]; topicKey?: string; authorId?: MemberId; body?: string; reactions?: Reactions; embeds?: MessageEmbed[]; replyToId?: MessageId | null; pinnedAt?: number | null; pinnedBy?: MemberId | null; editedAt?: number | null; deletedAt?: number | null; deletedBy?: MemberId | null; createdAt?: number; encrypted?: boolean; giftWraps?: Record<string, unknown>; }
+  /** Resolved frontend message from matterhorn.core direct messages. */
+  export interface DirectMessage extends DirectMessageRecord { threadId: ThreadId; authorId: MemberId; body: string; reactions: Reactions; embeds: MessageEmbed[]; createdAt: number; encrypted?: false; }
   export interface RoomPresence { memberId?: MemberId; status?: string; activity?: string; updatedAt?: number; lastPingAt?: number; visible?: boolean; avatar?: string; avatarUrl?: string; profileImageUrl?: string; }
   export interface Actor { memberId: MemberId; deviceId: string; role: Role | (string & {}); displayName?: string; avatar?: string; avatarUrl?: string; profileImageUrl?: string; }
   export interface Activity { id: string; operationId?: string; actorId?: MemberId; actorName?: string; message: string; createdAt?: number; }
@@ -67,6 +69,7 @@ export namespace Mosh {
    * From primary model collection `access`.
    */
   export interface Acces {
+    "channel:general": { canEdit: boolean; canView: boolean; role: string; scopeId: string; scopeType: string };
     "channel:guest": { canEdit: boolean; canView: boolean; role: string; scopeId: string; scopeType: string };
   }
   /**
@@ -199,7 +202,7 @@ export namespace Mosh {
     rooms: MediaRoom[];
     screenShares: Record<ShareId, ScreenShare>;
   }
-  export interface DirectMessageThread { thread: DirectThread; messages: DirectMessage[]; }
+  export interface DirectMessageThread { thread: DirectThread; messages: DirectMessage[]; readTag?: ReadTagRecord; unreadCount?: number; firstUnreadMessageId?: MessageId; }
   export interface Actions {
     /**
      * Requires `moderator` role.
@@ -436,8 +439,9 @@ export namespace Mosh {
      * description: string, <= 500, nullable, omit to leave unchanged; null to clear
      * color: string, <= 40, nullable, omit to leave unchanged; null to clear
      * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     * disabledAt: number, >= 0, nullable, omit to leave unchanged; null to clear
      */
-    roleCreate: { roleId: RoleId; rules: unknown[]; name?: string; description?: null | string; color?: null | string; reason?: null | string };
+    roleCreate: { roleId: RoleId; rules: unknown[]; name?: string; description?: null | string; color?: null | string; reason?: null | string; disabledAt?: null | number };
     /**
      * Requires `admin` role.
      * roleId: string, <= 120
@@ -448,8 +452,9 @@ export namespace Mosh {
      * name: string, <= 120
      * description: string, <= 500, nullable, omit to leave unchanged; null to clear
      * color: string, <= 40, nullable, omit to leave unchanged; null to clear
+     * disabledAt: number, >= 0, nullable, omit to leave unchanged; null to clear
      */
-    roleUpdate: { roleId: RoleId; generation: number; revision: number; previousHash: string; rules: unknown[]; name?: string; description?: null | string; color?: null | string };
+    roleUpdate: { roleId: RoleId; generation: number; revision: number; previousHash: string; rules: unknown[]; name?: string; description?: null | string; color?: null | string; disabledAt?: null | number };
     /**
      * Requires `admin` role.
      * memberId: string, <= 240
@@ -493,6 +498,10 @@ export namespace Mosh {
      * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
      */
     scopeMemberOverrideRemove: { memberId: MemberId; reason?: null | string } & ScopeRef;
+    /**
+     * Requires `admin` role.
+     */
+    scopeRoleSet: { [key: string]: unknown };
     /**
      * Requires `admin` role.
      * memberId: string, <= 200
@@ -596,6 +605,7 @@ export namespace Mosh {
     roleTombstone: "access.role.tombstone";
     scopeMemberOverrideSet: "scope.member.override.set";
     scopeMemberOverrideRemove: "scope.member.override.remove";
+    scopeRoleSet: "scope.role.set";
     moderateMember: "member.moderate";
     updateMemberCall: "member.call.update";
     banMember: "member.ban";

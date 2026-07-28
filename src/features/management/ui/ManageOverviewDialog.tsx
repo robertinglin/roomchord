@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { Actor, Channel, ChatState, MediaRoom } from "@entities/chat/model/types";
+import type { MatterhornManagementSnapshot } from "matterhorn-sdk/browser/management";
 import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import { activeRoles, memberOptions } from "@entities/chat/model/roles";
 import { joinRequestsForState } from "@entities/chat/model/state";
@@ -26,6 +27,7 @@ type Props = {
   canManageRooms: boolean;
   canManageRoles: boolean;
   canManageMembers: boolean;
+  managementSnapshot?: MatterhornManagementSnapshot;
   initialTab?: ManagementTab;
   initialMemberId?: string;
   memberPreferences: Record<string, MemberPreference>;
@@ -41,7 +43,7 @@ type Props = {
   onCreateRole: (input: RoleInput) => void;
   onUpdateRole: (roleId: string, input: RoleUpdateInput) => void;
   onArchiveRole: (roleId: string) => void;
-  onAssignMemberRoles: (memberId: string, roleIds: string[], displayName?: string) => void;
+  onAssignMemberRoles: (memberId: string, roleIds: string[], displayName?: string) => Promise<void>;
   onApproveJoinRequest: (requestId: string) => void;
   onBanMember: (memberId: string) => void;
   onDenyJoinRequest: (requestId: string) => void;
@@ -84,6 +86,8 @@ function activeRooms(rooms: MediaRoom[]) {
   return rooms.filter((room) => !room.archivedAt);
 }
 
+const SYSTEM_ROLE_IDS = new Set(["guest", "member", "moderator", "admin", "owner"]);
+
 function tabDescription(tab: ManagementTab) {
   if (tab === "channels") return "Create text channels and manage existing ones.";
   if (tab === "voice") return "Create voice rooms and set who can see them.";
@@ -119,6 +123,7 @@ export function ManageOverviewDialog({
   canManageRooms,
   canManageRoles,
   canManageMembers,
+  managementSnapshot,
   initialTab,
   initialMemberId,
   memberPreferences,
@@ -151,7 +156,23 @@ export function ManageOverviewDialog({
   const roles = useMemo(() => activeRoles(state), [state]);
   const channels = useMemo(() => activeChannels(state.channels || []), [state.channels]);
   const rooms = useMemo(() => activeRooms(state.rooms || []), [state.rooms]);
-  const members = useMemo(() => memberOptions(actor, state.members || {}, state.presence || {}, state, memberPreferences), [actor, memberPreferences, state]);
+  const members = useMemo(() => {
+    const visibleMembers = memberOptions(actor, state.members || {}, state.presence || {}, state, memberPreferences);
+    const byMemberId = new Map(visibleMembers.map((member) => [member.id, member]));
+    for (const authorityMember of managementSnapshot?.members || []) {
+      const current = byMemberId.get(authorityMember.memberId);
+      const customRoleIds = (current?.roleIds || []).filter((roleId) => !SYSTEM_ROLE_IDS.has(roleId));
+      byMemberId.set(authorityMember.memberId, {
+        id: authorityMember.memberId,
+        name: current?.name || authorityMember.username || authorityMember.memberId,
+        roleIds: [...new Set([...authorityMember.roleIds, ...customRoleIds])],
+        ...(current?.baseRole ? { baseRole: current.baseRole } : {}),
+        ...(current?.avatar ? { avatar: current.avatar } : {}),
+        status: current?.status || authorityMember.status
+      });
+    }
+    return [...byMemberId.values()].sort((left, right) => left.name.localeCompare(right.name));
+  }, [actor, managementSnapshot, memberPreferences, state]);
   const pendingAdminCount = useMemo(() => joinRequestsForState(state).filter((request) => request.status === "pending").length, [state]);
   const canManageAnything = canCreateChannels || canManageRooms || canManageRoles || canManageMembers;
   const tabs = useMemo(() => allowedTabs({
@@ -332,6 +353,7 @@ export function ManageOverviewDialog({
               <ManageAdminTab
                 actor={actor}
                 canManageMembers={canManageMembers}
+                managementSnapshot={managementSnapshot}
                 state={state}
                 onApproveJoinRequest={onApproveJoinRequest}
                 onBanMember={onBanMember}

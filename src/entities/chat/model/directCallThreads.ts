@@ -37,12 +37,17 @@ export function directCallMatchesThread(thread: DirectThread, currentUserId: str
 export function directCallPresenceLabel(status: DirectCallState["status"], held = false) {
   if (held) return "On hold";
   if (status === "incoming") return "Incoming call";
-  if (status === "outgoing") return "Calling";
-  if (status === "connecting") return "Connecting";
+  if (status === "outgoing" || status === "contacting" || status === "ringing") return "Calling";
+  if (status === "answering" || status === "connecting") return "Connecting";
   if (status === "connected") return "In call";
   return "";
 }
 
 export function directCallCanRenderRoom(status: DirectCallState["status"]) {
-  return status === "outgoing" || status === "connecting" || status === "connected";
+  return status === "outgoing"
+    || status === "contacting"
+    || status === "ringing"
+    || status === "answering"
+    || status === "connecting"
+    || status === "connected";
 }

@@ -5,8 +5,9 @@ import userEvent from "@testing-library/user-event";
 import { installMatterhornAppScope, resetMatterhornForTests } from "matterhorn-sdk/client";
 import { MeshRoomCallController } from "matterhorn-sdk/browser/meshRoomCalls";
 import { SfuCallController } from "matterhorn-sdk/browser/sfuCalls";
+import { loadCallIdentityForProfile, signBoundCallSignal } from "matterhorn-sdk/browser/callIdentity";
 import { markMediaTrackRole } from "matterhorn-sdk/browser/mediaCapture";
-import { getDirectMessageThreads } from "matterhorn-sdk/browser/directMessages";
+import { getDirectMessageThreads, getResolvedDirectMessageThreads } from "matterhorn-sdk/browser/directMessages";
 import { ChatApp } from "@pages/chat/ui/ChatPage";
 import { MarkdownMessage } from "@features/messages/ui/MarkdownMessage";
 import { UserControls } from "@features/user-controls/ui/UserControls";
@@ -124,6 +125,60 @@ const testAppMetadata = {
     ]
   }
 };
+
+let callSignalSequence = 0;
+
+function boundCallSignal(sourceClientId: string, targetClientId: string, signal: any) {
+  const identity = loadCallIdentityForProfile({ roomName: "chat", profile: { id: sourceClientId } });
+  const createdAt = Date.now();
+  const sourceClaim = {
+    kind: "matterhorn.member-key-claim",
+    type: "matterhorn/member-key/v1",
+    version: 1,
+    scheme: "matterhorn.device-signing.v1",
+    alg: "nostr-secp256k1",
+    roomId: "chat",
+    roomName: "chat",
+    memberId: sourceClientId,
+    deviceId: `device-${sourceClientId}`,
+    keyId: `key-${sourceClientId}`,
+    rootPublicKey: "1".repeat(64),
+    publicKey: "2".repeat(64),
+    callPublicKey: identity.pubkey,
+    publicKeyFingerprint: `sha256:${"3".repeat(64)}`,
+    encryptionAlg: "x25519",
+    encryptionKeyId: `encryption-${sourceClientId}`,
+    encryptionPublicKey: `encryption-public-${sourceClientId}`,
+    createdAt,
+    rootProof: { alg: "nostr-secp256k1", eventId: "4".repeat(64), sig: "5".repeat(128), createdAt: Math.floor(createdAt / 1000) },
+    proof: { alg: "nostr-secp256k1", eventId: "6".repeat(64), sig: "7".repeat(128), createdAt: Math.floor(createdAt / 1000) }
+  } as const;
+  const envelope = {
+    signalingVersion: 2 as const,
+    signalId: (++callSignalSequence).toString(16).padStart(32, "0"),
+    sourceDeviceId: sourceClaim.deviceId,
+    targetClientId,
+    createdAt,
+    expiresAt: createdAt + 45_000
+  };
+  return {
+    type: "client/peer-signal",
+    protocol: 1,
+    roomName: "chat",
+    sourceClientId,
+    ...envelope,
+    signal,
+    sourceClaim,
+    auth: signBoundCallSignal({
+      ...envelope,
+      roomName: "chat",
+      sourceClientId,
+      sourceClaim,
+      signal,
+      identity
+    })
+  };
+}
 
 function installTestMatterhornScope(
   initialState: ChatState = state,
@@ -335,8 +390,14 @@ describe("ChatApp", () => {
     expect(directCallCanRenderRoom("idle")).toBe(false);
     expect(directCallCanRenderRoom("incoming")).toBe(false);
     expect(directCallCanRenderRoom("outgoing")).toBe(true);
+    expect(directCallCanRenderRoom("contacting")).toBe(true);
+    expect(directCallCanRenderRoom("ringing")).toBe(true);
+    expect(directCallCanRenderRoom("answering")).toBe(true);
     expect(directCallCanRenderRoom("connecting")).toBe(true);
     expect(directCallCanRenderRoom("connected")).toBe(true);
+    expect(directCallPresenceLabel("contacting")).toBe("Calling");
+    expect(directCallPresenceLabel("ringing")).toBe("Calling");
+    expect(directCallPresenceLabel("answering")).toBe("Connecting");
     expect(directCallPresenceLabel("connected", true)).toBe("On hold");
   });
 
@@ -355,6 +416,21 @@ describe("ChatApp", () => {
 
     expect(getDirectMessageThreads(dmState).map((group) => group.thread.id)).toEqual(["dm_alice__lee"]);
     expect(getDirectMessageThreads(dmState, /^groups\./).map((group) => group.thread.id)).toEqual(["dm_groups_launch"]);
+  });
+
+  it("does not send metadata-only direct messages to the message renderer", async () => {
+    const malformedState = {
+      ...state,
+      directMessages: {
+        pending: { id: "pending", threadId: "dm_alice__lee", authorId: "lee", createdAt: 3 }
+      }
+    } as ChatState;
+    expect(getResolvedDirectMessageThreads(malformedState as any)).toEqual([]);
+    installTestMatterhornScope(malformedState);
+
+    expect(() => render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />)).not.toThrow();
+    expect(await screen.findByRole("button", { name: "#general" })).toBeInTheDocument();
+    expect(screen.queryByText("pending")).not.toBeInTheDocument();
   });
 
   it("renders a real backend-connected team chat surface", async () => {
@@ -670,35 +746,45 @@ describe("ChatApp", () => {
   });
 
   it("uses launcher direct groups for persisted direct-message read cursors", async () => {
-    const rawState = { ...state, directThreads: {}, directMessages: {} };
+    const rawState = { ...state };
     const thread = state.directThreads.dm_alice__lee;
     const message = state.directMessages.dm_msg_1;
+    const getDMs = vi.fn(() => [{ thread, messages: [message], unreadCount: 1, firstUnreadMessageId: message.id }]);
     window.localStorage.setItem("matterhorn:notification-read-state", JSON.stringify({
-      kind: "matterhorn.notification-read-state.v1",
       version: 1,
-      userId: "alice",
-      rooms: {
-        chat: {
-          kind: "matterhorn.notification-read-cursors.v1",
-          roomName: "chat",
-          updatedAt: 2,
-          cursors: {
-            "direct.thread:dm_alice__lee": {
-              scopeKey: "direct.thread:dm_alice__lee",
-              cursor: { createdAt: 2, operationId: "dm_msg_1" },
-              readAt: 2,
-              source: "manual"
+      kind: "personal-state",
+      value: {
+        kind: "matterhorn.notification-read-state.v1",
+        version: 1,
+        userId: "alice",
+        updatedAt: 2,
+        rooms: {
+          chat: {
+            kind: "matterhorn.notification-read-cursors.v1",
+            version: 1,
+            roomName: "chat",
+            updatedAt: 2,
+            cursors: {
+              "direct.thread:dm_alice__lee": {
+                topic: "direct.thread:dm_alice__lee",
+                roomName: "chat",
+                scopeKey: "direct.thread:dm_alice__lee",
+                cursor: { createdAt: 2, operationId: "dm_msg_1" },
+                readAt: 2,
+                source: "manual"
+              }
             }
           }
         }
       }
     }));
     installTestMatterhornScope(rawState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: rawState, operation })), {
-      getDMs: () => [{ thread, messages: [message], unreadCount: 1, firstUnreadMessageId: message.id }]
+      getDMs
     });
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
 
+    await waitFor(() => expect(getDMs).toHaveBeenCalled());
     expect(await screen.findByRole("button", { name: "Lee" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Lee, 1 unread DM" })).not.toBeInTheDocument();
   });
@@ -770,6 +856,10 @@ describe("ChatApp", () => {
         ...state.members,
         banned: { id: "banned", memberId: "banned", displayName: "Banned User", role: "member" }
       },
+      presence: {
+        ...state.presence,
+        guest: { memberId: "guest", name: "Presence Guest", status: "online", activity: "guest", updatedAt: 2 }
+      },
       publicInvites: [
         { id: "invite_active", status: "active" },
         { id: "invite_disabled", status: "disabled" }
@@ -786,6 +876,7 @@ describe("ChatApp", () => {
 
     const leeRow = within(manageDialog).getAllByTestId("admin-member-row").find((row) => within(row).queryByText("Lee"));
     const bannedRow = within(manageDialog).getAllByTestId("admin-member-row").find((row) => within(row).queryByText("Banned User"));
+    expect(within(manageDialog).getByText("Presence Guest", { exact: true })).toBeInTheDocument();
     if (!leeRow || !bannedRow) throw new Error("Expected admin member rows");
 
     await user.click(within(leeRow).getByRole("button", { name: "Mute chat" }));
@@ -1491,7 +1582,7 @@ describe("ChatApp", () => {
       getPeer: () => alicePeer as any,
       getPeerAddress: () => "peerjs:peer-alice",
       sendSignal(targetClientId, targetPeerId, signal, auth) {
-        sentToBob.push({ type: "client/peer-signal", roomName: "chat", targetClientId, targetPeerId, sourceClientId: "alice", sourcePeerId: "peer-alice", signal, auth });
+        sentToBob.push(boundCallSignal("alice", targetClientId, signal));
         return true;
       },
       onError: vi.fn()
@@ -1503,7 +1594,7 @@ describe("ChatApp", () => {
       getPeer: () => bobPeer as any,
       getPeerAddress: () => "peerjs:peer-bob",
       sendSignal(targetClientId, targetPeerId, signal, auth) {
-        sentFromBob.push({ type: "client/peer-signal", roomName: "chat", targetClientId, targetPeerId, sourceClientId: "bob", sourcePeerId: "peer-bob", signal, auth });
+        sentFromBob.push(boundCallSignal("bob", targetClientId, signal));
         return true;
       },
       onState(state) {
@@ -1622,7 +1713,7 @@ describe("ChatApp", () => {
       getPeer: () => alicePeer as any,
       getPeerAddress: () => "peerjs:peer-alice",
       sendSignal(targetClientId, targetPeerId, signal, auth) {
-        sentToBob.push({ type: "client/peer-signal", roomName: "chat", targetClientId, targetPeerId, sourceClientId: "alice", sourcePeerId: "peer-alice", signal, auth });
+        sentToBob.push(boundCallSignal("alice", targetClientId, signal));
         return true;
       },
       onError: vi.fn()
@@ -1633,7 +1724,7 @@ describe("ChatApp", () => {
       getPeer: () => bobPeer as any,
       getPeerAddress: () => "peerjs:peer-bob",
       sendSignal(targetClientId, targetPeerId, signal, auth) {
-        sentFromBob.push({ type: "client/peer-signal", roomName: "chat", targetClientId, targetPeerId, sourceClientId: "bob", sourcePeerId: "peer-bob", signal, auth });
+        sentFromBob.push(boundCallSignal("bob", targetClientId, signal));
         return true;
       },
       onState(state) {
@@ -1682,7 +1773,7 @@ describe("ChatApp", () => {
       getPeer: () => alicePeer as any,
       getPeerAddress: () => "peerjs:peer-alice",
       sendSignal(targetClientId, targetPeerId, signal, auth) {
-        sentToBob.push({ type: "client/peer-signal", roomName: "chat", targetClientId, targetPeerId, sourceClientId: "alice", sourcePeerId: "peer-alice", signal, auth });
+        sentToBob.push(boundCallSignal("alice", targetClientId, signal));
         return true;
       },
       onError: vi.fn()
@@ -1693,7 +1784,7 @@ describe("ChatApp", () => {
       getPeer: () => bobPeer as any,
       getPeerAddress: () => "peerjs:peer-bob",
       sendSignal(targetClientId, targetPeerId, signal, auth) {
-        sentFromBob.push({ type: "client/peer-signal", roomName: "chat", targetClientId, targetPeerId, sourceClientId: "bob", sourcePeerId: "peer-bob", signal, auth });
+        sentFromBob.push(boundCallSignal("bob", targetClientId, signal));
         return true;
       },
       onError: vi.fn()
@@ -1829,7 +1920,7 @@ describe("ChatApp", () => {
     await user.click(await screen.findByRole("button", { name: "More actions for message from Mina" }));
     const menu = screen.getByRole("menu");
     expect(within(menu).queryByRole("menuitem", { name: "Edit" })).not.toBeInTheDocument();
-    expect(within(menu).getByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Delete Message" })).toBeInTheDocument();
   });
 
   it("lets member authors edit and delete their own messages in the menu", async () => {
@@ -1844,7 +1935,7 @@ describe("ChatApp", () => {
     await user.click(await screen.findByRole("button", { name: "More actions for message from Alice" }));
     const menu = screen.getByRole("menu");
     expect(within(menu).getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
-    expect(within(menu).getByRole("menuitem", { name: "Delete" })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Delete Message" })).toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: "Pin Message⌖" })).toBeDisabled();
   });
 
@@ -1872,7 +1963,7 @@ describe("ChatApp", () => {
     expect(rows[2]).toHaveTextContent("Later update");
 
     await user.click(within(rows[0]).getByRole("button", { name: "More actions for message from Mina" }));
-    await user.click(within(rows[0]).getByRole("menuitem", { name: "Unpin" }));
+    await user.click(within(rows[0]).getByRole("menuitem", { name: "Unpin Message" }));
 
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toMatchObject({ type: "messageUnpin", schemaAction: "messageUnpin", payload: { messageId: "m1" } });
@@ -2025,6 +2116,7 @@ describe("ChatApp", () => {
 
     await waitFor(() => expect(sent.some((op) => op.schemaAction === "messageReact" && op.payload.emoji === "😂")).toBe(true));
     expect(JSON.parse(window.localStorage.getItem("matterhorn:mosh:recent-reactions:v1") || "[]")).toEqual(["👍", "😂", "❤️"]);
+    expect(screen.getByRole("button", { name: "Reply to message from Mina" }).closest(".msg-actions")).toHaveStyle({ opacity: "1", pointerEvents: "auto" });
   });
 
   it("forwards messages to other channels and direct messages", async () => {
@@ -2639,6 +2731,22 @@ describe("ChatApp", () => {
       memberRoles: { lee: { memberId: "lee", roleIds: [] } },
       roleDefinitions: {
         launch: { id: "launch", name: "Launch Lead", description: "Launch coordination", color: "#38bdf8", rank: 1, grants: [{ scopeType: "*", scopeId: "*", role: "viewer" }] }
+      },
+      scopedRoles: {
+        roles: {
+          launch: {
+            roleId: "launch",
+            generation: 1,
+            revision: 1,
+            definitionHash: "sha256:launch",
+            name: "Launch Lead",
+            description: "Launch coordination",
+            color: "#38bdf8",
+            rules: []
+          }
+        },
+        assignments: {},
+        memberOverrides: {}
       }
     };
     renderChat(vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: roleState, operation }; }), roleState);
@@ -2652,7 +2760,52 @@ describe("ChatApp", () => {
     await user.click(within(manageDialog).getByRole("button", { name: "Save roles" }));
 
     await waitFor(() => expect(sent.some((operation) => operation.schemaAction === "memberRoleAssign" && operation.payload.roleId === "launch")).toBe(true));
-    expect(sent.find((operation) => operation.schemaAction === "memberRoleAssign" && operation.payload.roleId === "launch")).toMatchObject({ payload: { target: "lee", roleId: "launch" } });
+    expect(sent.find((operation) => operation.schemaAction === "memberRoleAssign" && operation.payload.roleId === "launch")).toMatchObject({ payload: { memberId: "lee", roleId: "launch", generation: 1 } });
+  });
+
+  it("assigns system roles through the signed room authority API", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const roleState: ChatState = {
+      ...state,
+      roleDefinitions: {
+        moderator: {
+          id: "moderator",
+          name: "Moderator",
+          description: "Room moderator",
+          color: "#f59e0b",
+          rank: 2,
+          systemRole: true,
+          grants: []
+        }
+      }
+    };
+    const setMemberRoles = vi.fn(async (memberId: string, roleIds: string[]) => ({
+      memberId,
+      roleIds
+    }));
+    const sent: any[] = [];
+    renderChat(
+      vi.fn(async (operation) => {
+        sent.push(operation);
+        return { ok: true, state: roleState, operation };
+      }),
+      roleState,
+      { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" },
+      { management: { setMemberRoles } }
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Manage" }));
+    const manageDialog = await screen.findByRole("dialog", { name: "Manage" });
+    await user.click(within(manageDialog).getByRole("button", { name: /^Members/ }));
+    const leeRow = within(manageDialog).getAllByTestId("manage-member-row")
+      .find((row) => row.textContent?.includes("Lee"));
+    expect(leeRow).toBeTruthy();
+    await user.click(leeRow!);
+    await user.click(within(manageDialog).getAllByRole("checkbox", { name: "Moderator role tag" })[0]);
+    await user.click(within(manageDialog).getByRole("button", { name: "Save roles" }));
+
+    await waitFor(() => expect(setMemberRoles).toHaveBeenCalledWith("lee", ["moderator"]));
+    expect(sent).toHaveLength(0);
   });
 
   it("renders presence when member role ids arrive as unresolved expression wrappers", async () => {

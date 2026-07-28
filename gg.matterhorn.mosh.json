@@ -9,6 +9,7 @@
     "id": "gg.matterhorn.mosh",
     "name": "Mosh",
     "version": "1.0.0",
+    "protocolHash": "sha256-c59d2c7cfb128b442149e63908a20e5628b6b932234c3b828b6b743c29c5cd2a",
     "publisher": {
       "id": "gg.matterhorn.schema",
       "name": "Matterhorn Schema Builder",
@@ -17,14 +18,14 @@
     "matterhornVersion": "^0.1.4",
     "hostPack": {
       "url": "workspace:matterhorn-mosh#hostPack",
-      "integrity": "sha256-48df3a303ad6bfdc254ad3c8b3ecd7eee95153eb86c124173a2e512dea1776dc"
+      "integrity": "sha256-36156af55ea88acfe7b3ce1f239b2ee38ed086b85041f5171eb6df6e2b04efd1"
     },
     "playerPacks": [
       {
         "id": "gg.matterhorn.mosh.player",
         "name": "Mosh Player",
         "url": "workspace:matterhorn-mosh#playerPack",
-        "integrity": "sha256-0ec6d3393765a9326ff7d8b1c9bda8eb1a7448850614f5c7930fb32f6e58de59",
+        "integrity": "sha256-539181c1ca1e3e4d3a7f0ccb985938cd949b6b42f581529d1e6d28bb8ffd0fbf",
         "recommendedFor": {
           "devices": [
             "desktop",
@@ -38,11 +39,10 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-581203128b17ce494481e48e4debeb128167dc955b4ef6f277c166fa3b67dfc8",
       "operationSchemaHash": "sha256-30dcc354892a41e840017ed551b928fc0c4b1177971cf728a33f60cc3792504f",
-      "stateSchemaHash": "sha256-6ede487e05cab425a518f26a4af7ee7ac525488af75a2b3d7e11dde69cb08480",
-      "pluginGraphHash": "sha256-c8b05647734e50cecd7620d3104e281ce5e928136f73cdec6a33098f1ce71ed1",
-      "compositionSchemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
+      "stateSchemaHash": "sha256-53f3bdd298e2c5383b7c232af51b621e68f6cfeef2a2f01b1f72e2ac10936485",
+      "pluginGraphHash": "sha256-3065b51b8707d5e244860ac2b49239d03362ca6695c68573817fe084541bdc1a",
+      "compositionSchemaHash": "sha256-c2d1caa613a9e2c76c82f60dd43bbdeca4365b1f0417911e7020ef2fc4828bc4"
     },
     "composition": {
       "kind": "matterhorn.app-composition.schema",
@@ -89,11 +89,37 @@
               "messages": {},
               "guests": {},
               "callRoutes": {},
-              "publicInvites": [],
+              "publicInvites": [
+                {
+                  "id": "admin",
+                  "role": "admin",
+                  "status": "active",
+                  "createdAt": 0
+                },
+                {
+                  "id": "member",
+                  "role": "member",
+                  "status": "active",
+                  "createdAt": 0
+                },
+                {
+                  "id": "guest",
+                  "role": "guest",
+                  "status": "active",
+                  "createdAt": 0
+                }
+              ],
               "joinRequests": {},
               "access": {
                 "version": 1,
                 "scopes": {
+                  "channel:general": {
+                    "scopeType": "channel",
+                    "scopeId": "general",
+                    "role": "editor",
+                    "canView": true,
+                    "canEdit": true
+                  },
                   "channel:guest": {
                     "scopeType": "channel",
                     "scopeId": "guest",
@@ -189,14 +215,8 @@
                   "idPrefix": "channel",
                   "fields": {
                     "name": "$payload.name",
-                    "topic": {
-                      "$expr": "$payload.topic",
-                      "fallback": null
-                    },
-                    "group": {
-                      "$expr": "$payload.group",
-                      "fallback": null
-                    },
+                    "topic": "$payload.topic",
+                    "group": "$payload.group",
                     "requiredRole": "member",
                     "scopeType": "channel",
                     "scopeId": "$id:channel",
@@ -388,10 +408,7 @@
                     "pinnedAt": null,
                     "pinnedBy": null,
                     "reactions": {},
-                    "embeds": {
-                      "$expr": "$payload.embeds",
-                      "fallback": []
-                    }
+                    "embeds": "$payload.embeds"
                   },
                   "activity": "created message"
                 }
@@ -878,10 +895,7 @@
                   "fields": {
                     "memberId": "$payload.memberId",
                     "bannedAt": "$createdAt",
-                    "banReason": {
-                      "$expr": "$payload.reason",
-                      "fallback": null
-                    },
+                    "banReason": "$payload.reason",
                     "chatDisabled": true,
                     "bannedBy": "$actor.memberId"
                   },
@@ -1774,7 +1788,8 @@
         {
           "name": "messageDelete",
           "plugin": "primary",
-          "type": "message.delete"
+          "type": "message.delete",
+          "requiredRole": "member"
         },
         {
           "name": "messageEdit",
@@ -1784,7 +1799,8 @@
         {
           "name": "messagePin",
           "plugin": "primary",
-          "type": "message.pin"
+          "type": "message.pin",
+          "requiredRole": "moderator"
         },
         {
           "name": "messageReact",
@@ -1804,7 +1820,8 @@
         {
           "name": "messageUnpin",
           "plugin": "primary",
-          "type": "message.unpin"
+          "type": "message.unpin",
+          "requiredRole": "moderator"
         },
         {
           "name": "commentsAdd",
@@ -2230,6 +2247,11 @@
                 "type": "string",
                 "max": 500,
                 "nullable": true
+              },
+              "disabledAt": {
+                "type": "number",
+                "min": 0,
+                "nullable": true
               }
             }
           },
@@ -2275,6 +2297,11 @@
               "color": {
                 "type": "string",
                 "max": 40,
+                "nullable": true
+              },
+              "disabledAt": {
+                "type": "number",
+                "min": 0,
                 "nullable": true
               }
             }
@@ -2443,6 +2470,12 @@
               }
             }
           },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeRoleSet",
+          "plugin": "core",
+          "type": "scope.role.set",
           "requiredRole": "admin"
         },
         {
@@ -2643,7 +2676,7 @@
           }
         }
       },
-      "schemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
+      "schemaHash": "sha256-c2d1caa613a9e2c76c82f60dd43bbdeca4365b1f0417911e7020ef2fc4828bc4"
     },
     "capabilities": {
       "required": [
@@ -2670,6 +2703,7 @@
     "id": "gg.matterhorn.mosh.host",
     "appPackId": "gg.matterhorn.mosh",
     "version": "1.0.0",
+    "protocolHash": "sha256-c59d2c7cfb128b442149e63908a20e5628b6b932234c3b828b6b743c29c5cd2a",
     "plugins": [
       {
         "id": "gg.matterhorn.mosh.plugin",
@@ -2715,8 +2749,7 @@
       }
     ],
     "compatibility": {
-      "appProtocolHash": "sha256-581203128b17ce494481e48e4debeb128167dc955b4ef6f277c166fa3b67dfc8",
-      "pluginGraphHash": "sha256-c8b05647734e50cecd7620d3104e281ce5e928136f73cdec6a33098f1ce71ed1"
+      "pluginGraphHash": "sha256-3065b51b8707d5e244860ac2b49239d03362ca6695c68573817fe084541bdc1a"
     },
     "runtime": {
       "minMatterhornVersion": "0.1.0",
@@ -2732,7 +2765,7 @@
       ]
     },
     "composition": {
-      "schemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54",
+      "schemaHash": "sha256-c2d1caa613a9e2c76c82f60dd43bbdeca4365b1f0417911e7020ef2fc4828bc4",
       "primaryPlugin": {
         "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
@@ -2770,11 +2803,37 @@
               "messages": {},
               "guests": {},
               "callRoutes": {},
-              "publicInvites": [],
+              "publicInvites": [
+                {
+                  "id": "admin",
+                  "role": "admin",
+                  "status": "active",
+                  "createdAt": 0
+                },
+                {
+                  "id": "member",
+                  "role": "member",
+                  "status": "active",
+                  "createdAt": 0
+                },
+                {
+                  "id": "guest",
+                  "role": "guest",
+                  "status": "active",
+                  "createdAt": 0
+                }
+              ],
               "joinRequests": {},
               "access": {
                 "version": 1,
                 "scopes": {
+                  "channel:general": {
+                    "scopeType": "channel",
+                    "scopeId": "general",
+                    "role": "editor",
+                    "canView": true,
+                    "canEdit": true
+                  },
                   "channel:guest": {
                     "scopeType": "channel",
                     "scopeId": "guest",
@@ -2870,14 +2929,8 @@
                   "idPrefix": "channel",
                   "fields": {
                     "name": "$payload.name",
-                    "topic": {
-                      "$expr": "$payload.topic",
-                      "fallback": null
-                    },
-                    "group": {
-                      "$expr": "$payload.group",
-                      "fallback": null
-                    },
+                    "topic": "$payload.topic",
+                    "group": "$payload.group",
                     "requiredRole": "member",
                     "scopeType": "channel",
                     "scopeId": "$id:channel",
@@ -3069,10 +3122,7 @@
                     "pinnedAt": null,
                     "pinnedBy": null,
                     "reactions": {},
-                    "embeds": {
-                      "$expr": "$payload.embeds",
-                      "fallback": []
-                    }
+                    "embeds": "$payload.embeds"
                   },
                   "activity": "created message"
                 }
@@ -3559,10 +3609,7 @@
                   "fields": {
                     "memberId": "$payload.memberId",
                     "bannedAt": "$createdAt",
-                    "banReason": {
-                      "$expr": "$payload.reason",
-                      "fallback": null
-                    },
+                    "banReason": "$payload.reason",
                     "chatDisabled": true,
                     "bannedBy": "$actor.memberId"
                   },
@@ -4456,7 +4503,8 @@
         {
           "name": "messageDelete",
           "plugin": "primary",
-          "type": "message.delete"
+          "type": "message.delete",
+          "requiredRole": "member"
         },
         {
           "name": "messageEdit",
@@ -4466,7 +4514,8 @@
         {
           "name": "messagePin",
           "plugin": "primary",
-          "type": "message.pin"
+          "type": "message.pin",
+          "requiredRole": "moderator"
         },
         {
           "name": "messageReact",
@@ -4486,7 +4535,8 @@
         {
           "name": "messageUnpin",
           "plugin": "primary",
-          "type": "message.unpin"
+          "type": "message.unpin",
+          "requiredRole": "moderator"
         },
         {
           "name": "commentsAdd",
@@ -4912,6 +4962,11 @@
                 "type": "string",
                 "max": 500,
                 "nullable": true
+              },
+              "disabledAt": {
+                "type": "number",
+                "min": 0,
+                "nullable": true
               }
             }
           },
@@ -4957,6 +5012,11 @@
               "color": {
                 "type": "string",
                 "max": 40,
+                "nullable": true
+              },
+              "disabledAt": {
+                "type": "number",
+                "min": 0,
                 "nullable": true
               }
             }
@@ -5125,6 +5185,12 @@
               }
             }
           },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeRoleSet",
+          "plugin": "core",
+          "type": "scope.role.set",
           "requiredRole": "admin"
         },
         {
@@ -5361,11 +5427,37 @@
                 "messages": {},
                 "guests": {},
                 "callRoutes": {},
-                "publicInvites": [],
+                "publicInvites": [
+                  {
+                    "id": "admin",
+                    "role": "admin",
+                    "status": "active",
+                    "createdAt": 0
+                  },
+                  {
+                    "id": "member",
+                    "role": "member",
+                    "status": "active",
+                    "createdAt": 0
+                  },
+                  {
+                    "id": "guest",
+                    "role": "guest",
+                    "status": "active",
+                    "createdAt": 0
+                  }
+                ],
                 "joinRequests": {},
                 "access": {
                   "version": 1,
                   "scopes": {
+                    "channel:general": {
+                      "scopeType": "channel",
+                      "scopeId": "general",
+                      "role": "editor",
+                      "canView": true,
+                      "canEdit": true
+                    },
                     "channel:guest": {
                       "scopeType": "channel",
                       "scopeId": "guest",
@@ -5461,14 +5553,8 @@
                     "idPrefix": "channel",
                     "fields": {
                       "name": "$payload.name",
-                      "topic": {
-                        "$expr": "$payload.topic",
-                        "fallback": null
-                      },
-                      "group": {
-                        "$expr": "$payload.group",
-                        "fallback": null
-                      },
+                      "topic": "$payload.topic",
+                      "group": "$payload.group",
                       "requiredRole": "member",
                       "scopeType": "channel",
                       "scopeId": "$id:channel",
@@ -5660,10 +5746,7 @@
                       "pinnedAt": null,
                       "pinnedBy": null,
                       "reactions": {},
-                      "embeds": {
-                        "$expr": "$payload.embeds",
-                        "fallback": []
-                      }
+                      "embeds": "$payload.embeds"
                     },
                     "activity": "created message"
                   }
@@ -6150,10 +6233,7 @@
                     "fields": {
                       "memberId": "$payload.memberId",
                       "bannedAt": "$createdAt",
-                      "banReason": {
-                        "$expr": "$payload.reason",
-                        "fallback": null
-                      },
+                      "banReason": "$payload.reason",
                       "chatDisabled": true,
                       "bannedBy": "$actor.memberId"
                     },
@@ -7046,7 +7126,8 @@
           {
             "name": "messageDelete",
             "plugin": "primary",
-            "type": "message.delete"
+            "type": "message.delete",
+            "requiredRole": "member"
           },
           {
             "name": "messageEdit",
@@ -7056,7 +7137,8 @@
           {
             "name": "messagePin",
             "plugin": "primary",
-            "type": "message.pin"
+            "type": "message.pin",
+            "requiredRole": "moderator"
           },
           {
             "name": "messageReact",
@@ -7076,7 +7158,8 @@
           {
             "name": "messageUnpin",
             "plugin": "primary",
-            "type": "message.unpin"
+            "type": "message.unpin",
+            "requiredRole": "moderator"
           },
           {
             "name": "commentsAdd",
@@ -7502,6 +7585,11 @@
                   "type": "string",
                   "max": 500,
                   "nullable": true
+                },
+                "disabledAt": {
+                  "type": "number",
+                  "min": 0,
+                  "nullable": true
                 }
               }
             },
@@ -7547,6 +7635,11 @@
                 "color": {
                   "type": "string",
                   "max": 40,
+                  "nullable": true
+                },
+                "disabledAt": {
+                  "type": "number",
+                  "min": 0,
                   "nullable": true
                 }
               }
@@ -7715,6 +7808,12 @@
                 }
               }
             },
+            "requiredRole": "admin"
+          },
+          {
+            "name": "scopeRoleSet",
+            "plugin": "core",
+            "type": "scope.role.set",
             "requiredRole": "admin"
           },
           {
@@ -7915,7 +8014,7 @@
             }
           }
         },
-        "schemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
+        "schemaHash": "sha256-c2d1caa613a9e2c76c82f60dd43bbdeca4365b1f0417911e7020ef2fc4828bc4"
       }
     },
     {
@@ -8021,7 +8120,7 @@
         {
           "appPackId": "gg.matterhorn.mosh",
           "appPackRange": "^1.0.0",
-          "appProtocolHash": "sha256-581203128b17ce494481e48e4debeb128167dc955b4ef6f277c166fa3b67dfc8",
+          "appProtocolHash": "sha256-c59d2c7cfb128b442149e63908a20e5628b6b932234c3b828b6b743c29c5cd2a",
           "pluginIds": [
             "gg.matterhorn.examples.plugins.comments",
             "gg.matterhorn.examples.plugins.embeds",
@@ -8031,7 +8130,7 @@
             "gg.matterhorn.examples.plugins.screen-share",
             "gg.matterhorn.mosh.plugin"
           ],
-          "compositionSchemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
+          "compositionSchemaHash": "sha256-c2d1caa613a9e2c76c82f60dd43bbdeca4365b1f0417911e7020ef2fc4828bc4"
         }
       ],
       "recommendedFor": {
@@ -8067,7 +8166,7 @@
       "acceptsPeerRelays": true
     },
     "frontendDelivery": {
-      "mode": "relay-chunks"
+      "mode": "repository"
     }
   },
   "frontend": {
@@ -8118,6 +8217,8 @@
     }
   },
   "matterhorn": {
+    "roomMode": "encrypted-event-v3-mls",
+    "operationFormat": "matterhorn.operation.v3",
     "frontendProjection": "chat"
   },
   "compositionSchema": {
@@ -8165,11 +8266,37 @@
             "messages": {},
             "guests": {},
             "callRoutes": {},
-            "publicInvites": [],
+            "publicInvites": [
+              {
+                "id": "admin",
+                "role": "admin",
+                "status": "active",
+                "createdAt": 0
+              },
+              {
+                "id": "member",
+                "role": "member",
+                "status": "active",
+                "createdAt": 0
+              },
+              {
+                "id": "guest",
+                "role": "guest",
+                "status": "active",
+                "createdAt": 0
+              }
+            ],
             "joinRequests": {},
             "access": {
               "version": 1,
               "scopes": {
+                "channel:general": {
+                  "scopeType": "channel",
+                  "scopeId": "general",
+                  "role": "editor",
+                  "canView": true,
+                  "canEdit": true
+                },
                 "channel:guest": {
                   "scopeType": "channel",
                   "scopeId": "guest",
@@ -8265,14 +8392,8 @@
                 "idPrefix": "channel",
                 "fields": {
                   "name": "$payload.name",
-                  "topic": {
-                    "$expr": "$payload.topic",
-                    "fallback": null
-                  },
-                  "group": {
-                    "$expr": "$payload.group",
-                    "fallback": null
-                  },
+                  "topic": "$payload.topic",
+                  "group": "$payload.group",
                   "requiredRole": "member",
                   "scopeType": "channel",
                   "scopeId": "$id:channel",
@@ -8464,10 +8585,7 @@
                   "pinnedAt": null,
                   "pinnedBy": null,
                   "reactions": {},
-                  "embeds": {
-                    "$expr": "$payload.embeds",
-                    "fallback": []
-                  }
+                  "embeds": "$payload.embeds"
                 },
                 "activity": "created message"
               }
@@ -8954,10 +9072,7 @@
                 "fields": {
                   "memberId": "$payload.memberId",
                   "bannedAt": "$createdAt",
-                  "banReason": {
-                    "$expr": "$payload.reason",
-                    "fallback": null
-                  },
+                  "banReason": "$payload.reason",
                   "chatDisabled": true,
                   "bannedBy": "$actor.memberId"
                 },
@@ -9850,7 +9965,8 @@
       {
         "name": "messageDelete",
         "plugin": "primary",
-        "type": "message.delete"
+        "type": "message.delete",
+        "requiredRole": "member"
       },
       {
         "name": "messageEdit",
@@ -9860,7 +9976,8 @@
       {
         "name": "messagePin",
         "plugin": "primary",
-        "type": "message.pin"
+        "type": "message.pin",
+        "requiredRole": "moderator"
       },
       {
         "name": "messageReact",
@@ -9880,7 +9997,8 @@
       {
         "name": "messageUnpin",
         "plugin": "primary",
-        "type": "message.unpin"
+        "type": "message.unpin",
+        "requiredRole": "moderator"
       },
       {
         "name": "commentsAdd",
@@ -10306,6 +10424,11 @@
               "type": "string",
               "max": 500,
               "nullable": true
+            },
+            "disabledAt": {
+              "type": "number",
+              "min": 0,
+              "nullable": true
             }
           }
         },
@@ -10351,6 +10474,11 @@
             "color": {
               "type": "string",
               "max": 40,
+              "nullable": true
+            },
+            "disabledAt": {
+              "type": "number",
+              "min": 0,
               "nullable": true
             }
           }
@@ -10519,6 +10647,12 @@
             }
           }
         },
+        "requiredRole": "admin"
+      },
+      {
+        "name": "scopeRoleSet",
+        "plugin": "core",
+        "type": "scope.role.set",
         "requiredRole": "admin"
       },
       {
@@ -10719,7 +10853,7 @@
         }
       }
     },
-    "schemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
+    "schemaHash": "sha256-c2d1caa613a9e2c76c82f60dd43bbdeca4365b1f0417911e7020ef2fc4828bc4"
   },
   "artifacts": {
     "composition": {
@@ -10767,11 +10901,37 @@
               "messages": {},
               "guests": {},
               "callRoutes": {},
-              "publicInvites": [],
+              "publicInvites": [
+                {
+                  "id": "admin",
+                  "role": "admin",
+                  "status": "active",
+                  "createdAt": 0
+                },
+                {
+                  "id": "member",
+                  "role": "member",
+                  "status": "active",
+                  "createdAt": 0
+                },
+                {
+                  "id": "guest",
+                  "role": "guest",
+                  "status": "active",
+                  "createdAt": 0
+                }
+              ],
               "joinRequests": {},
               "access": {
                 "version": 1,
                 "scopes": {
+                  "channel:general": {
+                    "scopeType": "channel",
+                    "scopeId": "general",
+                    "role": "editor",
+                    "canView": true,
+                    "canEdit": true
+                  },
                   "channel:guest": {
                     "scopeType": "channel",
                     "scopeId": "guest",
@@ -10867,14 +11027,8 @@
                   "idPrefix": "channel",
                   "fields": {
                     "name": "$payload.name",
-                    "topic": {
-                      "$expr": "$payload.topic",
-                      "fallback": null
-                    },
-                    "group": {
-                      "$expr": "$payload.group",
-                      "fallback": null
-                    },
+                    "topic": "$payload.topic",
+                    "group": "$payload.group",
                     "requiredRole": "member",
                     "scopeType": "channel",
                     "scopeId": "$id:channel",
@@ -11066,10 +11220,7 @@
                     "pinnedAt": null,
                     "pinnedBy": null,
                     "reactions": {},
-                    "embeds": {
-                      "$expr": "$payload.embeds",
-                      "fallback": []
-                    }
+                    "embeds": "$payload.embeds"
                   },
                   "activity": "created message"
                 }
@@ -11556,10 +11707,7 @@
                   "fields": {
                     "memberId": "$payload.memberId",
                     "bannedAt": "$createdAt",
-                    "banReason": {
-                      "$expr": "$payload.reason",
-                      "fallback": null
-                    },
+                    "banReason": "$payload.reason",
                     "chatDisabled": true,
                     "bannedBy": "$actor.memberId"
                   },
@@ -12452,7 +12600,8 @@
         {
           "name": "messageDelete",
           "plugin": "primary",
-          "type": "message.delete"
+          "type": "message.delete",
+          "requiredRole": "member"
         },
         {
           "name": "messageEdit",
@@ -12462,7 +12611,8 @@
         {
           "name": "messagePin",
           "plugin": "primary",
-          "type": "message.pin"
+          "type": "message.pin",
+          "requiredRole": "moderator"
         },
         {
           "name": "messageReact",
@@ -12482,7 +12632,8 @@
         {
           "name": "messageUnpin",
           "plugin": "primary",
-          "type": "message.unpin"
+          "type": "message.unpin",
+          "requiredRole": "moderator"
         },
         {
           "name": "commentsAdd",
@@ -12908,6 +13059,11 @@
                 "type": "string",
                 "max": 500,
                 "nullable": true
+              },
+              "disabledAt": {
+                "type": "number",
+                "min": 0,
+                "nullable": true
               }
             }
           },
@@ -12953,6 +13109,11 @@
               "color": {
                 "type": "string",
                 "max": 40,
+                "nullable": true
+              },
+              "disabledAt": {
+                "type": "number",
+                "min": 0,
                 "nullable": true
               }
             }
@@ -13121,6 +13282,12 @@
               }
             }
           },
+          "requiredRole": "admin"
+        },
+        {
+          "name": "scopeRoleSet",
+          "plugin": "core",
+          "type": "scope.role.set",
           "requiredRole": "admin"
         },
         {
@@ -13321,7 +13488,7 @@
           }
         }
       },
-      "schemaHash": "sha256-b53cfe59dc0ee0488bfb692c1d2975b6bf3c7d6943a96d76ba8ac51e82522e54"
+      "schemaHash": "sha256-c2d1caa613a9e2c76c82f60dd43bbdeca4365b1f0417911e7020ef2fc4828bc4"
     },
     "model": {
       "kind": "matterhorn.primary-model.schema",
@@ -13357,11 +13524,37 @@
           "messages": {},
           "guests": {},
           "callRoutes": {},
-          "publicInvites": [],
+          "publicInvites": [
+            {
+              "id": "admin",
+              "role": "admin",
+              "status": "active",
+              "createdAt": 0
+            },
+            {
+              "id": "member",
+              "role": "member",
+              "status": "active",
+              "createdAt": 0
+            },
+            {
+              "id": "guest",
+              "role": "guest",
+              "status": "active",
+              "createdAt": 0
+            }
+          ],
           "joinRequests": {},
           "access": {
             "version": 1,
             "scopes": {
+              "channel:general": {
+                "scopeType": "channel",
+                "scopeId": "general",
+                "role": "editor",
+                "canView": true,
+                "canEdit": true
+              },
               "channel:guest": {
                 "scopeType": "channel",
                 "scopeId": "guest",
@@ -13457,14 +13650,8 @@
               "idPrefix": "channel",
               "fields": {
                 "name": "$payload.name",
-                "topic": {
-                  "$expr": "$payload.topic",
-                  "fallback": null
-                },
-                "group": {
-                  "$expr": "$payload.group",
-                  "fallback": null
-                },
+                "topic": "$payload.topic",
+                "group": "$payload.group",
                 "requiredRole": "member",
                 "scopeType": "channel",
                 "scopeId": "$id:channel",
@@ -13656,10 +13843,7 @@
                 "pinnedAt": null,
                 "pinnedBy": null,
                 "reactions": {},
-                "embeds": {
-                  "$expr": "$payload.embeds",
-                  "fallback": []
-                }
+                "embeds": "$payload.embeds"
               },
               "activity": "created message"
             }
@@ -14146,10 +14330,7 @@
               "fields": {
                 "memberId": "$payload.memberId",
                 "bannedAt": "$createdAt",
-                "banReason": {
-                  "$expr": "$payload.reason",
-                  "fallback": null
-                },
+                "banReason": "$payload.reason",
                 "chatDisabled": true,
                 "bannedBy": "$actor.memberId"
               },
@@ -14446,7 +14627,8 @@
       },
       "messageDelete": {
         "plugin": "primary",
-        "type": "message.delete"
+        "type": "message.delete",
+        "requiredRole": "member"
       },
       "messageEdit": {
         "plugin": "primary",
@@ -14454,7 +14636,8 @@
       },
       "messagePin": {
         "plugin": "primary",
-        "type": "message.pin"
+        "type": "message.pin",
+        "requiredRole": "moderator"
       },
       "messageReact": {
         "plugin": "primary",
@@ -14470,7 +14653,8 @@
       },
       "messageUnpin": {
         "plugin": "primary",
-        "type": "message.unpin"
+        "type": "message.unpin",
+        "requiredRole": "moderator"
       },
       "commentsAdd": {
         "plugin": "comments",
@@ -14876,6 +15060,11 @@
               "type": "string",
               "max": 500,
               "nullable": true
+            },
+            "disabledAt": {
+              "type": "number",
+              "min": 0,
+              "nullable": true
             }
           }
         },
@@ -14920,6 +15109,11 @@
             "color": {
               "type": "string",
               "max": 40,
+              "nullable": true
+            },
+            "disabledAt": {
+              "type": "number",
+              "min": 0,
               "nullable": true
             }
           }
@@ -15083,6 +15277,11 @@
             }
           }
         },
+        "requiredRole": "admin"
+      },
+      "scopeRoleSet": {
+        "plugin": "core",
+        "type": "scope.role.set",
         "requiredRole": "admin"
       },
       "moderateMember": {

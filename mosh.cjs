@@ -47,11 +47,16 @@ const chat = defineModel({
       messages: {},
       guests: {},
       callRoutes: {},
-      publicInvites: [],
+      publicInvites: [
+        { id: "admin", role: "admin", status: "active", createdAt: 0 },
+        { id: "member", role: "member", status: "active", createdAt: 0 },
+        { id: "guest", role: "guest", status: "active", createdAt: 0 },
+      ],
       joinRequests: {},
       access: {
         version: 1,
         scopes: {
+          "channel:general": { scopeType: "channel", scopeId: "general", role: "editor", canView: true, canEdit: true },
           "channel:guest": { scopeType: "channel", scopeId: "guest", role: "editor", canView: true, canEdit: true },
         },
       },
@@ -107,8 +112,8 @@ const operations = {
           id: ref.newId("channel"),
           fields: {
             name: ref.payload("name"),
-            topic: ref.payload("topic", null),
-            group: ref.payload("group", null),
+            topic: ref.payload("topic"),
+            group: ref.payload("group"),
             requiredRole: "member",
             scopeType: "channel",
             scopeId: ref.newId("channel"),
@@ -210,7 +215,7 @@ const operations = {
             pinnedAt: null,
             pinnedBy: null,
             reactions: {},
-            embeds: ref.payload("embeds", []),
+            embeds: ref.payload("embeds"),
           },
           activity: "created message",
         }),
@@ -499,7 +504,7 @@ const operations = {
           set: {
             memberId: ref.payload("memberId"),
             bannedAt: ref.now(),
-            banReason: ref.payload("reason", null),
+            banReason: ref.payload("reason"),
             chatDisabled: true,
             bannedBy: ref.actor("memberId"),
           },
@@ -778,6 +783,14 @@ const app = defineApp({
       overrideSetName: "scopeMemberOverrideSet",
       overrideRemoveName: "scopeMemberOverrideRemove",
     }),
+    // Keep the legacy scope-role capability key available to clients that
+    // still use it for permission discovery; scoped member overrides are the
+    // current operation family.
+    scopeRoleSet: {
+      plugin: "core",
+      type: "scope.role.set",
+      requiredRole: "admin",
+    },
     moderateMember: {
       plugin: "primary",
       type: "member.moderate",
@@ -817,6 +830,21 @@ const app = defineApp({
     directMessageSend: {
       plugin: "core",
       type: "dm.message",
+      requiredRole: "member",
+    },
+    messagePin: {
+      plugin: "primary",
+      type: "message.pin",
+      requiredRole: "moderator",
+    },
+    messageUnpin: {
+      plugin: "primary",
+      type: "message.unpin",
+      requiredRole: "moderator",
+    },
+    messageDelete: {
+      plugin: "primary",
+      type: "message.delete",
       requiredRole: "member",
     },
   },

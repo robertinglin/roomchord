@@ -1,20 +1,25 @@
 import React from "react";
-import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
+import type { MatterhornManagementSnapshot } from "matterhorn-sdk/browser/management";
 import { joinRequestsForState, memberModerationFor, publicInvitesForState } from "@entities/chat/model/state";
-import type { Actor, ChatState, MemberModeration, RoomMember } from "@entities/chat/model/types";
+import { memberOptions } from "@entities/chat/model/roles";
+import type { Actor, ChatState, MemberModeration } from "@entities/chat/model/types";
 import { panel, button, row, layout, misc } from "@features/management/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
 
 type AdminMember = {
   id: string;
+  isCurrent: boolean;
   name: string;
   role?: string;
   moderation?: MemberModeration;
 };
 
+const USED_INVITE_STATUSES = new Set(["consumed", "expired", "exhausted"]);
+
 type Props = {
   actor: Actor;
   canManageMembers: boolean;
+  managementSnapshot?: MatterhornManagementSnapshot;
   state: ChatState;
   onApproveJoinRequest: (requestId: string) => void;
   onBanMember: (memberId: string) => void;
@@ -25,32 +30,19 @@ type Props = {
   onUnbanMember: (memberId: string) => void;
 };
 
-function memberIdFromEntry(key: string, member?: RoomMember & { id?: string }) {
-  return member?.memberId || member?.id || key;
-}
-
-function adminMembers(state: ChatState): AdminMember[] {
-  const members = new Map<string, AdminMember>();
-  for (const [key, member] of Object.entries(state.members || {})) {
-    const id = memberIdFromEntry(key, member);
-    if (!id) continue;
-    members.set(id, {
-      id,
-      name: matterhornDisplayName({ member, fallbackId: id }),
-      role: member.role,
-      moderation: memberModerationFor(state, id)
-    });
-  }
-  for (const [id, moderation] of Object.entries((state as ChatState & { guests?: Record<string, MemberModeration> }).guests || {})) {
-    const current = members.get(id);
-    members.set(id, {
-      id,
-      name: current?.name || id,
-      role: current?.role,
-      moderation
-    });
-  }
-  return [...members.values()].sort((left, right) => left.name.localeCompare(right.name));
+function adminMembers(actor: Actor, state: ChatState, managementSnapshot?: MatterhornManagementSnapshot): AdminMember[] {
+  const currentAuthorityIds = new Set(
+    (managementSnapshot?.members || [])
+      .filter((member) => member.isCurrent)
+      .map((member) => member.memberId)
+  );
+  return memberOptions(actor, state.members || {}, state.presence || {}, state).map((member) => ({
+    id: member.id,
+    isCurrent: member.id === actor.memberId || currentAuthorityIds.has(member.id),
+    name: member.name,
+    role: member.baseRole || member.roleIds[0],
+    moderation: memberModerationFor(state, member.id)
+  }));
 }
 
 function statusLabel(member: AdminMember) {
@@ -63,6 +55,7 @@ function statusLabel(member: AdminMember) {
 export function ManageAdminTab({
   actor,
   canManageMembers,
+  managementSnapshot,
   state,
   onApproveJoinRequest,
   onBanMember,
@@ -72,8 +65,14 @@ export function ManageAdminTab({
   onRemoveInvite,
   onUnbanMember
 }: Props) {
-  const members = adminMembers(state);
-  const invites = publicInvitesForState(state).filter((invite) => invite.status !== "removed");
+  const members = adminMembers(actor, state, managementSnapshot);
+  const invites = (managementSnapshot?.invites?.length
+    ? managementSnapshot.invites.filter((invite) => invite.status !== "removed")
+    : publicInvitesForState(state).filter((invite) => invite.status !== "removed"))
+    .sort((left, right) =>
+      Number(USED_INVITE_STATUSES.has(left.status || "active"))
+      - Number(USED_INVITE_STATUSES.has(right.status || "active"))
+    );
   const joinRequests = joinRequestsForState(state).filter((request) => request.status === "pending");
 
   return (
@@ -87,7 +86,7 @@ export function ManageAdminTab({
           <div {...stylex.props(panel.bodyFlush)}>
             <div {...stylex.props(layout.rowStack)}>
               {members.map((member) => {
-                const self = member.id === actor.memberId;
+                const self = member.isCurrent;
                 const muted = Boolean(member.moderation?.chatDisabled);
                 const locked = Boolean(member.moderation?.nameLocked);
                 const banned = Boolean(member.moderation?.bannedAt);
@@ -132,7 +131,7 @@ export function ManageAdminTab({
                 <article {...stylex.props(row.row)} data-testid="admin-invite-row" key={invite.id}>
                   <span {...stylex.props(row.rowMain)}>
                     <span {...stylex.props(row.rowTitle)}>{invite.id}</span>
-                    <span {...stylex.props(row.rowSub)}>{invite.status || "active"}</span>
+                      <span {...stylex.props(row.rowSub)}>{invite.status === "revoked" ? "disabled" : invite.status || "active"}</span>
                   </span>
                   <span {...stylex.props(row.rowEnd)}>
                     {(invite.status || "active") === "active" ? <button data-testid="invite-disable" type="button" disabled={!canManageMembers} onClick={() => onDisableInvite(invite.id)} {...stylex.props(button.btn, button.secondary, button.sm)}>Disable</button> : null}

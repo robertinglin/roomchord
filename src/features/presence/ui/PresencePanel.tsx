@@ -153,6 +153,7 @@ export function PresencePanel({
   memberPreferences,
   memberRoles,
   canManageRoles,
+  canStartCall,
   onDirectMessage,
   onMention,
   onOpenMemberProfile,
@@ -173,6 +174,7 @@ export function PresencePanel({
   memberPreferences?: Record<string, MemberPreference>;
   memberRoles?: Partial<ChatState>;
   canManageRoles: boolean;
+  canStartCall?: (memberId: string) => boolean;
   onDirectMessage?: (memberId: string) => void;
   onMention: (text: string) => void;
   onOpenMemberProfile: (memberId: string) => void;
@@ -238,7 +240,7 @@ export function PresencePanel({
           onMention={() => onMention(`${mentionToken(member.id)} `)}
           onOpenModView={canManageRoles ? onSetMemberRoles : undefined}
           onOpenProfile={onOpenMemberProfile}
-          onStartCall={canInteractDirectly ? onStartCall : undefined}
+          onStartCall={canInteractDirectly && canStartCall?.(member.id) ? onStartCall : undefined}
         >
           <button
             {...stylex.props(styles.memberButton, selectedMemberId === member.id && styles.selected)}

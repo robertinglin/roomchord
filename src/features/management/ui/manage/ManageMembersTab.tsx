@@ -29,7 +29,7 @@ export function ManageMembersTab({
   profileOnly?: boolean;
   roleDefinitions?: ChatState["roleDefinitions"];
   roles: RoleDefinition[];
-  onAssignMemberRoles: (memberId: string, roleIds: string[], displayName?: string) => void;
+  onAssignMemberRoles: (memberId: string, roleIds: string[], displayName?: string) => Promise<void>;
   onSetMemberBlock: (memberId: string, blocked: boolean) => void;
   onSetMemberIgnore: (memberId: string, ignored: boolean) => void;
   onSetMemberNickname: (memberId: string, nickname: string | null) => void;
@@ -41,6 +41,8 @@ export function ManageMembersTab({
   const selectedPreference = selectedMember ? memberPreferences?.[selectedMember.id] : undefined;
   const [nickname, setNickname] = useState("");
   const [note, setNote] = useState("");
+  const [savingRoles, setSavingRoles] = useState(false);
+  const [roleSaveError, setRoleSaveError] = useState("");
 
   useEffect(() => {
     if (initialMemberId) setSelectedMemberId(initialMemberId);
@@ -56,10 +58,18 @@ export function ManageMembersTab({
     setNote(selectedPreference?.note || "");
   }, [selectedMember?.id, selectedPreference?.nickname, selectedPreference?.note]);
 
-  function saveMemberRoles(event: React.FormEvent<HTMLFormElement>) {
+  async function saveMemberRoles(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedMember) return;
-    onAssignMemberRoles(selectedMember.id, selectedRoleIds, selectedMember.name);
+    if (!selectedMember || savingRoles) return;
+    setSavingRoles(true);
+    setRoleSaveError("");
+    try {
+      await onAssignMemberRoles(selectedMember.id, selectedRoleIds, selectedMember.name);
+    } catch (error) {
+      setRoleSaveError(error instanceof Error ? error.message : "Unable to save roles.");
+    } finally {
+      setSavingRoles(false);
+    }
   }
 
   function saveMemberProfile(event: React.FormEvent<HTMLFormElement>) {
@@ -89,6 +99,8 @@ export function ManageMembersTab({
                     return (
                       <div
                         key={member.id}
+                        data-testid="manage-member-row"
+                        data-member-id={member.id}
                         {...stylex.props(row.row, row.tap, isActive && row.sel)}
                         role="button"
                         tabIndex={0}
@@ -183,8 +195,11 @@ export function ManageMembersTab({
                 </header>
                 <div {...stylex.props(panel.body)}>
                   <RoleCheckboxes roles={roles} selectedRoleIds={selectedRoleIds} onChange={setSelectedRoleIds} />
+                  {roleSaveError ? <p role="alert" {...stylex.props(misc.hint)}>{roleSaveError}</p> : null}
                   <div {...stylex.props(button.actions, button.actionsEnd)}>
-                    <button type="submit" {...stylex.props(button.btn, button.primary)}>Save roles</button>
+                    <button type="submit" disabled={savingRoles} {...stylex.props(button.btn, button.primary)}>
+                      {savingRoles ? "Saving roles…" : "Save roles"}
+                    </button>
                   </div>
                 </div>
               </form>

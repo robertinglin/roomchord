@@ -68,8 +68,8 @@ const styles = stylex.create({
   },
   actions: {
     position: "absolute",
-    left: "68px",
-    top: "calc(100% - 14px)",
+    right: "16px",
+    top: "4px",
     zIndex: 16,
     display: "flex",
     alignItems: "center",
@@ -80,7 +80,7 @@ const styles = stylex.create({
     backgroundColor: tokens.surfaceDeep,
     boxShadow: tokens.elevPanel,
     "@media (max-width: 599px)": {
-      left: "62px",
+      right: "8px",
     },
   },
   actionsShroud: {
@@ -172,7 +172,6 @@ export function MessageRow({
   const [forwardMenuOpen, setForwardMenuOpen] = useState(false);
   const [messageMenuPosition, setMessageMenuPosition] = useState<MessageMenuPosition | undefined>();
   const [actionsActive, setActionsActive] = useState(false);
-  const [actionsSurfaceActive, setActionsSurfaceActive] = useState(false);
   const name = authorName(message, memberNamesById);
   const isDeleted = Boolean(message.deletedAt);
   const reactions = Object.entries(message.reactions || {}).filter(([, members]) => members.length > 0);
@@ -202,12 +201,6 @@ export function MessageRow({
     setReactionPickerOpen(false);
     setForwardMenuOpen(false);
     setMessageMenuPosition(undefined);
-  }
-
-  function closeHoverActions() {
-    setActionsActive(false);
-    setActionsSurfaceActive(false);
-    closeMenus();
   }
 
   function openMessageMenuAt(x: number, y: number) {
@@ -240,8 +233,6 @@ export function MessageRow({
     if (!onReact) return;
     onRememberReaction(emoji);
     onReact(messageId, emoji);
-    setActionsActive(false);
-    setActionsSurfaceActive(false);
   }
 
   function forwardTo(target: MessageForwardTarget) {
@@ -286,7 +277,7 @@ export function MessageRow({
     { disabled: true, icon: "▥", id: "create-thread", label: "Create Thread" },
     { icon: "⧉", id: "copy-text", label: "Copy Text", onSelect: () => copyText(message.body), sectionBefore: true },
     {
-      ariaLabel: canPin ? (message.pinnedAt ? "Unpin" : "Pin") : undefined,
+      ariaLabel: canPin ? (message.pinnedAt ? "Unpin Message" : "Pin Message") : undefined,
       disabled: !canPin,
       icon: "⌖",
       id: "pin",
@@ -298,7 +289,7 @@ export function MessageRow({
     { icon: "🔗", id: "copy-link", label: "Copy Message Link", onSelect: () => copyText(messageLink()) },
     { disabled: true, icon: "◉", id: "speak", label: "Speak Message" },
     {
-      ariaLabel: canDelete ? "Delete" : undefined,
+      ariaLabel: canDelete ? "Delete Message" : undefined,
       disabled: !canDelete,
       icon: "⌫",
       id: "delete",
@@ -315,7 +306,6 @@ export function MessageRow({
     item.onSelect();
     if (item.id !== "add-reaction" && item.id !== "forward") {
       setActionsActive(false);
-      setActionsSurfaceActive(false);
     }
   }
 
@@ -397,7 +387,6 @@ export function MessageRow({
             className={`msg-actions ${stylex.props(styles.actions).className}`}
             style={actionsStyle}
             aria-label={`Actions for ${name}`}
-            onMouseEnter={() => setActionsSurfaceActive(true)}
           >
             {canReact ? recentReactions.map((emoji) => (
               <button className="message-action-emoji" key={emoji} type="button" aria-label={`React with ${emoji}`} onClick={() => reactWith(message.id, emoji)}>

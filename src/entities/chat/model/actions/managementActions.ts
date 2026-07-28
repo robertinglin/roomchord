@@ -2,6 +2,7 @@ import type { ManagementTab } from "@entities/chat/model/managementTypes";
 import type { ChannelId, MemberId, RoleId, RoomId, RoomRoleAccess } from "@entities/chat/model/types";
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
 import { assignedRoleIds } from "@entities/chat/model/roles";
+import { publicInvitesForState } from "@entities/chat/model/state";
 
 const DEFAULT_ROLE_RULES = [{ scopeType: "channel", scopeId: "*", level: "viewer", allowOperations: [], denyOperations: [] }];
 const MEMBER_ROOM_ACCESS: RoomRoleAccess = {
@@ -98,16 +99,28 @@ export function managementActions(input: ChatActionHandlersInput) {
   }
 
   async function assignMemberRoles(memberId: string, roleIds: string[], _displayName?: string) {
+    const systemRoles = ["guest", "member", "moderator", "admin", "owner"] as const;
+    const isSystemRole = (roleId: string): roleId is typeof systemRoles[number] =>
+      systemRoles.includes(roleId as typeof systemRoles[number]);
     const next = new Set(roleIds.filter(Boolean));
-    const current = new Set(assignedRoleIdsForMember(memberId).filter((roleId) => roleId !== "guest" && roleId !== "member" && roleId !== "moderator" && roleId !== "admin" && roleId !== "owner"));
+    const nextCustom = new Set([...next].filter((roleId) => !isSystemRole(roleId)));
+    const nextSystemRole = [...systemRoles].reverse().find((roleId) => next.has(roleId)) || "member";
+    const managementSnapshot = await input.live.management.getSnapshot();
+    const authorityRoleIds = managementSnapshot.members.find((member) => member.memberId === memberId)?.roleIds || [];
+    const currentRoleIds = new Set([...assignedRoleIdsForMember(memberId), ...authorityRoleIds]);
+    const current = new Set([...currentRoleIds].filter((roleId) => !isSystemRole(roleId)));
+    const currentSystemRole = [...systemRoles].reverse().find((roleId) => currentRoleIds.has(roleId));
+    if (nextSystemRole !== currentSystemRole) {
+      await input.live.management.members.setRoles(memberId, [nextSystemRole]);
+    }
     for (const roleId of current) {
-      if (!next.has(roleId)) {
+      if (!nextCustom.has(roleId)) {
         const role = scopedRole(roleId);
         const scoped = role as ScopedRoleRecord | undefined;
         if (scoped?.generation) await dispatch("memberRoleUnassign", { memberId, roleId: roleId as RoleId, generation: scoped.generation });
       }
     }
-    for (const roleId of next) {
+    for (const roleId of nextCustom) {
       if (!current.has(roleId)) {
         const role = scopedRole(roleId);
         const scoped = role as ScopedRoleRecord | undefined;
@@ -137,10 +150,32 @@ export function managementActions(input: ChatActionHandlersInput) {
   }
 
   async function disableInvite(inviteId: string) {
+    if (publicInvitesForState(input.live.state).some((invite) => invite.id === inviteId)) {
+      await dispatch("disableInvite", { inviteId });
+      return;
+    }
+    const managementSnapshot = await input.live.management.getSnapshot();
+    if (managementSnapshot.invites.some((invite) => invite.id === inviteId)) {
+      await input.live.management.invites.remove(inviteId);
+      return;
+    }
     await dispatch("disableInvite", { inviteId });
   }
 
   async function removeInvite(inviteId: string) {
+    if (publicInvitesForState(input.live.state).some((invite) => invite.id === inviteId)) {
+      await dispatch("removeInvite", { inviteId });
+      return;
+    }
+    const managementSnapshot = await input.live.management.getSnapshot();
+    if (managementSnapshot.invites.some((invite) => invite.id === inviteId)) {
+      try {
+        await input.live.management.invites.remove(inviteId);
+        return;
+      } catch (error) {
+        if (!(error instanceof Error) || !error.message.includes("not available")) throw error;
+      }
+    }
     await dispatch("removeInvite", { inviteId });
   }
 

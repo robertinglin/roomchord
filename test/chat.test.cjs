@@ -278,7 +278,7 @@ test("Chat runtime room applies primary message operations through Matterhorn", 
   await admin.actions.channelCreate({ name: "launch", topic: "Planning", group: "Team" });
   await member.actions.messageSend({ channelId: "general", body: "Ready", embeds: [] });
   const state = await room.state();
-  const operations = await room.operations();
+  const operations = room.operations;
   const channel = state.channels.find((item) => item.name === "launch");
   const message = Object.values(state.messages).find((item) => item.body === "Ready");
 
@@ -304,7 +304,13 @@ test("Chat runtime room applies shared media-room plugin operations", async () =
   const admin = room.as(testActor("admin", { role: "admin", displayName: "Admin" }));
   const member = room.as(testActor("mina", { role: "member", displayName: "Mina" }));
 
-  await admin.actions.mediaRoomCreate({ name: "Standup", group: "Ops", allowsVideo: true });
+  await admin.actions.mediaRoomCreate({
+    name: "Standup",
+    group: "Ops",
+    allowsVideo: true,
+    scopeType: "channel",
+    scopeId: "general"
+  });
   const roomState = await room.roomState();
   const mediaState = roomState.plugins["gg.matterhorn.examples.plugins.media-rooms"];
   const created = Object.values(mediaState.rooms).find((item) => item.name === "Standup");
@@ -328,21 +334,39 @@ test("Chat runtime room rejects actions using Matterhorn role checks", async () 
   const { createRuntimeTestRoom, testActor } = await runtimeTestingApi();
   const room = await createRuntimeTestRoom(sdkApp, {
     roomId: "mosh_runtime_roles",
-    now: () => 4000
+    now: () => 4000,
+    initialRoomState: {
+      access: {
+        scopes: {
+          "channel:guest": {
+            scopeType: "channel",
+            scopeId: "guest",
+            role: "editor",
+            canView: true,
+            canEdit: true
+          }
+        }
+      }
+    }
   });
   const guest = room.as(testActor("guest", { role: "guest", displayName: "Guest" }));
 
   await guest.actions.messageSend({ channelId: "guest", body: "Welcome", embeds: [] });
   await assert.rejects(
     () => guest.actions.messageSend({ channelId: "general", body: "Nope", embeds: [] }),
-    /Schema guard rejected|requires scoped edit access|not authorized|unauthorized/i
+    /Schema guard rejected|requires scoped (?:edit|editor) access|not authorized|unauthorized/i
   );
   await assert.rejects(
     () => guest.actions.directMessageSend({ userIds: ["member"], body: "Nope" }),
     /requires member|not authorized|unauthorized/i
   );
   await assert.rejects(
-    () => guest.actions.mediaRoomCreate({ name: "Private", allowsVideo: true }),
+    () => guest.actions.mediaRoomCreate({
+      name: "Private",
+      allowsVideo: true,
+      scopeType: "channel",
+      scopeId: "guest"
+    }),
     /requires moderator|not authorized|unauthorized/i
   );
 });

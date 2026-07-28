@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
-import { channelReadTopic, unreadCountsByTopic, type MatterhornReadTopic, type TopicReadCursor, type TopicReadableItem } from "matterhorn-sdk/browser";
+import { channelReadTopic, roleRank, unreadCountsByTopic, type MatterhornReadTopic, type TopicReadCursor, type TopicReadableItem } from "matterhorn-sdk/browser";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
 import type { ActiveView } from "@entities/chat/model/chatUiStore";
 import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
@@ -115,14 +115,15 @@ export function useChatViewData(input: ChatViewDataInput) {
     ).length;
     return [group.thread.id, unread];
   })), [directGroups, input.memberPreferences, input.readAtByThread, live.actor.memberId]);
-  const actorCanManageRooms = live.can("mediaRoomCreate");
-  const actorCanCreateChannels = live.can("channelCreate");
-  const actorCanManageRoles = live.can("roleCreate") || live.can("memberRoleAssign") || live.can("scopeRoleSet");
-  const actorCanManageMembers = live.can("banMember") || live.can("moderateMember") || live.can("disableInvite") || live.can("approveJoinRequest");
+  const actorRoleIds = useMemo(() => assignedRoleIds(live.actor.memberId, live.actor.role, state), [live.actor.memberId, live.actor.role, state]);
+  const actorRoleRank = Math.max(...actorRoleIds.map((roleId) => roleRank(roleId, state)), 0);
+  const actorCanManageRooms = live.can("mediaRoomCreate") || actorRoleRank >= 2;
+  const actorCanCreateChannels = live.can("channelCreate") || actorRoleRank >= 2;
+  const actorCanManageRoles = live.can("roleCreate") || live.can("memberRoleAssign") || live.can("scopeRoleSet") || actorRoleRank >= 2;
+  const actorCanManageMembers = live.can("banMember") || live.can("moderateMember") || live.can("disableInvite") || live.can("approveJoinRequest") || actorRoleRank >= 3;
   const actorCanManageAnything = actorCanManageRooms || actorCanCreateChannels || actorCanManageRoles || actorCanManageMembers;
   const actorCanSendMessages = live.can("messageSend");
   const actorChatDisabled = memberChatDisabled(state, live.actor.memberId);
-  const actorRoleIds = useMemo(() => assignedRoleIds(live.actor.memberId, live.actor.role, state), [live.actor.memberId, live.actor.role, state]);
   const effectiveVoicePreferences = useMemo(
     () => input.voiceSettingsOpen && !input.voicePreferences.deafened ? { ...input.voicePreferences, deafened: true } : input.voicePreferences,
     [input.voicePreferences, input.voiceSettingsOpen]
