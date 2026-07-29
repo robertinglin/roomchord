@@ -1,6 +1,5 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const permissionsApi = require("matterhorn-sdk/permissions");
@@ -80,9 +79,16 @@ test("Chat generated TypeScript contract stays flattened across SDK export helpe
   assert.deepEqual(Object.keys(sdkApp.toJSONFragments()).sort(), ["actions", "composition", "model"]);
 });
 
-test("Chat emit writes flattened TypeScript contract artifacts", () => {
-  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "matterhorn-mosh-emit-"));
-  const bundleOut = sdkApp.emit({ outDir });
+test("Chat emit writes flattened TypeScript contract artifacts", (t) => {
+  const outDir = path.join(__dirname, "..");
+  const suffix = `${process.pid}-${Date.now()}`;
+  const bundleFile = `.matterhorn-mosh-emit-${suffix}.json`;
+  const typesFile = `.matterhorn-mosh-emit-${suffix}.d.ts`;
+  t.after(() => {
+    fs.rmSync(path.join(outDir, bundleFile), { force: true });
+    fs.rmSync(path.join(outDir, typesFile), { force: true });
+  });
+  const bundleOut = sdkApp.emit({ outDir, fileName: bundleFile });
   const emittedBundle = JSON.parse(fs.readFileSync(bundleOut.bundlePath, "utf8"));
 
   assert.equal("types" in bundleOut.bundle, false);
@@ -90,7 +96,7 @@ test("Chat emit writes flattened TypeScript contract artifacts", () => {
   assert.equal("types" in emittedBundle, false);
   assert.equal("types" in emittedBundle.artifacts, false);
 
-  const emitOut = sdkApp.emit({ outDir: path.join(outDir, "chat"), typesFile: "./types.d.ts" });
+  const emitOut = sdkApp.emit({ outDir, fileName: bundleFile, typesFile });
   assertCleanMoshTypes(fs.readFileSync(emitOut.typesPath, "utf8"));
 });
 

@@ -8172,7 +8172,7 @@
   "frontend": {
     "kind": "matterhorn-player-bundle",
     "appId": "gg.matterhorn.mosh",
-    "root": "/home/robert/workspace/mosh",
+    "root": ".",
     "defaultPort": 42732,
     "locations": [
       {

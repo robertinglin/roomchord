@@ -78,7 +78,7 @@ function copyProject() {
     },
   });
   fs.symlinkSync(path.join(PROJECT_ROOT, "node_modules"), path.join(target, "node_modules"), "dir");
-  fs.symlinkSync(path.join(PROJECT_ROOT, "dist"), path.join(target, "dist"), "dir");
+  fs.cpSync(path.join(PROJECT_ROOT, "dist"), path.join(target, "dist"), { recursive: true });
 
   // The checked-in bundle is the test fixture's runtime artifact. Marking it
   // prebuilt keeps Matterhorn from rebuilding its sibling SDK on every test
@@ -88,7 +88,6 @@ function copyProject() {
   const descriptor = JSON.parse(fs.readFileSync(descriptorPath, "utf8"));
   descriptor.frontend = {
     ...descriptor.frontend,
-    root: target,
     bundle: {
       ...descriptor.frontend.bundle,
       prebuilt: true,
