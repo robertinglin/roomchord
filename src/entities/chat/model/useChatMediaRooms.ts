@@ -155,6 +155,7 @@ export function useChatMediaRooms(input: Input) {
       createPeer: bridge.createMediaPeer,
       encryptRoomPayload: bridge.encryptRoomPayload,
       decryptRoomPayload: bridge.decryptRoomPayload,
+      encryptRelayPayload: bridge.encryptRelayPayload,
       sendSignal: (targetClientId, targetPeerId, signal, auth) => {
         return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
       },
@@ -191,8 +192,15 @@ export function useChatMediaRooms(input: Input) {
       }
       const handledBySfu = sfu.handleMediaCall(call);
     };
-    const peer = bridge.getMediaPeer?.();
+    let peer = bridge.getMediaPeer?.();
     peer?.on("call", onCall);
+    const removeMediaPeerListener = bridge.subscribeMediaPeer?.(() => {
+      const nextPeer = bridge.getMediaPeer?.();
+      if (!nextPeer || nextPeer === peer) return;
+      removePeerCallListener(peer, onCall);
+      peer = nextPeer;
+      peer.on("call", onCall);
+    });
     const unsubscribe = bridge.subscribeRelayMessage?.((message) => {
       const signal = typeof message === "object" && message ? (message as { signal?: { type?: string; sessionId?: string }; type?: string; sourceClientId?: string; targetClientId?: string }).signal : undefined;
       const handledByMesh = mesh.handlePeerSignal(message);
@@ -201,6 +209,7 @@ export function useChatMediaRooms(input: Input) {
 
     return () => {
       unsubscribe?.();
+      removeMediaPeerListener?.();
       removePeerCallListener(peer, onCall);
       voiceTokenRef.current?.release();
       voiceTokenRef.current = undefined;

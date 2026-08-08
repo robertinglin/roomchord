@@ -1273,6 +1273,44 @@ describe("ChatApp", () => {
     expect(screen.getByLabelText("Your room video")).toBeInTheDocument();
   });
 
+  it("merges the local member token and session client into one voice participant", () => {
+    installMediaCapture();
+    const localStream = new FakeMediaStream([new FakeMediaStreamTrack("audio")]) as unknown as MediaStream;
+
+    render(
+      <VoiceRoomView
+        actorId="alice"
+        actorName="Alice"
+        joinedRoomId="media1"
+        localMedia={{ audio: true, video: false }}
+        room={state.rooms[0]}
+        sfu={{
+          status: "connected",
+          mediaRoomId: "media1",
+          media: { audio: true, video: false },
+          localStream,
+          remoteStreams: [],
+          peers: [{ clientId: "session-alice", name: "Alice", phase: "streaming" }]
+        }}
+        voicePreferences={defaultVoicePreferences()}
+        voiceTokens={[{
+          id: "voice-token",
+          kind: "media-room.join",
+          scope: "media1",
+          ownerId: "alice",
+          ownerName: "Alice",
+          clientId: "session-alice",
+          payload: { roomId: "media1", media: { audio: true, video: false } },
+          updatedAt: 1,
+          expiresAt: 2
+        }]}
+      />
+    );
+
+    expect(screen.getAllByLabelText("Alice participant")).toHaveLength(1);
+    expect(screen.getByRole("heading", { name: "Launch Room" }).nextElementSibling).toHaveTextContent(/^1 connected/);
+  });
+
   it("shows a local screen share beside the local participant tile", () => {
     installMediaCapture();
     const cameraTrack = new FakeMediaStreamTrack("video", "camera");

@@ -51,6 +51,11 @@ function streamFromTracks(tracks: MediaStreamTrack[]) {
 
 export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId, localMedia, room, sfu, voicePreferences, voiceTokens }: VoiceRoomViewProps): VoiceParticipant[] {
   const participants = new Map<string, VoiceParticipant>();
+  const localClientIds = new Set(
+    voiceTokens
+      .filter((token) => token.scope === room.id && token.ownerId === actorId && token.clientId)
+      .map((token) => token.clientId!)
+  );
   if (joinedRoomId === room.id) {
     participants.set(actorId, {
       avatar: actorAvatar || initialFor(actorName),
@@ -66,7 +71,7 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
     });
   }
   for (const token of voiceTokens.filter((item) => item.scope === room.id)) {
-    const id = token.clientId || token.ownerId || token.id;
+    const id = token.ownerId === actorId ? actorId : token.clientId || token.ownerId || token.id;
     const current = participants.get(id);
     const voiceStatus = tokenVoiceStatus(token);
     participants.set(id, {
@@ -84,14 +89,15 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
     });
   }
   for (const remote of sfu.mediaRoomId === room.id ? sfu.remoteStreams : []) {
-    const current = participants.get(remote.clientId);
-    participants.set(remote.clientId, {
+    const id = localClientIds.has(remote.clientId) ? actorId : remote.clientId;
+    const current = participants.get(id);
+    participants.set(id, {
       avatar: remote.avatar || initialFor(remote.name),
       connecting: false,
       connectionError: undefined,
       connectionPhase: "streaming",
       deafened: current?.deafened,
-      id: remote.clientId,
+      id,
       memberId: current?.memberId,
       media: remote.media || current?.media,
       mediaTracks: current?.mediaTracks || remote.mediaTracks,
@@ -103,7 +109,7 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
     });
   }
   for (const peer of sfu.mediaRoomId === room.id ? sfu.peers || [] : []) {
-    if (peer.clientId === actorId) continue;
+    if (peer.clientId === actorId || localClientIds.has(peer.clientId)) continue;
     const current = participants.get(peer.clientId);
     const isStreaming = peer.phase === "streaming" && Boolean(current?.stream);
     participants.set(peer.clientId, {
@@ -125,11 +131,12 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
     });
   }
   for (const remote of sfu.mediaRoomId === room.id ? sfu.remoteScreenStreams || [] : []) {
-    const current = participants.get(remote.clientId);
-    participants.set(remote.clientId, {
+    const id = localClientIds.has(remote.clientId) ? actorId : remote.clientId;
+    const current = participants.get(id);
+    participants.set(id, {
       avatar: current?.avatar || remote.avatar || initialFor(remote.name),
       deafened: current?.deafened,
-      id: remote.clientId,
+      id,
       isLocal: current?.isLocal,
       memberId: current?.memberId,
       media: current?.media || remote.media,

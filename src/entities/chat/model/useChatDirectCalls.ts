@@ -172,11 +172,19 @@ export function useChatDirectCalls(input: Input) {
     });
     directRef.current = direct;
     const onCall = (call: PeerJsMediaConnection) => {
-      const handled = direct.handleMediaCall(call);
+      direct.handleMediaCall(call);
     };
-    const peer = bridge.getMediaPeer?.();
+    let peer = bridge.getMediaPeer?.();
     peer?.on("call", onCall);
+    const removeMediaPeerListener = bridge.subscribeMediaPeer?.(() => {
+      const nextPeer = bridge.getMediaPeer?.();
+      if (!nextPeer || nextPeer === peer) return;
+      removePeerCallListener(peer, onCall);
+      peer = nextPeer;
+      peer.on("call", onCall);
+    });
     return () => {
+      removeMediaPeerListener?.();
       removePeerCallListener(peer, onCall);
       direct.destroy();
       directRef.current = undefined;
