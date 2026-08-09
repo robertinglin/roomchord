@@ -12,12 +12,14 @@ const styles = stylex.create({
  * create-channel button.
  */
 export function ChannelGroup({
+  addLabel,
   label,
   open,
   onAdd,
   onToggle,
   children,
 }: React.PropsWithChildren<{
+  addLabel?: string;
   label: string;
   open?: boolean;
   onAdd?: () => void;
@@ -25,7 +27,7 @@ export function ChannelGroup({
 }>) {
   return (
     <div {...stylex.props(styles.group)}>
-      <GroupHeading label={label} open={open} onAdd={onAdd} onToggle={onToggle} />
+      <GroupHeading addLabel={addLabel} label={label} open={open} onAdd={onAdd} onToggle={onToggle} />
       {children}
     </div>
   );

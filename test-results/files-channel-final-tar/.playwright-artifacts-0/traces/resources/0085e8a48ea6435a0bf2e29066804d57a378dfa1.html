@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#4b7f78" />
+    <meta name="description" content="Matterhorn room launcher." />
+    <link rel="manifest" href="/matterhorn/manifest.webmanifest" />
+    <link rel="icon" href="/matterhorn/icons/icon.svg" type="image/svg+xml" />
+    <title>Matterhorn</title>
+    <style>
+      :root {
+        background: oklch(96% 0.014 80);
+        color: oklch(99% 0.005 260);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      html,
+      body,
+      #root {
+        min-height: 100%;
+        margin: 0;
+      }
+      body {
+        background: var(--matterhorn-player-background, oklch(96% 0.014 80));
+        min-width: 320px;
+      }
+      .matterhorn-startup-shell {
+        align-items: center;
+        background: var(--matterhorn-player-background, oklch(96% 0.014 80));
+        display: grid;
+        inset: 0;
+        justify-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+        position: fixed;
+        z-index: 10;
+      }
+      .matterhorn-startup-mark {
+        align-items: center;
+        color: oklch(99% 0.005 260);
+        display: grid;
+        gap: clamp(14px, 2.2vw, 22px);
+        justify-items: center;
+        mix-blend-mode: difference;
+        width: min(78vw, 360px);
+      }
+      .matterhorn-startup-mark img {
+        display: block;
+        height: clamp(86px, 16vw, 154px);
+        object-fit: contain;
+        width: clamp(86px, 16vw, 154px);
+      }
+      .matterhorn-startup-dots {
+        animation: matterhorn-startup-breathe 960ms ease-in-out infinite;
+        color: currentColor;
+        display: block;
+        font-size: 8rem;
+        font-weight: 850;
+        line-height: 1;
+        min-height: 1em;
+        text-align: center;
+        text-shadow: 0 10px 28px oklch(0% 0 0 / 38%);
+        width: 3ch;
+      }
+      .matterhorn-startup-status {
+        align-items: center;
+        display: grid;
+        gap: 9px;
+        justify-items: center;
+        margin-top: -6px;
+        width: min(100%, 320px);
+      }
+      .matterhorn-startup-status strong,
+      .matterhorn-startup-status small {
+        color: currentColor;
+        text-align: center;
+      }
+      .matterhorn-startup-status strong {
+        font-size: .95rem;
+        font-weight: 850;
+        line-height: 1.2;
+      }
+      .matterhorn-startup-status small {
+        display: block;
+        font-size: .76rem;
+        font-weight: 720;
+        line-height: 1.25;
+        opacity: .78;
+      }
+      .matterhorn-startup-progress {
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        height: 5px;
+        overflow: hidden;
+        position: relative;
+        width: min(100%, 260px);
+      }
+      .matterhorn-startup-progress span {
+        animation: matterhorn-startup-progress-sweep 1100ms ease-in-out infinite;
+        background: currentColor;
+        display: block;
+        height: 100%;
+        opacity: .76;
+        position: absolute;
+        width: 34%;
+      }
+      @keyframes matterhorn-startup-breathe {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+      }
+      @keyframes matterhorn-startup-progress-sweep {
+        0% { transform: translateX(-110%); }
+        100% { transform: translateX(310%); }
+      }
+    </style>
+    <script type="module" crossorigin src="/matterhorn/assets/index-DeaM76wJ.js"></script>
+    <link rel="modulepreload" crossorigin href="/matterhorn/assets/modulepreload-polyfill-CWIbYaaI.js">
+    <link rel="modulepreload" crossorigin href="/matterhorn/assets/rolldown-runtime-M0oDzQ_3.js">
+    <link rel="modulepreload" crossorigin href="/matterhorn/assets/matterhorn-sdk-BzbKDKTo.js">
+    <link rel="modulepreload" crossorigin href="/matterhorn/assets/launchDiagnostics-DqVI4Mqx.js">
+    <link rel="stylesheet" crossorigin href="/matterhorn/assets/index-BBi7tRL-.css">
+  </head>
+  <body>
+    <div id="root">
+      <main class="matterhorn-startup-shell" aria-label="Loading room">
+        <div class="matterhorn-startup-mark">
+          <img src="/matterhorn/icons/icon.svg" alt="" aria-hidden="true" />
+          <div class="matterhorn-startup-dots" aria-hidden="true">.</div>
+          <div class="matterhorn-startup-status" role="status" aria-live="polite">
+            <strong>Starting Matterhorn</strong>
+            <div class="matterhorn-startup-progress"><span></span></div>
+            <small>Preparing direct room launch.</small>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script src="/matterhorn/launch-diagnostics.js"></script>
+    <script src="/matterhorn/matterhorn-runtime.js"></script>
+  </body>
+</html>

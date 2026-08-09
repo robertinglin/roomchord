@@ -10,7 +10,7 @@ import { canEditRoom, canViewRoom, assignedRoleIds } from "@entities/chat/model/
 import { channelThreads, latestDirectMessageTime, memberChatDisabled, visibleChannelMessages } from "@entities/chat/model/state";
 import { directCallMatchesThread, directCallThreadForMembers } from "@entities/chat/model/directCallThreads";
 import type { ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
-import type { ChannelId, DirectThread, MediaRoom, ThreadId } from "@entities/chat/model/types";
+import type { Channel, ChannelId, DirectThread, MediaRoom, ThreadId } from "@entities/chat/model/types";
 import {
   forwardTargetsForState,
   hasDirectMessages,
@@ -45,7 +45,7 @@ export function useChatViewData(input: ChatViewDataInput) {
   const actorCanDirectMessage = live.can("directMessageSend");
   // Receipt is controlled by participant-scoped DM projection, not the send capability.
   const actorCanReceiveDirectMessages = true;
-  const channels = useMemo(() => (live.select.channels?.() || state.channels).filter((channel) => !channel.archivedAt), [live.select, state.channels]);
+  const channels = useMemo(() => ((live.select.channels?.() || state.channels) as Channel[]).filter((channel) => !channel.archivedAt), [live.select, state.channels]);
   const [directGroups, setDirectGroups] = useState<Awaited<ReturnType<MatterhornRoom<Mosh>["getDMs"]>>>([]);
   useEffect(() => {
     if (!actorCanReceiveDirectMessages) {
@@ -69,7 +69,10 @@ export function useChatViewData(input: ChatViewDataInput) {
     if (!actorCanReceiveDirectMessages) return [];
     const visible = directGroups
       .filter((thread) => {
-        if (thread.thread.archivedAt || thread.messages.length === 0) return false;
+        if (thread.thread.archivedAt) return false;
+        // Matterhorn retains named/owned group threads before their first
+        // message. Empty one-to-one reservations remain drafts below.
+        if (thread.messages.length === 0 && !thread.thread.name && !thread.thread.ownerId) return false;
         const closedAt = input.closedDirectThreads[thread.thread.id];
         return closedAt === undefined || latestDirectMessageTime(state, thread.thread.id) > closedAt;
       })
@@ -117,9 +120,12 @@ export function useChatViewData(input: ChatViewDataInput) {
   })), [directGroups, input.memberPreferences, input.readAtByThread, live.actor.memberId]);
   const actorRoleIds = useMemo(() => assignedRoleIds(live.actor.memberId, live.actor.role, state), [live.actor.memberId, live.actor.role, state]);
   const actorRoleRank = Math.max(...actorRoleIds.map((roleId) => roleRank(roleId, state)), 0);
-  const actorCanManageRooms = live.can("mediaRoomCreate") || actorRoleRank >= 2;
+  const actorCanManageRooms = live.can("mediaRoomCreateScoped") || actorRoleRank >= 2;
   const actorCanCreateChannels = live.can("channelCreate") || actorRoleRank >= 2;
-  const actorCanManageRoles = live.can("roleCreate") || live.can("memberRoleAssign") || live.can("scopeRoleSet") || actorRoleRank >= 2;
+  // Role lifecycle and assignment are global authority operations. Scoped
+  // custom roles must never make a member appear to be an administrator.
+  const actorIsRoleAdministrator = live.actor.role === "admin" || live.actor.role === "owner";
+  const actorCanManageRoles = actorIsRoleAdministrator && (live.can("roleCreate") || live.can("memberRoleAssign") || live.can("scopeMemberOverrideSet"));
   const actorCanManageMembers = live.can("banMember") || live.can("moderateMember") || live.can("disableInvite") || live.can("approveJoinRequest") || actorRoleRank >= 3;
   const actorCanManageAnything = actorCanManageRooms || actorCanCreateChannels || actorCanManageRoles || actorCanManageMembers;
   const actorCanSendMessages = live.can("messageSend");

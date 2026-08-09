@@ -4,6 +4,7 @@ import type { VoicePreferences } from "@entities/chat/model/localVoicePreference
 import { VideoStream } from "@shared/ui/CallMedia";
 import { MemberContextMenu, type MemberContextMenuAction } from "@shared/ui/MemberContextMenu";
 import type { VoiceParticipant } from "@features/voice-room/model/types";
+import type { VoiceMemberModerationAction, VoiceModerationHandlers } from "@features/voice-room/model/voiceModeration";
 import { audioOn, cameraStream, isVoiceParticipantMuted } from "@features/voice-room/model/voiceParticipants";
 import type { ScreenPreviewSnapshot } from "matterhorn-sdk/browser/types";
 import { Avatar, Button, HeadphonesGlyph, MicOffGlyph } from "@shared/ui/design";
@@ -148,9 +149,12 @@ export function VoiceParticipantGrid({
   mutedVoiceParticipantIds,
   onDirectMessage,
   onToggleVoiceParticipantMute,
+  roomId,
+  voiceModeration,
   participants,
   roomName,
   voicePreferences,
+  emptyDescription,
   inlinedShares,
   onWatchScreenShare
 }: {
@@ -158,20 +162,41 @@ export function VoiceParticipantGrid({
   mutedVoiceParticipantIds?: Record<string, boolean>;
   onDirectMessage?: (memberId: string) => void;
   onToggleVoiceParticipantMute?: (participantId: string) => void;
+  roomId: string;
+  voiceModeration?: VoiceModerationHandlers;
   participants: VoiceParticipant[];
   roomName: string;
   voicePreferences: VoicePreferences;
+  emptyDescription?: string;
   inlinedShares?: Array<{ participant: VoiceParticipant; preview: ScreenPreviewSnapshot | undefined; stream?: MediaStream }>;
   onWatchScreenShare?: (participantId: string) => void;
 }) {
   function voiceParticipantActions(participant: VoiceParticipant): MemberContextMenuAction[] {
-    if (participant.isLocal || !onToggleVoiceParticipantMute) return [];
-    const muted = isVoiceParticipantMuted(participant, mutedVoiceParticipantIds);
-    return [{
-      id: "voice-mute",
-      label: muted ? "Unmute" : "Mute",
-      onSelect: () => onToggleVoiceParticipantMute(participant.id)
-    }];
+    if (participant.isLocal || !participant.memberId) return [];
+    const actions: MemberContextMenuAction[] = [];
+    const memberActions: Array<{ action: VoiceMemberModerationAction; id: string; label: string }> = [
+      { action: "mute", id: "voice-moderate-mute", label: isVoiceParticipantMuted(participant, mutedVoiceParticipantIds) ? "Clear mute" : "Mute" },
+      { action: "deafen", id: "voice-moderate-deafen", label: participant.deafened ? "Clear deafen" : "Deafen" },
+      { action: "suppress", id: "voice-moderate-suppress", label: participant.moderationSuppressed ? "Allow speaker" : "Suppress speaker" },
+      { action: "kick", id: "voice-moderate-kick", label: "Kick from voice" }
+    ];
+    if (voiceModeration?.available) {
+      for (const item of memberActions) {
+        if (!voiceModeration.canMemberAction(roomId, participant.memberId, item.action)) continue;
+        actions.push({ id: item.id, label: item.label, onSelect: () => { void voiceModeration.memberAction(roomId, participant.memberId!, item.action, item.action === "kick" ? true : !((item.action === "mute" && isVoiceParticipantMuted(participant, mutedVoiceParticipantIds)) || (item.action === "deafen" && participant.deafened) || (item.action === "suppress" && participant.moderationSuppressed))); } });
+      }
+      if (voiceModeration.canStageAction(roomId, "approveSpeaker", participant.memberId)) {
+        actions.push({ id: "voice-stage-approve", label: "Approve speaker", onSelect: () => { void voiceModeration.stageAction(roomId, "approveSpeaker", participant.memberId); } });
+      }
+      if (voiceModeration.canStageAction(roomId, "removeSpeaker", participant.memberId)) {
+        actions.push({ id: "voice-stage-remove", label: "Remove speaker", onSelect: () => { void voiceModeration.stageAction(roomId, "removeSpeaker", participant.memberId); } });
+      }
+    }
+    if ((!voiceModeration || !voiceModeration.available) && onToggleVoiceParticipantMute) {
+      const muted = isVoiceParticipantMuted(participant, mutedVoiceParticipantIds);
+      actions.push({ id: "voice-mute", label: muted ? "Unmute" : "Mute", onSelect: () => onToggleVoiceParticipantMute(participant.id) });
+    }
+    return actions;
   }
 
   const totalTilesCount = participants.length + (inlinedShares?.length || 0);
@@ -188,12 +213,59 @@ export function VoiceParticipantGrid({
     );
   }
 
+  function renderInlineShare({ participant, preview, stream }: { participant: VoiceParticipant; preview: ScreenPreviewSnapshot | undefined; stream?: MediaStream }) {
+    const isLocalShare = participant.isLocal;
+    const key = `${participant.id}-screen`;
+
+    if (isLocalShare) {
+      return (
+        <article {...stylex.props(styles.tile)} key={key}>
+          {stream ? (
+            <VideoStream {...stylex.props(styles.video)} label="Your screen share" muted={true} stream={stream} />
+          ) : (
+            <div {...stylex.props(styles.previewPlaceholder)} aria-label="Your screen share preview" />
+          )}
+          <div {...stylex.props(styles.shareOverlay)}>
+            <span {...stylex.props(styles.shareCopy)}>
+              <strong {...stylex.props(styles.shareTitle)}>Your screen</strong>
+              <small {...stylex.props(styles.shareSub)}>Sharing now</small>
+            </span>
+          </div>
+        </article>
+      );
+    }
+
+    return (
+      <article {...stylex.props(styles.tile)} key={key}>
+        {preview?.dataUrl ? (
+          <img alt="" aria-label={`${participant.name} screen share preview`} {...stylex.props(styles.previewImage)} src={preview.dataUrl} />
+        ) : (
+          <div {...stylex.props(styles.previewPlaceholder)} aria-label={`${participant.name} screen share preview`} />
+        )}
+        <div {...stylex.props(styles.shareOverlay)}>
+          <span {...stylex.props(styles.shareCopy)}>
+            <strong {...stylex.props(styles.shareTitle)}>{participant.name}</strong>
+            <small {...stylex.props(styles.shareSub)}>Screen share</small>
+          </span>
+          <Button
+            variant="etched"
+            tone="muted"
+            aria-label={`Watch ${participant.name} screen share`}
+            onClick={() => onWatchScreenShare?.(participant.id)}
+          >
+            Watch
+          </Button>
+        </div>
+      </article>
+    );
+  }
+
   return (
     <div {...stylex.props(styles.grid)} aria-label={`${roomName} participants`}>
       {totalTilesCount === 0 ? (
         <div {...stylex.props(styles.empty)}>
           <h3 {...stylex.props(styles.emptyTitle)}>No one is in this room</h3>
-          <p {...stylex.props(styles.emptyText)}>No active voice participants.</p>
+          <p {...stylex.props(styles.emptyText)}>{emptyDescription || "No active voice participants."}</p>
         </div>
       ) : null}
       {participants.map((participant) => {
@@ -225,68 +297,7 @@ export function VoiceParticipantGrid({
           </article>
         );
       })}
-      {inlinedShares?.map(({ participant, preview, stream }) => {
-        const isLocalShare = participant.isLocal;
-        const key = `${participant.id}-screen`;
-        
-        if (isLocalShare) {
-          return (
-            <article
-              {...stylex.props(styles.tile)}
-              key={key}
-            >
-              {stream ? (
-                <VideoStream
-                  {...stylex.props(styles.video)}
-                  label="Your screen share"
-                  muted={true}
-                  stream={stream}
-                />
-              ) : (
-                <div {...stylex.props(styles.previewPlaceholder)} aria-label="Your screen share preview" />
-              )}
-              <div {...stylex.props(styles.shareOverlay)}>
-                <span {...stylex.props(styles.shareCopy)}>
-                  <strong {...stylex.props(styles.shareTitle)}>Your screen</strong>
-                  <small {...stylex.props(styles.shareSub)}>Sharing now</small>
-                </span>
-              </div>
-            </article>
-          );
-        } else {
-          return (
-            <article
-              {...stylex.props(styles.tile)}
-              key={key}
-            >
-              {preview?.dataUrl ? (
-                <img
-                  alt=""
-                  aria-label={`${participant.name} screen share preview`}
-                  {...stylex.props(styles.previewImage)}
-                  src={preview.dataUrl}
-                />
-              ) : (
-                <div {...stylex.props(styles.previewPlaceholder)} aria-label={`${participant.name} screen share preview`} />
-              )}
-              <div {...stylex.props(styles.shareOverlay)}>
-                <span {...stylex.props(styles.shareCopy)}>
-                  <strong {...stylex.props(styles.shareTitle)}>{participant.name}</strong>
-                  <small {...stylex.props(styles.shareSub)}>Screen share</small>
-                </span>
-                <Button
-                  variant="etched"
-                  tone="muted"
-                  aria-label={`Watch ${participant.name} screen share`}
-                  onClick={() => onWatchScreenShare?.(participant.id)}
-                >
-                  Watch
-                </Button>
-              </div>
-            </article>
-          );
-        }
-      })}
+      {inlinedShares ? inlinedShares.map(renderInlineShare) : null}
     </div>
   );
 }

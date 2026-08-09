@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import type { Actor, Channel, ChatState, MediaRoom } from "@entities/chat/model/types";
+import type { Actor, Channel, ChannelVisibility, ChatState, MediaRoom, RoleDefinition } from "@entities/chat/model/types";
 import type { MatterhornManagementSnapshot } from "matterhorn-sdk/browser/management";
+import type { MatterhornMediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
+import type { MatterhornActiveRules, MatterhornAutoModDecision, MatterhornAutoModOverrideInput, MatterhornAutoModPolicy, MatterhornMemberModerationStatus, MatterhornModerationAuditEntry, MatterhornModerationReport, MatterhornRoleRule } from "matterhorn-sdk/browser";
+import type { MatterhornIntegrationController } from "matterhorn-sdk/browser";
 import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import { activeRoles, memberOptions } from "@entities/chat/model/roles";
 import { joinRequestsForState } from "@entities/chat/model/state";
@@ -12,9 +15,13 @@ import { ManageMembersTab } from "@features/management/ui/manage/ManageMembersTa
 import { ManageOverviewTab } from "@features/management/ui/manage/ManageOverviewTab";
 import { ManageRolesTab } from "@features/management/ui/manage/ManageRolesTab";
 import { ManageVoiceTab } from "@features/management/ui/manage/ManageVoiceTab";
+import { ManageCommunityTab } from "@features/management/ui/manage/ManageCommunityTab";
+import type { CommunityEvent } from "@entities/community/model/communityCapabilities";
+import type { CommunityChannel, CommunityNotification, CommunityPoll } from "@entities/community/ui/CommunityCapabilityPanel";
+import { ManageIntegrationsTab } from "@features/management/ui/manage/ManageIntegrationsTab";
 import { VoiceSettingsPanel } from "@entities/chat/ui/VoiceSettingsPanel";
-import { MANAGEMENT_TABS, type ManagementTab, type RoleInput, type RoleUpdateInput, type RoomSettings } from "@entities/chat/model/managementTypes";
-import { shell, rail, content } from "@features/management/ui/manage.styles";
+import { MANAGEMENT_TABS, type InviteInput, type ManagementTab, type RoleInput, type RoleUpdateInput, type RoomSettings } from "@entities/chat/model/managementTypes";
+import { shell, rail, content } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
 
 export type { ManagementTab };
@@ -33,9 +40,14 @@ type Props = {
   memberPreferences: Record<string, MemberPreference>;
   profileOnly?: boolean;
   voicePreferences: VoicePreferences;
+  mediaDeviceController?: MatterhornMediaDeviceController;
   onClose: () => void;
-  onCreateChannel: (input: { name: string; topic?: string; group?: string }) => void;
-  onUpdateChannel: (id: string, input: { name?: string; topic?: string | null; group?: string | null }) => void;
+  onCreateCategory: (input: { name: string; position?: number }) => void;
+  onUpdateCategory: (id: string, input: { name?: string; position?: number }) => void;
+  onReorderCategory: (id: string, position: number) => void;
+  onArchiveCategory: (id: string) => void;
+  onCreateChannel: (input: { name: string; topic?: string; group?: string; categoryId?: string; position?: number; visibility?: ChannelVisibility; allowedRoleIds?: string[]; allowedMemberIds?: string[] }) => void;
+  onUpdateChannel: (id: string, input: { name?: string; topic?: string | null; group?: string | null; categoryId?: string | null; position?: number; visibility?: ChannelVisibility; allowedRoleIds?: string[]; allowedMemberIds?: string[] }) => void;
   onArchiveChannel: (id: string) => void;
   onCreateRoom: (input: { name: string; group?: string; allowsVideo: boolean; roleAccess?: RoomSettings["roleAccess"] }) => void;
   onUpdateRoom: (roomId: string, settings: RoomSettings) => void;
@@ -50,12 +62,52 @@ type Props = {
   onDisableInvite: (inviteId: string) => void;
   onModerateMember: (memberId: string, input: { chatDisabled?: boolean; nameLocked?: boolean }) => void;
   onRemoveInvite: (inviteId: string) => void;
+  onCreateInvite: (input: InviteInput) => Promise<unknown>;
   onSetMemberBlock: (memberId: string, blocked: boolean) => void;
   onSetMemberIgnore: (memberId: string, ignored: boolean) => void;
   onSetMemberNickname: (memberId: string, nickname: string | null) => void;
   onSetMemberNote: (memberId: string, note: string | null) => void;
+  canReport?: boolean;
+  onReportMember?: (memberId: string, reason: string) => Promise<void>;
+  onGetStatus?: (memberId: string) => Promise<MatterhornMemberModerationStatus>;
+  onClearTimeout?: (memberId: string, revision: number, reason?: string) => Promise<void>;
+  onClearQuarantine?: (memberId: string, revision: number, reason?: string) => Promise<void>;
+  onActiveRules?: () => Promise<MatterhornActiveRules | undefined>;
+  onPublishRules?: (text: string, version: number, required?: boolean, reason?: string) => Promise<void>;
+  onAcceptRules?: (version?: number) => Promise<void>;
+  onReportInbox?: () => Promise<MatterhornModerationReport[]>;
+  onResolveReport?: (reportId: string, status: "resolved" | "dismissed", reason?: string) => Promise<void>;
+  onAuditQuery?: () => Promise<MatterhornModerationAuditEntry[]>;
+  onActiveAutoMod?: () => Promise<MatterhornAutoModPolicy | undefined>;
+  onPublishAutoMod?: (input: MatterhornAutoModPolicy & { reason?: string }) => Promise<void>;
+  onOverrideAutoMod?: (input: MatterhornAutoModOverrideInput) => Promise<void>;
+  onRedactAutoMod?: (input: Omit<MatterhornAutoModOverrideInput, "action">) => Promise<void>;
+  onQuarantineAutoMod?: (input: Omit<MatterhornAutoModOverrideInput, "action">) => Promise<void>;
+  onEvaluateAutoMod?: (input: { body: string; scopeId?: string }) => Promise<MatterhornAutoModDecision>;
+  canModerateSafety?: boolean;
+  onTimeoutMember?: (memberId: string, input: { durationMs?: number; permanent?: boolean; reason?: string }) => Promise<void>;
+  onQuarantineMember?: (memberId: string, input: { durationMs?: number; permanent?: boolean; scopeId?: string; reason?: string }) => Promise<void>;
+  onSetSlowmode?: (scopeId: string, intervalMs: number, input?: { reason?: string }) => Promise<void>;
   onUnbanMember: (memberId: string) => void;
   onUpdateVoicePreferences: (preferences: VoicePreferences) => void;
+  onScheduleEvent?: (input: { scopeType: string; scopeId: string; title: string; startsAt: number; location?: string }) => void;
+  onCreatePoll?: (input: { scopeType: string; scopeId: string; question: string; options: string[]; kind?: "single" | "multiple"; maxSelections?: number }) => void;
+  onVotePoll?: (pollId: string, optionIds: string[]) => void;
+  onClosePoll?: (pollId: string) => void;
+  onRsvpEvent?: (eventId: string, status: "going" | "maybe" | "declined") => void;
+  onReadCalendarNotification?: (notificationId: string) => void;
+  communityPolls?: CommunityPoll[];
+  communityEvents?: CommunityEvent[];
+  communityNotifications?: CommunityNotification[];
+  communityChannels?: CommunityChannel[];
+  onSetChannelPolicy?: (channelId: string, policyType: "posting" | "thread" | "speaker", policy: "members" | "moderators" | "none") => void;
+  onSetForumLayout?: (channelId: string, layout: "list" | "gallery") => void;
+  onCreateForumTag?: (channelId: string, name: string, color?: string) => void;
+  onUpdateForumTag?: (channelId: string, tagId: string, name: string, color?: string) => void;
+  onArchiveForumTag?: (channelId: string, tagId: string) => void;
+  roomScopeId?: string;
+  onCreateChannelKind?: (input: { scopeType: string; scopeId: string; name: string; kind: "text" | "forum" | "announcement" | "onboarding" | "rules" | "voice-text" | "stage"; mediaRoomId?: string }) => void;
+  integrations?: MatterhornIntegrationController;
 };
 
 function allowedTabs(input: {
@@ -73,6 +125,8 @@ function allowedTabs(input: {
     if (item.id === "roles") return input.canManageRoles;
     if (item.id === "members") return input.canManageRoles;
     if (item.id === "admin") return input.canManageMembers;
+    if (item.id === "community") return input.canManageMembers;
+    if (item.id === "integrations") return input.canManageMembers;
     if (item.id === "audio") return input.includeAudio;
     return false;
   });
@@ -94,6 +148,8 @@ function tabDescription(tab: ManagementTab) {
   if (tab === "roles") return "Define role tags, their colour, and their permissions.";
   if (tab === "members") return "Manage the roster, role tags, invites, and join requests.";
   if (tab === "admin") return "Room-level access, invites, moderation, and join requests.";
+  if (tab === "community") return "Polls, scheduled events, rules, and community workflows.";
+  if (tab === "integrations") return "Install and manage encrypted room integrations.";
   if (tab === "audio") return "Microphone processing for this device.";
   return "A snapshot of this room at a glance.";
 }
@@ -112,6 +168,7 @@ function tabIcon(tab: ManagementTab) {
   if (tab === "roles" || tab === "admin") {
     return <><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4Z" />{tab === "admin" ? <path d="m9 12 2 2 4-4" /> : null}</>;
   }
+  if (tab === "integrations") return <><path d="M8 8h8v8H8z" /><path d="M4 12h4M16 12h4M12 4v4M12 16v4" /></>;
   return <><circle cx="9" cy="8" r="3.2" /><path d="M3 20a6 6 0 0 1 12 0" /><path d="M16 5.5a3 3 0 0 1 0 5.5M21 20a6 6 0 0 0-4-5.6" /></>;
 }
 
@@ -129,7 +186,12 @@ export function ManageOverviewDialog({
   memberPreferences,
   profileOnly,
   voicePreferences,
+  mediaDeviceController,
   onClose,
+  onCreateCategory,
+  onUpdateCategory,
+  onReorderCategory,
+  onArchiveCategory,
   onCreateChannel,
   onUpdateChannel,
   onArchiveChannel,
@@ -146,16 +208,87 @@ export function ManageOverviewDialog({
   onDisableInvite,
   onModerateMember,
   onRemoveInvite,
+  onCreateInvite,
   onSetMemberBlock,
   onSetMemberIgnore,
   onSetMemberNickname,
   onSetMemberNote,
+  canReport = false,
+  onReportMember,
+  onGetStatus,
+  onClearTimeout,
+  onClearQuarantine,
+  onActiveRules,
+  onPublishRules,
+  onAcceptRules,
+  onReportInbox,
+  onResolveReport,
+  onAuditQuery,
+  onActiveAutoMod,
+  onPublishAutoMod,
+  onOverrideAutoMod,
+  onRedactAutoMod,
+  onQuarantineAutoMod,
+  onEvaluateAutoMod,
+  canModerateSafety = false,
+  onTimeoutMember,
+  onQuarantineMember,
+  onSetSlowmode,
   onUnbanMember,
-  onUpdateVoicePreferences
+  onUpdateVoicePreferences,
+  onScheduleEvent,
+  onCreatePoll,
+  onVotePoll,
+  onClosePoll,
+  onRsvpEvent,
+  onReadCalendarNotification,
+  communityPolls,
+  communityEvents,
+  communityNotifications,
+  communityChannels,
+  onSetChannelPolicy,
+  onSetForumLayout,
+  onCreateForumTag,
+  onUpdateForumTag,
+  onArchiveForumTag,
+  roomScopeId,
+  onCreateChannelKind,
+  integrations
 }: Props) {
-  const roles = useMemo(() => activeRoles(state), [state]);
+  const roles = useMemo(() => {
+    const byId = new Map(activeRoles(state).map((role) => [role.id, role]));
+    for (const managed of managementSnapshot?.roles || []) {
+      const roleId = managed.id as RoleDefinition["id"];
+      if (managed.disabledAt) {
+        byId.delete(roleId);
+        continue;
+      }
+      const projected = byId.get(roleId);
+      byId.set(roleId, {
+        id: roleId,
+        name: managed.name,
+        description: managed.description || "",
+        color: managed.color || projected?.color || "",
+        rank: projected?.rank || 0,
+        systemRole: managed.systemRole ?? projected?.systemRole ?? false,
+        archivedAt: null
+      });
+    }
+    return [...byId.values()]
+      .filter((role) => !role.archivedAt)
+      .sort((left, right) => (Number(right.rank) || 0) - (Number(left.rank) || 0) || left.name.localeCompare(right.name));
+  }, [managementSnapshot?.roles, state]);
   const channels = useMemo(() => activeChannels(state.channels || []), [state.channels]);
   const rooms = useMemo(() => activeRooms(state.rooms || []), [state.rooms]);
+  const scopedRulesByRoom = useMemo(() => Object.fromEntries(rooms.map((room) => {
+    const scopeType = room.scopeType || "media-room";
+    const scopeId = room.scopeId || room.id;
+    const byRole = Object.fromEntries((managementSnapshot?.roles || []).map((role) => [
+      role.id,
+      role.rules.filter((rule) => (rule.scopeType === scopeType && rule.scopeId === scopeId) || (rule.scopeType === "*" && rule.scopeId === "*"))
+    ]));
+    return [room.id, byRole];
+  })), [managementSnapshot?.roles, rooms]);
   const members = useMemo(() => {
     const visibleMembers = memberOptions(actor, state.members || {}, state.presence || {}, state, memberPreferences);
     const byMemberId = new Map(visibleMembers.map((member) => [member.id, member]));
@@ -183,7 +316,8 @@ export function ManageOverviewDialog({
     canManageRooms,
     includeAudio: initialTab === "audio"
   }), [canCreateChannels, canManageAnything, canManageMembers, canManageRoles, canManageRooms, initialTab]);
-  const roomTabs = tabs.filter((item) => item.id !== "audio");
+  const workspaceTabs = tabs.filter((item) => ["overview", "channels", "voice", "roles", "members"].includes(item.id));
+  const governanceTabs = tabs.filter((item) => ["admin", "community", "integrations"].includes(item.id));
   const deviceTabs = tabs.filter((item) => item.id === "audio");
   const fallbackTab = tabs[0]?.id || "overview";
   const [tab, setTab] = useState<ManagementTab>(initialTab || fallbackTab);
@@ -231,10 +365,10 @@ export function ManageOverviewDialog({
               </span>
             </div>
 
-            {roomTabs.length ? (
+            {workspaceTabs.length ? (
               <div {...stylex.props(rail.group, rail.groupFirst)}>
-                <div {...stylex.props(rail.groupLabel)}>Room</div>
-                {roomTabs.map((item) => (
+                <div {...stylex.props(rail.groupLabel)}>Workspace</div>
+                {workspaceTabs.map((item) => (
                   <button
                     type="button"
                     key={item.id}
@@ -249,6 +383,27 @@ export function ManageOverviewDialog({
                     {item.id === "voice" ? <small {...stylex.props(rail.itemCount)}>{rooms.length}</small> : null}
                     {item.id === "roles" ? <small {...stylex.props(rail.itemCount)}>{roles.length}</small> : null}
                     {item.id === "members" ? <small {...stylex.props(rail.itemCount)}>{members.length}</small> : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {governanceTabs.length ? (
+              <div {...stylex.props(rail.group)}>
+                <div {...stylex.props(rail.groupLabel)}>Governance</div>
+                {governanceTabs.map((item) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    aria-label={item.id === "admin" ? item.label : undefined}
+                    onClick={() => setTab(item.id)}
+                    {...stylex.props(rail.item, tab === item.id && rail.itemActive)}
+                  >
+                    <span {...stylex.props(tab === item.id ? rail.itemIconActive : rail.itemIcon)}>
+                      <Glyph size={18}>{tabIcon(item.id)}</Glyph>
+                    </span>
+                    <span {...stylex.props(rail.itemLabel)}>{item.label}</span>
+                    {item.id === "admin" && pendingAdminCount > 0 ? <small {...stylex.props(rail.itemCount)}>{pendingAdminCount}</small> : null}
                   </button>
                 ))}
               </div>
@@ -308,9 +463,16 @@ export function ManageOverviewDialog({
             {tab === "channels" ? (
               <ManageChannelsTab
                 canCreateChannels={canCreateChannels}
+                canManageCategories={canManageRoles}
+                accessScopes={state.access?.scopes}
+                categories={(state.categories || []).filter((category) => !category.archivedAt)}
                 channels={channels}
+                onArchiveCategory={onArchiveCategory}
                 onArchiveChannel={onArchiveChannel}
+                onCreateCategory={onCreateCategory}
                 onCreateChannel={onCreateChannel}
+                onReorderCategory={onReorderCategory}
+                onUpdateCategory={onUpdateCategory}
                 onUpdateChannel={onUpdateChannel}
               />
             ) : null}
@@ -319,6 +481,23 @@ export function ManageOverviewDialog({
                 canManageRooms={canManageRooms}
                 roles={roles}
                 rooms={rooms}
+                permissionActions={managementSnapshot?.actions}
+                permissionScopes={managementSnapshot?.scopes}
+                scopedRulesByRoom={scopedRulesByRoom}
+                onScopedRulesChange={(roomId, roleId, nextRules: MatterhornRoleRule[]) => {
+                  const room = rooms.find((item) => item.id === roomId);
+                  const role = managementSnapshot?.roles.find((item) => item.id === roleId);
+                  if (!room || !role) return;
+                  const scopeType = room.scopeType || "media-room";
+                  const scopeId = room.scopeId || room.id;
+                  const editedKeys = new Set(nextRules.map((rule) => `${rule.scopeType}\u0000${rule.scopeId}`));
+                  const rules = role.rules.filter((rule) => {
+                    const exactRoomScope = rule.scopeType === scopeType && rule.scopeId === scopeId;
+                    const edited = editedKeys.has(`${rule.scopeType}\u0000${rule.scopeId}`);
+                    return !exactRoomScope && !edited;
+                  });
+                  onUpdateRole(roleId, { rules: [...rules, ...nextRules] });
+                }}
                 onArchiveRoom={onArchiveRoom}
                 onCreateRoom={onCreateRoom}
                 onUpdateRoom={onUpdateRoom}
@@ -328,6 +507,9 @@ export function ManageOverviewDialog({
               <ManageRolesTab
                 canManageRoles={canManageRoles}
                 roles={roles}
+                managementRoles={managementSnapshot?.roles}
+                permissionActions={managementSnapshot?.actions}
+                permissionScopes={managementSnapshot?.scopes}
                 onArchiveRole={onArchiveRole}
                 onCreateRole={onCreateRole}
                 onUpdateRole={onUpdateRole}
@@ -342,11 +524,21 @@ export function ManageOverviewDialog({
                 profileOnly={profileOnly}
                 roleDefinitions={state.roleDefinitions}
                 roles={roles}
+                managementRoles={managementSnapshot?.roles}
+                managementScopes={managementSnapshot?.scopes}
                 onAssignMemberRoles={onAssignMemberRoles}
                 onSetMemberBlock={onSetMemberBlock}
                 onSetMemberIgnore={onSetMemberIgnore}
                 onSetMemberNickname={onSetMemberNickname}
                 onSetMemberNote={onSetMemberNote}
+                canReport={canReport}
+                onReportMember={onReportMember}
+                onGetStatus={onGetStatus}
+                onClearTimeout={onClearTimeout}
+                onClearQuarantine={onClearQuarantine}
+                onActiveRules={onActiveRules}
+                onAcceptRules={onAcceptRules}
+                onAuditQuery={onAuditQuery}
               />
             ) : null}
             {tab === "admin" ? (
@@ -361,11 +553,58 @@ export function ManageOverviewDialog({
                 onDisableInvite={onDisableInvite}
                 onModerateMember={onModerateMember}
                 onRemoveInvite={onRemoveInvite}
+                onCreateInvite={onCreateInvite}
                 onUnbanMember={onUnbanMember}
+                canModerateSafety={canModerateSafety}
+                canReport={canReport}
+                onTimeoutMember={onTimeoutMember}
+                onQuarantineMember={onQuarantineMember}
+                onSetSlowmode={onSetSlowmode}
+                onReportMember={onReportMember}
+                onGetStatus={onGetStatus}
+                onClearTimeout={onClearTimeout}
+                onClearQuarantine={onClearQuarantine}
+                onActiveRules={onActiveRules}
+                onPublishRules={onPublishRules}
+                onAcceptRules={onAcceptRules}
+                onReportInbox={onReportInbox}
+                onResolveReport={onResolveReport}
+                onAuditQuery={onAuditQuery}
+                onActiveAutoMod={onActiveAutoMod}
+                onPublishAutoMod={onPublishAutoMod}
+                onOverrideAutoMod={onOverrideAutoMod}
+                onRedactAutoMod={onRedactAutoMod}
+                onQuarantineAutoMod={onQuarantineAutoMod}
+                onEvaluateAutoMod={onEvaluateAutoMod}
               />
             ) : null}
+            {tab === "community" && onScheduleEvent ? (
+              <ManageCommunityTab
+                channelId={state.channels.find((channel) => !channel.archivedAt)?.id || "general"}
+                state={state}
+                canModerate={canManageMembers}
+                onScheduleEvent={onScheduleEvent}
+                onCreatePoll={onCreatePoll}
+                onVotePoll={onVotePoll}
+                onClosePoll={onClosePoll}
+                onRsvpEvent={onRsvpEvent}
+                onReadNotification={onReadCalendarNotification}
+                polls={communityPolls}
+                events={communityEvents}
+                notifications={communityNotifications}
+                channels={communityChannels}
+                onSetChannelPolicy={onSetChannelPolicy}
+                onSetForumLayout={onSetForumLayout}
+                onCreateForumTag={onCreateForumTag}
+                onUpdateForumTag={onUpdateForumTag}
+                onArchiveForumTag={onArchiveForumTag}
+                roomScopeId={roomScopeId}
+                onCreateChannelKind={onCreateChannelKind}
+              />
+            ) : null}
+            {tab === "integrations" ? <ManageIntegrationsTab controller={integrations} canManage={canManageMembers} /> : null}
             {tab === "audio" ? (
-              <VoiceSettingsPanel preferences={voicePreferences} onChange={onUpdateVoicePreferences} />
+              <VoiceSettingsPanel mediaDeviceController={mediaDeviceController} preferences={voicePreferences} onChange={onUpdateVoicePreferences} />
             ) : null}
           </div>
         </section>

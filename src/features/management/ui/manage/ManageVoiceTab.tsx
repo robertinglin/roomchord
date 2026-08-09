@@ -1,13 +1,14 @@
 import React, { useState } from "react";
+import type { MatterhornManagementAction, MatterhornManagementScope, MatterhornRoleRule } from "matterhorn-sdk/browser";
 import { optionalChannelGroup } from "@entities/chat/model/channelGroups";
-import { roomAccessSummary } from "@entities/chat/model/roles";
+import { scopedRoomAccessSummary } from "@entities/chat/model/roles";
 import type { MediaRoom, RoleDefinition, RoomRoleAccess } from "@entities/chat/model/types";
 import { RoleAccessEditor } from "@features/management/ui/manage/RoleFields";
 import type { RoomSettings } from "@entities/chat/model/managementTypes";
 import { Glyph } from "@shared/ui/design";
-import { Switch } from "@features/management/ui/Controls";
+import { Switch } from "@shared/ui/SettingsControls";
 import { Modal } from "@features/management/ui/Modal";
-import { panel, field, button, row, option, layout, misc, section as sectionStyle } from "@features/management/ui/manage.styles";
+import { panel, field, button, row, option, layout, misc, section as sectionStyle } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
 
 type VoiceModalMode = "create" | "edit";
@@ -16,15 +17,23 @@ export function ManageVoiceTab({
   canManageRooms,
   roles,
   rooms,
+  permissionActions = [],
+  permissionScopes = [],
+  scopedRulesByRoom = {},
   onArchiveRoom,
   onCreateRoom,
+  onScopedRulesChange,
   onUpdateRoom
 }: {
   canManageRooms: boolean;
   roles: RoleDefinition[];
   rooms: MediaRoom[];
+  permissionActions?: MatterhornManagementAction[];
+  permissionScopes?: MatterhornManagementScope[];
+  scopedRulesByRoom?: Record<string, Record<string, MatterhornRoleRule[]>>;
   onArchiveRoom: (roomId: string) => void;
   onCreateRoom: (input: { name: string; group?: string; allowsVideo: boolean; roleAccess?: RoomRoleAccess }) => void;
+  onScopedRulesChange?: (roomId: string, roleId: string, rules: MatterhornRoleRule[]) => void;
   onUpdateRoom: (roomId: string, settings: RoomSettings) => void;
 }) {
   const [roomName, setRoomName] = useState("");
@@ -37,6 +46,7 @@ export function ManageVoiceTab({
   const [editRoomAllowsVideo, setEditRoomAllowsVideo] = useState(true);
   const [editRoomLocked, setEditRoomLocked] = useState(false);
   const [editRoomRoleAccess, setEditRoomRoleAccess] = useState<RoomRoleAccess>({});
+  const [editScopedRulesByRole, setEditScopedRulesByRole] = useState<Record<string, MatterhornRoleRule[]>>({});
   const [modalMode, setModalMode] = useState<VoiceModalMode | undefined>();
   const editingRoom = editingRoomId ? rooms.find((room) => room.id === editingRoomId) : undefined;
   const isCreating = modalMode === "create";
@@ -65,6 +75,7 @@ export function ManageVoiceTab({
     setEditRoomAllowsVideo(room.allowsVideo !== false);
     setEditRoomLocked(Boolean(room.locked));
     setEditRoomRoleAccess({ ...(room.roleAccess || {}) });
+    setEditScopedRulesByRole(scopedRulesByRoom[room.id] || {});
     setModalMode("edit");
   }
 
@@ -100,7 +111,7 @@ export function ManageVoiceTab({
                 <div {...stylex.props(row.row)} key={room.id}>
                   <span {...stylex.props(row.rowMain)}>
                     <span {...stylex.props(row.rowTitle)}>{room.name}</span>
-                    <span {...stylex.props(row.rowSub)}>{[room.group || "General", roomAccessSummary(room, roles)].join(" · ")}</span>
+                    <span {...stylex.props(row.rowSub)}>{[room.group || "General", scopedRoomAccessSummary(room, roles, scopedRulesByRoom[room.id])].join(" · ")}</span>
                   </span>
                   <span {...stylex.props(row.rowEnd)}>
                     <button type="button" onClick={() => openRoomEditor(room)} {...stylex.props(button.btn, button.ghost, button.sm)}>Manage</button>
@@ -201,7 +212,19 @@ export function ManageVoiceTab({
             </span>
           </div>
           <p {...stylex.props(field.label, sectionStyle.labelFirst)}>Role visibility</p>
-          <RoleAccessEditor roles={roles} value={editRoomRoleAccess} onChange={setEditRoomRoleAccess} />
+          <RoleAccessEditor
+            roles={roles}
+            value={editRoomRoleAccess}
+            onChange={setEditRoomRoleAccess}
+            permissionActions={permissionActions}
+            permissionScopes={permissionScopes}
+            scopedRulesByRole={editScopedRulesByRole}
+            scopedPermissionScope={editingRoom ? { scopeType: editingRoom.scopeType || "media-room", scopeId: editingRoom.scopeId || editingRoom.id, label: editingRoom.name } : undefined}
+            onScopedRulesChange={(roleId, rules) => {
+              setEditScopedRulesByRole((current) => ({ ...current, [roleId]: rules }));
+              if (editingRoomId) onScopedRulesChange?.(editingRoomId, roleId, rules);
+            }}
+          />
         </form>
       </Modal>
     </div>

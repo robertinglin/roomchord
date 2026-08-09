@@ -110,17 +110,15 @@ test("Chat app behavior runs through Matterhorn testing helpers", async () => {
   const admin = room.as(testActor("admin", { role: "admin", displayName: "Admin" }));
   const member = room.as(testActor("mina", { role: "member", displayName: "Mina" }));
 
-  await admin.actions.channelCreate({ name: "launch", topic: "Planning", group: "Team" });
+  await admin.actions.channelCreate({ channelId: "launch", name: "launch", topic: "Planning", group: "Team", requiredRole: "member" });
   await member.actions.messageSend({ channelId: "general", body: "Ready", embeds: [] });
 
-  const channel = room.state.channels.find((item) => item.id === "channel_op_1_channelCreate");
+  const channel = room.state.channels.find((item) => item.id === "launch");
   assert.equal(channel.name, "launch");
   assert.equal(channel.createdBy, "admin");
   assert.equal(channel.requiredRole, "member");
   assert.equal(channel.scopeType, "channel");
-  // The lightweight schema test room preserves `$id` expressions; the host
-  // interpreter resolves this to the created channel id at runtime.
-  assert.equal(channel.scopeId, "$id:channel");
+  assert.equal(channel.scopeId, "launch");
   assert.equal(room.state.messages.message_op_2_messageSend.body, "Ready");
   assert.equal(room.state.messages.message_op_2_messageSend.authorId, "mina");
   assert.equal(expectOperation(room.operations, "messageSend").actor.memberId, "mina");
@@ -146,8 +144,8 @@ test("Chat schema declares moderation, author-only edits, and moderator deletes"
   assert.equal(app.compositionSchema.primaryPlugin.model.shapes.callRoutes.readClass, "head");
   assert.equal(app.compositionSchema.primaryPlugin.model.shapes.callRoutes.integrityClass, "signature");
   assert.deepEqual(
-    ["roleCreate", "memberRoleAssign", "memberRoleUnassign", "scopeRoleSet"].map((name) => app.appPack.composition.actions.find((action) => action.name === name)?.type),
-    ["access.role.define", "access.role.assign", "access.role.unassign", "scope.role.set"]
+    ["roleCreate", "memberRoleAssign", "memberRoleUnassign", "scopeMemberOverrideSet", "scopeParentSet"].map((name) => app.appPack.composition.actions.find((action) => action.name === name)?.type),
+    ["access.role.define", "access.role.assign", "access.role.unassign", "scope.member.override.set", "scope.parent.set"]
   );
 
   assert.deepEqual(primaryOperation("message.edit").guards, [
@@ -183,6 +181,8 @@ test("Chat schema starts with role-scoped member and guest channels and voice ro
       name: "general",
       topic: "Room coordination",
       group: "General",
+      categoryId: "general",
+      position: 0,
       requiredRole: "member",
       scopeType: "channel",
       scopeId: "general",
@@ -195,6 +195,8 @@ test("Chat schema starts with role-scoped member and guest channels and voice ro
       name: "guest",
       topic: "Guest lobby",
       group: "Guest",
+      categoryId: "guest",
+      position: 0,
       requiredRole: "guest",
       scopeType: "channel",
       scopeId: "guest",
@@ -205,9 +207,9 @@ test("Chat schema starts with role-scoped member and guest channels and voice ro
   ]);
 
   const createFields = primaryOperation("channel.create").effects[0].fields;
-  assert.equal(createFields.requiredRole, "member");
+  assert.equal(createFields.requiredRole, "$payload.requiredRole");
   assert.equal(createFields.scopeType, "channel");
-  assert.equal(createFields.scopeId, "$id:channel");
+  assert.equal(createFields.scopeId, "$payload.channelId");
 
   const mediaRooms = app.compositionSchema.plugins.find((plugin) => plugin.key === "mediaRooms");
   assert.deepEqual(mediaRooms.config.defaultRooms, [
@@ -243,9 +245,19 @@ test("Chat schema starts with role-scoped member and guest channels and voice ro
 
 test("Chat guest projection exposes only the guest channel and guest-scoped room", () => {
   const channels = app.compositionSchema.primaryPlugin.model.state.initial.channels;
+  const staffChannel = {
+    id: "staff",
+    name: "staff",
+    visibility: "private",
+    requiredRole: "__private__",
+    allowedRoleIds: ["admin", "owner", "moderator"],
+    allowedMemberIds: [],
+    scopeType: "channel",
+    scopeId: "staff"
+  };
   const mediaRooms = app.compositionSchema.plugins.find((plugin) => plugin.key === "mediaRooms");
   const state = {
-    channels,
+    channels: [...channels, staffChannel],
     messages: {
       general: { id: "general", channelId: "general", body: "member message" },
       guest: { id: "guest", channelId: "guest", body: "guest message" }
@@ -269,6 +281,9 @@ test("Chat guest projection exposes only the guest channel and guest-scoped room
   const member = permissionsApi.filterStateForActor(state, { memberId: "member-user", role: "member" });
   assert.deepEqual(member.channels.map((channel) => channel.id), ["general", "guest"]);
   assert.deepEqual(Object.keys(member.rooms), ["general_voice", "voice", "guest_voice"]);
+
+  const moderator = permissionsApi.filterStateForActor(state, { memberId: "mod-user", role: "moderator" });
+  assert.deepEqual(moderator.channels.map((channel) => channel.id), ["general", "guest", "staff"]);
 });
 
 test("Chat runtime room applies primary message operations through Matterhorn", async () => {
@@ -281,7 +296,7 @@ test("Chat runtime room applies primary message operations through Matterhorn", 
   const admin = room.as(testActor("admin", { role: "admin", displayName: "Admin" }));
   const member = room.as(testActor("mina", { role: "member", displayName: "Mina" }));
 
-  await admin.actions.channelCreate({ name: "launch", topic: "Planning", group: "Team" });
+  await admin.actions.channelCreate({ channelId: "launch", name: "launch", topic: "Planning", group: "Team", requiredRole: "member" });
   await member.actions.messageSend({ channelId: "general", body: "Ready", embeds: [] });
   const state = await room.state();
   const operations = room.operations;
@@ -310,12 +325,13 @@ test("Chat runtime room applies shared media-room plugin operations", async () =
   const admin = room.as(testActor("admin", { role: "admin", displayName: "Admin" }));
   const member = room.as(testActor("mina", { role: "member", displayName: "Mina" }));
 
-  await admin.actions.mediaRoomCreate({
+  await admin.actions.mediaRoomCreateScoped({
+    roomId: "standup",
     name: "Standup",
     group: "Ops",
     allowsVideo: true,
-    scopeType: "channel",
-    scopeId: "general"
+    parentScopeType: "channel",
+    parentScopeId: "general"
   });
   const roomState = await room.roomState();
   const mediaState = roomState.plugins["gg.matterhorn.examples.plugins.media-rooms"];
@@ -367,11 +383,12 @@ test("Chat runtime room rejects actions using Matterhorn role checks", async () 
     /requires member|not authorized|unauthorized/i
   );
   await assert.rejects(
-    () => guest.actions.mediaRoomCreate({
+    () => guest.actions.mediaRoomCreateScoped({
+      roomId: "private",
       name: "Private",
       allowsVideo: true,
-      scopeType: "channel",
-      scopeId: "guest"
+      parentScopeType: "channel",
+      parentScopeId: "guest"
     }),
     /requires moderator|not authorized|unauthorized/i
   );

@@ -1,0 +1,5777 @@
+{
+  "kind": "matterhorn.app-composition.schema",
+  "schemaVersion": 1,
+  "app": {
+    "id": "gg.matterhorn.mosh",
+    "version": "1.0.0",
+    "name": "Mosh"
+  },
+  "primaryPlugin": {
+    "id": "gg.matterhorn.mosh.plugin",
+    "version": "1.0.0",
+    "model": {
+      "kind": "matterhorn.primary-model.schema",
+      "schemaVersion": 1,
+      "state": {
+        "initial": {
+          "channels": [
+            {
+              "id": "general",
+              "name": "general",
+              "topic": "Room coordination",
+              "group": "General",
+              "categoryId": "general",
+              "position": 0,
+              "requiredRole": "member",
+              "scopeType": "channel",
+              "scopeId": "general",
+              "createdAt": 0,
+              "createdBy": "system",
+              "archivedAt": null
+            },
+            {
+              "id": "guest",
+              "name": "guest",
+              "topic": "Guest lobby",
+              "group": "Guest",
+              "categoryId": "guest",
+              "position": 0,
+              "requiredRole": "guest",
+              "scopeType": "channel",
+              "scopeId": "guest",
+              "createdAt": 0,
+              "createdBy": "system",
+              "archivedAt": null
+            }
+          ],
+          "categories": [
+            {
+              "id": "general",
+              "name": "General",
+              "position": 0,
+              "scopeType": "category",
+              "scopeId": "general",
+              "createdAt": 0,
+              "createdBy": "system",
+              "archivedAt": null
+            },
+            {
+              "id": "guest",
+              "name": "Guest",
+              "position": 1,
+              "scopeType": "category",
+              "scopeId": "guest",
+              "createdAt": 0,
+              "createdBy": "system",
+              "archivedAt": null
+            }
+          ],
+          "messages": {},
+          "guests": {},
+          "callRoutes": {},
+          "publicInvites": [
+            {
+              "id": "admin",
+              "role": "admin",
+              "status": "active",
+              "createdAt": 0
+            },
+            {
+              "id": "member",
+              "role": "member",
+              "status": "active",
+              "createdAt": 0
+            },
+            {
+              "id": "guest",
+              "role": "guest",
+              "status": "active",
+              "createdAt": 0
+            }
+          ],
+          "joinRequests": {},
+          "access": {
+            "version": 1,
+            "scopes": {
+              "channel:general": {
+                "scopeType": "channel",
+                "scopeId": "general",
+                "role": "editor",
+                "canView": true,
+                "canEdit": true
+              },
+              "channel:guest": {
+                "scopeType": "channel",
+                "scopeId": "guest",
+                "role": "editor",
+                "canView": true,
+                "canEdit": true
+              }
+            }
+          },
+          "roleDefinitions": {
+            "guest": {
+              "id": "guest",
+              "name": "Guest",
+              "description": "Can view public room activity",
+              "color": "#6b7280",
+              "rank": 0,
+              "systemRole": true,
+              "archivedAt": null
+            },
+            "member": {
+              "id": "member",
+              "name": "Member",
+              "description": "Can send messages and join collaborative scopes",
+              "color": "#22c55e",
+              "rank": 1,
+              "systemRole": true,
+              "archivedAt": null
+            },
+            "moderator": {
+              "id": "moderator",
+              "name": "Moderator",
+              "description": "Can manage messages and scoped resources",
+              "color": "#38bdf8",
+              "rank": 2,
+              "systemRole": true,
+              "archivedAt": null
+            },
+            "admin": {
+              "id": "admin",
+              "name": "Admin",
+              "description": "Can delegate access and manage roles",
+              "color": "#a78bfa",
+              "rank": 3,
+              "systemRole": true,
+              "archivedAt": null
+            },
+            "owner": {
+              "id": "owner",
+              "name": "Owner",
+              "description": "Full room ownership",
+              "color": "#f59e0b",
+              "rank": 4,
+              "systemRole": true,
+              "archivedAt": null
+            }
+          },
+          "activity": []
+        }
+      },
+      "operations": {
+        "category.create": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "categoryId": {
+                "type": "string",
+                "max": 200
+              },
+              "name": {
+                "type": "string",
+                "max": 80
+              }
+            },
+            "optional": {
+              "position": {
+                "type": "number",
+                "min": 0
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "createRecord",
+              "collection": "categories",
+              "storage": "array",
+              "partition": "categories",
+              "idField": "categoryId",
+              "fields": {
+                "name": "$payload.name",
+                "position": "$payload.position",
+                "scopeType": "category",
+                "scopeId": "$payload.categoryId",
+                "createdAt": "$createdAt",
+                "createdBy": "$actor.memberId",
+                "archivedAt": null
+              },
+              "activity": "created category"
+            }
+          ]
+        },
+        "category.update": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "categoryId": {
+                "type": "string",
+                "max": 200
+              }
+            },
+            "optional": {
+              "name": {
+                "type": "string",
+                "max": 80
+              },
+              "position": {
+                "type": "number",
+                "min": 0
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "updateRecord",
+              "collection": "categories",
+              "storage": "array",
+              "partition": "categories",
+              "idField": "categoryId",
+              "fields": {
+                "name": "$payload.name",
+                "position": "$payload.position",
+                "updatedAt": "$createdAt"
+              },
+              "activity": "updated category"
+            }
+          ]
+        },
+        "category.archive": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "categoryId": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "markRecord",
+              "collection": "categories",
+              "storage": "array",
+              "partition": "categories",
+              "idField": "categoryId",
+              "fields": {
+                "archivedAt": "$createdAt"
+              },
+              "activity": "archived category"
+            }
+          ]
+        },
+        "category.reorder": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "categoryId": {
+                "type": "string",
+                "max": 200
+              },
+              "position": {
+                "type": "number",
+                "min": 0
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "updateRecord",
+              "collection": "categories",
+              "storage": "array",
+              "partition": "categories",
+              "idField": "categoryId",
+              "fields": {
+                "position": "$payload.position",
+                "updatedAt": "$createdAt"
+              },
+              "activity": "reordered category"
+            }
+          ]
+        },
+        "channel.create": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "channelId": {
+                "type": "string",
+                "max": 200
+              },
+              "name": {
+                "type": "string",
+                "max": 80
+              },
+              "requiredRole": {
+                "type": "string",
+                "max": 120
+              }
+            },
+            "optional": {
+              "topic": {
+                "type": "string",
+                "max": 240,
+                "nullable": true
+              },
+              "group": {
+                "type": "string",
+                "max": 80,
+                "nullable": true
+              },
+              "categoryId": {
+                "type": "string",
+                "max": 200,
+                "nullable": true
+              },
+              "position": {
+                "type": "number",
+                "min": 0
+              },
+              "visibility": {
+                "type": "enum",
+                "values": [
+                  "public",
+                  "private"
+                ]
+              },
+              "allowedRoleIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 120
+                },
+                "max": 64
+              },
+              "allowedMemberIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 240
+                },
+                "max": 128
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "createRecord",
+              "collection": "channels",
+              "storage": "array",
+              "partition": "channels",
+              "idField": "channelId",
+              "fields": {
+                "name": "$payload.name",
+                "topic": "$payload.topic",
+                "group": "$payload.group",
+                "categoryId": "$payload.categoryId",
+                "position": "$payload.position",
+                "visibility": "$payload.visibility",
+                "allowedRoleIds": "$payload.allowedRoleIds",
+                "allowedMemberIds": "$payload.allowedMemberIds",
+                "requiredRole": "$payload.requiredRole",
+                "scopeType": "channel",
+                "scopeId": "$payload.channelId",
+                "createdAt": "$createdAt",
+                "createdBy": "$actor.memberId",
+                "archivedAt": null
+              },
+              "activity": "created channel"
+            }
+          ]
+        },
+        "channel.rename": {
+          "authorize": {
+            "roles": [
+              "moderator"
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "channels",
+                "idField": "channelId",
+                "scopeIdField": "scopeId"
+              },
+              "minimumLevel": "moderator"
+            }
+          },
+          "payload": {
+            "required": {
+              "channelId": {
+                "type": "string",
+                "max": 200
+              }
+            },
+            "optional": {
+              "name": {
+                "type": "string",
+                "max": 80,
+                "nullable": true
+              },
+              "topic": {
+                "type": "string",
+                "max": 240,
+                "nullable": true
+              },
+              "group": {
+                "type": "string",
+                "max": 80,
+                "nullable": true
+              },
+              "categoryId": {
+                "type": "string",
+                "max": 200,
+                "nullable": true
+              },
+              "position": {
+                "type": "number",
+                "min": 0
+              },
+              "visibility": {
+                "type": "enum",
+                "values": [
+                  "public",
+                  "private"
+                ]
+              },
+              "requiredRole": {
+                "type": "string",
+                "max": 120
+              },
+              "allowedRoleIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 120
+                },
+                "max": 64
+              },
+              "allowedMemberIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 240
+                },
+                "max": 128
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "updateRecord",
+              "collection": "channels",
+              "storage": "array",
+              "partition": "channels",
+              "idField": "channelId",
+              "fields": {
+                "name": "$payload.name",
+                "topic": "$payload.topic",
+                "group": "$payload.group",
+                "categoryId": "$payload.categoryId",
+                "position": "$payload.position",
+                "visibility": "$payload.visibility",
+                "requiredRole": "$payload.requiredRole",
+                "allowedRoleIds": "$payload.allowedRoleIds",
+                "allowedMemberIds": "$payload.allowedMemberIds",
+                "updatedAt": "$createdAt"
+              },
+              "activity": "updated record"
+            }
+          ]
+        },
+        "channel.archive": {
+          "authorize": {
+            "roles": [
+              "moderator"
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "channels",
+                "idField": "channelId",
+                "scopeIdField": "scopeId"
+              },
+              "minimumLevel": "moderator"
+            }
+          },
+          "payload": {
+            "required": {
+              "channelId": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "markRecord",
+              "collection": "channels",
+              "storage": "array",
+              "partition": "channels",
+              "idField": "channelId",
+              "fields": {
+                "archivedAt": "$createdAt"
+              },
+              "activity": "marked record"
+            }
+          ]
+        },
+        "message.send": {
+          "authorize": {
+            "roles": [
+              "guest",
+              "member"
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "payloadScopeIdField": "channelId",
+              "minimumLevel": "editor"
+            }
+          },
+          "payload": {
+            "required": {
+              "channelId": {
+                "type": "string",
+                "max": 200
+              },
+              "body": {
+                "type": "string",
+                "max": 4000
+              }
+            },
+            "optional": {
+              "embeds": {
+                "type": "array"
+              },
+              "mentionIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 120
+                }
+              },
+              "attachmentIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 200
+                }
+              },
+              "tagIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 120
+                },
+                "max": 32
+              },
+              "customMediaRefs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": {
+                    "mediaId": {
+                      "type": "string",
+                      "max": 320
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "max": 120
+                    },
+                    "scopeId": {
+                      "type": "string",
+                      "max": 320
+                    },
+                    "mediaType": {
+                      "type": "enum",
+                      "values": [
+                        "emoji",
+                        "sticker",
+                        "gif",
+                        "voice"
+                      ]
+                    }
+                  },
+                  "additional": false
+                },
+                "max": 64
+              }
+            }
+          },
+          "guards": [
+            {
+              "kind": "or",
+              "guards": [
+                {
+                  "kind": "eq",
+                  "left": {
+                    "kind": "value.expr",
+                    "expr": "$payload.channelId"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": "guest"
+                  }
+                },
+                {
+                  "kind": "ne",
+                  "left": {
+                    "kind": "value.expr",
+                    "expr": "$actor.role"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": "guest"
+                  }
+                }
+              ]
+            }
+          ],
+          "effects": [
+            {
+              "kind": "createRecord",
+              "collection": "messages",
+              "storage": "map",
+              "partition": "messages",
+              "idPrefix": "message",
+              "fields": {
+                "channelId": "$payload.channelId",
+                "scopeType": "channel",
+                "scopeId": "$payload.channelId",
+                "body": "$payload.body",
+                "authorId": "$actor.memberId",
+                "createdAt": "$createdAt",
+                "replyToId": null,
+                "editedAt": null,
+                "deletedAt": null,
+                "deletedBy": null,
+                "pinnedAt": null,
+                "pinnedBy": null,
+                "reactions": {},
+                "embeds": "$payload.embeds",
+                "attachmentIds": "$payload.attachmentIds",
+                "tagIds": "$payload.tagIds",
+                "customMediaRefs": "$payload.customMediaRefs"
+              },
+              "activity": "created message"
+            }
+          ]
+        },
+        "message.reply": {
+          "authorize": {
+            "roles": [
+              "guest",
+              "member"
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "payloadScopeIdField": "channelId",
+              "minimumLevel": "editor"
+            }
+          },
+          "payload": {
+            "required": {
+              "channelId": {
+                "type": "string",
+                "max": 200
+              },
+              "replyToId": {
+                "type": "string",
+                "max": 200
+              },
+              "body": {
+                "type": "string",
+                "max": 4000
+              }
+            },
+            "optional": {
+              "mentionIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 120
+                }
+              },
+              "attachmentIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 200
+                }
+              },
+              "tagIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 120
+                },
+                "max": 32
+              },
+              "customMediaRefs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": {
+                    "mediaId": {
+                      "type": "string",
+                      "max": 320
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "max": 120
+                    },
+                    "scopeId": {
+                      "type": "string",
+                      "max": 320
+                    },
+                    "mediaType": {
+                      "type": "enum",
+                      "values": [
+                        "emoji",
+                        "sticker",
+                        "gif",
+                        "voice"
+                      ]
+                    }
+                  },
+                  "additional": false
+                },
+                "max": 64
+              }
+            }
+          },
+          "guards": [
+            {
+              "kind": "or",
+              "guards": [
+                {
+                  "kind": "eq",
+                  "left": {
+                    "kind": "value.expr",
+                    "expr": "$payload.channelId"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": "guest"
+                  }
+                },
+                {
+                  "kind": "ne",
+                  "left": {
+                    "kind": "value.expr",
+                    "expr": "$actor.role"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": "guest"
+                  }
+                }
+              ]
+            }
+          ],
+          "effects": [
+            {
+              "kind": "createRecord",
+              "collection": "messages",
+              "storage": "map",
+              "partition": "messages",
+              "idPrefix": "message",
+              "fields": {
+                "channelId": "$payload.channelId",
+                "scopeType": "channel",
+                "scopeId": "$payload.channelId",
+                "replyToId": "$payload.replyToId",
+                "body": "$payload.body",
+                "authorId": "$actor.memberId",
+                "createdAt": "$createdAt",
+                "editedAt": null,
+                "deletedAt": null,
+                "deletedBy": null,
+                "pinnedAt": null,
+                "pinnedBy": null,
+                "reactions": {},
+                "embeds": [],
+                "attachmentIds": "$payload.attachmentIds",
+                "tagIds": "$payload.tagIds",
+                "customMediaRefs": "$payload.customMediaRefs"
+              },
+              "activity": "created message"
+            }
+          ]
+        },
+        "message.edit": {
+          "authorize": {
+            "roles": [
+              "member"
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "messages",
+                "idField": "messageId",
+                "scopeIdField": "channelId",
+                "ownerField": "authorId"
+              },
+              "minimumLevel": "editor",
+              "ownerAllowed": true
+            }
+          },
+          "payload": {
+            "required": {
+              "messageId": {
+                "type": "string",
+                "max": 200
+              },
+              "body": {
+                "type": "string",
+                "max": 4000
+              }
+            },
+            "optional": {
+              "embeds": {
+                "type": "array"
+              }
+            }
+          },
+          "guards": [
+            {
+              "kind": "recordOwnerOrRole",
+              "collection": "messages",
+              "storage": "map",
+              "partition": "messages",
+              "idField": "messageId",
+              "ownerField": "authorId",
+              "roles": [],
+              "message": "Only message authors can edit messages."
+            },
+            {
+              "kind": "recordFlagClear",
+              "collection": "messages",
+              "storage": "map",
+              "partition": "messages",
+              "idField": "messageId",
+              "flag": "deletedAt",
+              "message": "Deleted messages cannot be edited."
+            }
+          ],
+          "effects": [
+            {
+              "kind": "updateRecord",
+              "collection": "messages",
+              "storage": "map",
+              "partition": "messages",
+              "idField": "messageId",
+              "fields": {
+                "body": "$payload.body",
+                "editedAt": "$createdAt",
+                "embeds": "$payload.embeds"
+              },
+              "activity": "updated record"
+            }
+          ]
+        },
+        "message.react": {
+          "authorize": {
+            "roles": [
+              "member"
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "messages",
+                "idField": "messageId",
+                "scopeIdField": "channelId"
+              },
+              "minimumLevel": "editor"
+            }
+          },
+          "payload": {
+            "required": {
+              "messageId": {
+                "type": "string",
+                "max": 200
+              },
+              "emoji": {
+                "type": "string",
+                "max": 64
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "toggleReaction",
+              "collection": "messages",
+              "storage": "map",
+              "partition": "messages",
+              "idField": "messageId",
+              "emojiField": "emoji"
+            }
+          ]
+        },
+        "message.pin": {
+          "authorize": {
+            "roles": [
+              "moderator"
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "messages",
+                "idField": "messageId",
+                "scopeIdField": "channelId"
+              },
+              "minimumLevel": "moderator"
+            }
+          },
+          "payload": {
+            "required": {
+              "messageId": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "markRecord",
+              "collection": "messages",
+              "storage": "map",
+              "partition": "messages",
+              "idField": "messageId",
+              "fields": {
+                "pinnedAt": "$createdAt",
+                "pinnedBy": "$actor.memberId"
+              },
+              "activity": "marked record"
+            }
+          ]
+        },
+        "message.unpin": {
+          "authorize": {
+            "roles": [
+              "moderator"
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "messages",
+                "idField": "messageId",
+                "scopeIdField": "channelId"
+              },
+              "minimumLevel": "moderator"
+            }
+          },
+          "payload": {
+            "required": {
+              "messageId": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "markRecord",
+              "collection": "messages",
+              "storage": "map",
+              "partition": "messages",
+              "idField": "messageId",
+              "fields": {
+                "pinnedAt": null,
+                "pinnedBy": null
+              },
+              "activity": "marked record"
+            }
+          ]
+        },
+        "message.delete": {
+          "authorize": {
+            "roles": [
+              "member"
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "messages",
+                "idField": "messageId",
+                "scopeIdField": "channelId",
+                "ownerField": "authorId"
+              },
+              "minimumLevel": "moderator",
+              "ownerAllowed": true
+            }
+          },
+          "payload": {
+            "required": {
+              "messageId": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "guards": [
+            {
+              "kind": "recordOwnerOrRole",
+              "collection": "messages",
+              "storage": "map",
+              "partition": "messages",
+              "idField": "messageId",
+              "ownerField": "authorId",
+              "roles": [
+                "moderator"
+              ],
+              "message": "Only message authors or moderators can delete messages."
+            }
+          ],
+          "effects": [
+            {
+              "kind": "markRecord",
+              "collection": "messages",
+              "storage": "map",
+              "partition": "messages",
+              "idField": "messageId",
+              "fields": {
+                "body": "",
+                "embeds": [],
+                "reactions": {},
+                "pinnedAt": null,
+                "pinnedBy": null,
+                "deletedAt": "$createdAt",
+                "deletedBy": "$actor.memberId"
+              },
+              "activity": "marked record"
+            }
+          ]
+        },
+        "member.moderate": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "memberId": {
+                "type": "string",
+                "max": 200
+              }
+            },
+            "optional": {
+              "nameLocked": {
+                "type": "boolean"
+              },
+              "chatDisabled": {
+                "type": "boolean"
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "upsertRecord",
+              "collection": "guests",
+              "storage": "map",
+              "partition": "guests",
+              "idField": "memberId",
+              "fields": {
+                "memberId": "$payload.memberId",
+                "nameLocked": "$payload.nameLocked",
+                "chatDisabled": "$payload.chatDisabled",
+                "moderatedAt": "$createdAt",
+                "moderatedBy": "$actor.memberId"
+              },
+              "activity": "moderated member"
+            }
+          ]
+        },
+        "member.call.update": {
+          "authorize": {
+            "roles": [
+              "member"
+            ]
+          },
+          "payload": {
+            "required": {
+              "clientId": {
+                "type": "string",
+                "max": 200
+              },
+              "peerId": {
+                "type": "string",
+                "max": 200
+              },
+              "callPubkey": {
+                "type": "string",
+                "max": 200
+              }
+            },
+            "optional": {
+              "peerAddress": {
+                "type": "string",
+                "max": 400
+              },
+              "name": {
+                "type": "string",
+                "max": 80
+              },
+              "avatar": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "upsertActorRecord",
+              "collection": "guests",
+              "storage": "map",
+              "partition": "guests",
+              "fields": {
+                "memberId": "$actor.memberId",
+                "role": "$actor.role",
+                "lastSeenAt": "$createdAt",
+                "callClientId": "$payload.clientId",
+                "peerId": "$payload.peerId",
+                "peerAddress": "$payload.peerAddress",
+                "callPubkey": "$payload.callPubkey",
+                "name": "$payload.name",
+                "avatar": "$payload.avatar",
+                "callUpdatedAt": "$createdAt"
+              }
+            },
+            {
+              "kind": "upsertActorRecord",
+              "collection": "callRoutes",
+              "storage": "map",
+              "partition": "callRoutes",
+              "fields": {
+                "memberId": "$actor.memberId",
+                "callClientId": "$payload.clientId",
+                "peerId": "$payload.peerId",
+                "peerAddress": "$payload.peerAddress",
+                "callPubkey": "$payload.callPubkey",
+                "name": "$payload.name",
+                "avatar": "$payload.avatar",
+                "callUpdatedAt": "$createdAt"
+              }
+            }
+          ]
+        },
+        "member.ban": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "memberId": {
+                "type": "string",
+                "max": 200
+              }
+            },
+            "optional": {
+              "reason": {
+                "type": "string",
+                "max": 300,
+                "nullable": true
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "upsertRecord",
+              "collection": "guests",
+              "storage": "map",
+              "partition": "guests",
+              "idField": "memberId",
+              "fields": {
+                "memberId": "$payload.memberId",
+                "bannedAt": "$createdAt",
+                "banReason": "$payload.reason",
+                "chatDisabled": true,
+                "bannedBy": "$actor.memberId"
+              },
+              "activity": "banned member"
+            }
+          ]
+        },
+        "member.unban": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "memberId": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "upsertRecord",
+              "collection": "guests",
+              "storage": "map",
+              "partition": "guests",
+              "idField": "memberId",
+              "fields": {
+                "memberId": "$payload.memberId",
+                "bannedAt": null,
+                "banReason": null,
+                "chatDisabled": false,
+                "unbannedAt": "$createdAt",
+                "unbannedBy": "$actor.memberId"
+              },
+              "activity": "unbanned member"
+            }
+          ]
+        },
+        "invite.disable": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "inviteId": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "updateRecord",
+              "collection": "publicInvites",
+              "storage": "array",
+              "partition": "publicInvites",
+              "idField": "inviteId",
+              "fields": {
+                "status": "disabled",
+                "disabledAt": "$createdAt",
+                "disabledBy": "$actor.memberId"
+              },
+              "activity": "disabled invite"
+            }
+          ]
+        },
+        "invite.remove": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "inviteId": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "updateRecord",
+              "collection": "publicInvites",
+              "storage": "array",
+              "partition": "publicInvites",
+              "idField": "inviteId",
+              "fields": {
+                "status": "removed",
+                "removedAt": "$createdAt",
+                "removedBy": "$actor.memberId"
+              },
+              "activity": "removed invite"
+            }
+          ]
+        },
+        "join.approve": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "requestId": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "updateRecord",
+              "collection": "joinRequests",
+              "storage": "map",
+              "partition": "joinRequests",
+              "idField": "requestId",
+              "fields": {
+                "status": "approved",
+                "decidedAt": "$createdAt",
+                "decidedBy": "$actor.memberId"
+              },
+              "activity": "approved join request"
+            }
+          ]
+        },
+        "join.deny": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "requestId": {
+                "type": "string",
+                "max": 200
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "updateRecord",
+              "collection": "joinRequests",
+              "storage": "map",
+              "partition": "joinRequests",
+              "idField": "requestId",
+              "fields": {
+                "status": "denied",
+                "decidedAt": "$createdAt",
+                "decidedBy": "$actor.memberId"
+              },
+              "activity": "denied join request"
+            }
+          ]
+        }
+      },
+      "views": {},
+      "shapes": {
+        "channels": {
+          "readClass": "head",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "array",
+          "partition": "channels"
+        },
+        "categories": {
+          "readClass": "head",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "array",
+          "partition": "categories"
+        },
+        "messages": {
+          "readClass": "window",
+          "integrityClass": "seq",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "map",
+          "partition": "messages"
+        },
+        "guests": {
+          "readClass": "head",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "map",
+          "partition": "guests"
+        },
+        "callRoutes": {
+          "readClass": "head",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "map",
+          "partition": "callRoutes"
+        },
+        "publicInvites": {
+          "readClass": "head",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "array",
+          "partition": "publicInvites"
+        },
+        "joinRequests": {
+          "readClass": "head",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "map",
+          "partition": "joinRequests"
+        },
+        "access": {
+          "readClass": "full-fold",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "map",
+          "partition": "access"
+        },
+        "roleDefinitions": {
+          "readClass": "head",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "map",
+          "partition": "roleDefinitions"
+        },
+        "activity": {
+          "readClass": "window",
+          "integrityClass": "seq",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "array",
+          "partition": "activity"
+        }
+      }
+    }
+  },
+  "plugins": [
+    {
+      "key": "comments",
+      "id": "gg.matterhorn.examples.plugins.comments",
+      "version": "1.0.0",
+      "required": true,
+      "model": {
+        "kind": "matterhorn.primary-model.schema",
+        "schemaVersion": 1,
+        "state": {
+          "initial": {
+            "threads": {},
+            "comments": {},
+            "activity": []
+          }
+        },
+        "stateProjection": {
+          "threads": "commentThreads",
+          "comments": "comments"
+        },
+        "operations": {
+          "comments.thread.create": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
+            },
+            "effects": [
+              {
+                "kind": "createRecord",
+                "collection": "threads",
+                "idPrefix": "thread",
+                "fields": {
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId",
+                  "title": "$payload.title",
+                  "visibility": "$payload.visibility",
+                  "createdBy": "$actor.memberId",
+                  "createdByName": "$actor.displayName",
+                  "createdAt": "$createdAt",
+                  "resolved": false,
+                  "source": "$payload.source",
+                  "privateMemberIds": "$payload.privateMemberIds",
+                  "followers": [],
+                  "notificationPreferences": {},
+                  "lifecycle": "open",
+                  "archived": false,
+                  "locked": false
+                }
+              }
+            ]
+          },
+          "comments.add": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "editor"
+              }
+            },
+            "effects": [
+              {
+                "kind": "upsertRecord",
+                "collection": "threads",
+                "scopeIdPrefix": "thread",
+                "fields": {
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId",
+                  "scopeKey": "$scopedId:scope",
+                  "title": "Discussion",
+                  "visibility": "members",
+                  "createdBy": "$actor.memberId",
+                  "createdByName": "$actor.displayName",
+                  "createdAt": "$createdAt",
+                  "lastCommentAt": "$createdAt",
+                  "resolved": false
+                }
+              },
+              {
+                "kind": "createRecord",
+                "collection": "comments",
+                "idPrefix": "comment",
+                "fields": {
+                  "threadId": "$scopedId:thread",
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId",
+                  "parentId": "$payload.parentId",
+                  "body": "$payload.body",
+                  "authorId": "$actor.memberId",
+                  "authorName": "$actor.displayName",
+                  "createdAt": "$createdAt",
+                  "updatedAt": "$createdAt",
+                  "reactions": {}
+                }
+              }
+            ]
+          },
+          "comments.edit": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId",
+                  "ownerField": "authorId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
+            },
+            "guards": [
+              {
+                "kind": "recordOwnerOrRole",
+                "collection": "comments",
+                "id": "$payload.commentId",
+                "ownerField": "authorId",
+                "roles": [
+                  "moderator"
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "comments",
+                "id": "$payload.commentId",
+                "fields": {
+                  "body": "$payload.body",
+                  "editedAt": "$createdAt",
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "comments.react": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "editor"
+              }
+            },
+            "effects": [
+              {
+                "kind": "toggleReaction",
+                "collection": "comments",
+                "id": "$payload.commentId",
+                "emojiField": "emoji"
+              }
+            ]
+          },
+          "comments.delete": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "comments",
+                  "idField": "commentId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId",
+                  "ownerField": "authorId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
+            },
+            "guards": [
+              {
+                "kind": "recordOwnerOrRole",
+                "collection": "comments",
+                "id": "$payload.commentId",
+                "ownerField": "authorId",
+                "roles": [
+                  "moderator"
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "kind": "markRecord",
+                "collection": "comments",
+                "id": "$payload.commentId",
+                "fields": {
+                  "body": "",
+                  "deletedAt": "$createdAt",
+                  "deleteReason": "$payload.reason"
+                }
+              }
+            ]
+          },
+          "comments.resolve": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "fields": {
+                  "resolved": "$payload.resolved",
+                  "resolvedAt": "$createdAt",
+                  "resolvedBy": "$actor.memberId"
+                }
+              }
+            ]
+          },
+          "comments.thread.archive": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "fields": {
+                  "lifecycle": "archived",
+                  "archived": true,
+                  "locked": false,
+                  "archivedAt": "$createdAt",
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "comments.thread.reopen": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "fields": {
+                  "lifecycle": "open",
+                  "archived": false,
+                  "locked": false,
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "comments.thread.lock": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "fields": {
+                  "lifecycle": "locked",
+                  "archived": false,
+                  "locked": true,
+                  "lockedAt": "$createdAt",
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "comments.thread.unlock": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "fields": {
+                  "lifecycle": "open",
+                  "archived": false,
+                  "locked": false,
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "comments.thread.follow": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "viewer"
+              }
+            },
+            "effects": [
+              {
+                "kind": "insertIdIntoRecordArray",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "arrayField": "followers",
+                "value": "$actor.memberId"
+              },
+              {
+                "kind": "mergeRecordMap",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "mapField": "notificationPreferences",
+                "key": "$actor.memberId",
+                "value": true
+              },
+              {
+                "kind": "updateRecord",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "comments.thread.unfollow": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "viewer"
+              }
+            },
+            "effects": [
+              {
+                "kind": "removeIdFromRecordArray",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "arrayField": "followers",
+                "value": "$actor.memberId"
+              },
+              {
+                "kind": "mergeRecordMap",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "mapField": "notificationPreferences",
+                "key": "$actor.memberId",
+                "value": false
+              },
+              {
+                "kind": "updateRecord",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "comments.thread.member.add": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "insertIdIntoRecordArray",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "arrayField": "privateMemberIds",
+                "value": "$payload.memberId"
+              },
+              {
+                "kind": "updateRecord",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "comments.thread.member.remove": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "removeIdFromRecordArray",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "arrayField": "privateMemberIds",
+                "value": "$payload.memberId"
+              },
+              {
+                "kind": "updateRecord",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "comments.thread.notifications": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "threads",
+                  "idField": "threadId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "viewer"
+              }
+            },
+            "effects": [
+              {
+                "kind": "mergeRecordMap",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "mapField": "notificationPreferences",
+                "key": "$actor.memberId",
+                "value": "$payload.enabled"
+              },
+              {
+                "kind": "updateRecord",
+                "collection": "threads",
+                "id": "$payload.threadId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          }
+        },
+        "views": {
+          "commentsForScope": {
+            "kind": "scopedCollections",
+            "inputType": "ScopeRef",
+            "resultType": "ScopedComments",
+            "scope": {
+              "typeField": "scopeType",
+              "idField": "scopeId"
+            },
+            "collections": {
+              "threads": {
+                "collection": "threads",
+                "scopeTypeField": "scopeType",
+                "scopeIdField": "scopeId"
+              },
+              "comments": {
+                "collection": "comments",
+                "scopeTypeField": "scopeType",
+                "scopeIdField": "scopeId",
+                "orderBy": "createdAt"
+              }
+            }
+          }
+        },
+        "publicView": {
+          "kind": "state"
+        }
+      }
+    },
+    {
+      "key": "presence",
+      "id": "gg.matterhorn.examples.plugins.presence",
+      "version": "1.0.0",
+      "required": true,
+      "model": {
+        "kind": "matterhorn.primary-model.schema",
+        "schemaVersion": 1,
+        "state": {
+          "initial": {
+            "members": {},
+            "activity": []
+          }
+        },
+        "nonReplayableOperations": [
+          "presence.update",
+          "presence.ping",
+          "presence.clear"
+        ],
+        "operations": {}
+      }
+    },
+    {
+      "key": "mediaRooms",
+      "id": "gg.matterhorn.examples.plugins.media-rooms",
+      "version": "1.0.0",
+      "required": true,
+      "model": {
+        "kind": "matterhorn.primary-model.schema",
+        "schemaVersion": 1,
+        "state": {
+          "initial": {
+            "rooms": {},
+            "activity": []
+          }
+        },
+        "nonReplayableOperations": [
+          "media.room.join",
+          "media.room.leave"
+        ],
+        "operations": {
+          "media.room.create": {
+            "payload": {
+              "required": {
+                "name": {
+                  "type": "string",
+                  "max": 100
+                },
+                "scopeType": {
+                  "type": "string",
+                  "max": 80
+                },
+                "scopeId": {
+                  "type": "string",
+                  "max": 160
+                }
+              },
+              "optional": {
+                "allowsVideo": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "group": {
+                  "type": "string",
+                  "max": 80,
+                  "nullable": true,
+                  "nonEmpty": false
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "voice",
+                    "stage"
+                  ],
+                  "default": "voice"
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "createRecord",
+                "collection": "rooms",
+                "idPrefix": "media_room",
+                "fields": {
+                  "name": "$payload.name",
+                  "group": "$payload.group",
+                  "kind": "$payload.kind",
+                  "allowsVideo": "$payload.allowsVideo",
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId",
+                  "createdBy": "$actor.memberId",
+                  "createdAt": "$createdAt",
+                  "locked": false,
+                  "archivedAt": null,
+                  "participants": {},
+                  "policyRevision": 0,
+                  "participantCount": 0
+                }
+              },
+              {
+                "kind": "appendToArray",
+                "path": "activity",
+                "item": {
+                  "type": "media.room.create",
+                  "actorId": "$actor.memberId",
+                  "actorName": "$actor.displayName",
+                  "createdAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.room.create.v2": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                },
+                "name": {
+                  "type": "string",
+                  "max": 100
+                },
+                "parentScopeType": {
+                  "type": "string",
+                  "max": 80
+                },
+                "parentScopeId": {
+                  "type": "string",
+                  "max": 180
+                }
+              },
+              "optional": {
+                "allowsVideo": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "group": {
+                  "type": "string",
+                  "max": 80,
+                  "nullable": true,
+                  "nonEmpty": false
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "voice",
+                    "stage"
+                  ],
+                  "default": "voice"
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "payloadScopeTypeField": "parentScopeType",
+                "payloadScopeIdField": "parentScopeId",
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "createRecord",
+                "collection": "rooms",
+                "idField": "roomId",
+                "fields": {
+                  "name": "$payload.name",
+                  "group": "$payload.group",
+                  "kind": "$payload.kind",
+                  "allowsVideo": "$payload.allowsVideo",
+                  "scopeType": "media-room",
+                  "scopeId": "$payload.roomId",
+                  "parentScopeType": "$payload.parentScopeType",
+                  "parentScopeId": "$payload.parentScopeId",
+                  "createdBy": "$actor.memberId",
+                  "createdAt": "$createdAt",
+                  "locked": false,
+                  "archivedAt": null,
+                  "participants": {},
+                  "policyRevision": 0,
+                  "participantCount": 0
+                }
+              },
+              {
+                "kind": "appendToArray",
+                "path": "activity",
+                "item": {
+                  "type": "media.room.create.v2",
+                  "actorId": "$actor.memberId",
+                  "actorName": "$actor.displayName",
+                  "createdAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.room.member.mute": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                },
+                "targetMemberId": {
+                  "type": "string",
+                  "max": 120
+                }
+              },
+              "optional": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true,
+                  "nonEmpty": false
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "rooms",
+                "id": "$payload.roomId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              },
+              {
+                "kind": "appendToArray",
+                "path": "activity",
+                "item": {
+                  "type": "media.room.member.mute",
+                  "actorId": "$actor.memberId",
+                  "actorName": "$actor.displayName",
+                  "createdAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.room.member.deafen": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                },
+                "targetMemberId": {
+                  "type": "string",
+                  "max": 120
+                }
+              },
+              "optional": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true,
+                  "nonEmpty": false
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "rooms",
+                "id": "$payload.roomId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              },
+              {
+                "kind": "appendToArray",
+                "path": "activity",
+                "item": {
+                  "type": "media.room.member.deafen",
+                  "actorId": "$actor.memberId",
+                  "actorName": "$actor.displayName",
+                  "createdAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.room.member.suppress": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                },
+                "targetMemberId": {
+                  "type": "string",
+                  "max": 120
+                }
+              },
+              "optional": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true,
+                  "nonEmpty": false
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "rooms",
+                "id": "$payload.roomId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              },
+              {
+                "kind": "appendToArray",
+                "path": "activity",
+                "item": {
+                  "type": "media.room.member.suppress",
+                  "actorId": "$actor.memberId",
+                  "actorName": "$actor.displayName",
+                  "createdAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.room.member.kick": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                },
+                "targetMemberId": {
+                  "type": "string",
+                  "max": 120
+                }
+              },
+              "optional": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true,
+                  "nonEmpty": false
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "rooms",
+                "id": "$payload.roomId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              },
+              {
+                "kind": "appendToArray",
+                "path": "activity",
+                "item": {
+                  "type": "media.room.member.kick",
+                  "actorId": "$actor.memberId",
+                  "actorName": "$actor.displayName",
+                  "createdAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.stage.open": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                }
+              },
+              "optional": {
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true,
+                  "nonEmpty": false
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "rooms",
+                "id": "$payload.roomId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.stage.close": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                }
+              },
+              "optional": {
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true,
+                  "nonEmpty": false
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "rooms",
+                "id": "$payload.roomId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.stage.speaker.request": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                }
+              },
+              "optional": {
+                "targetMemberId": {
+                  "type": "string",
+                  "max": 120
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "viewer"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "rooms",
+                "id": "$payload.roomId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.stage.speaker.approve": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                },
+                "targetMemberId": {
+                  "type": "string",
+                  "max": 120
+                }
+              },
+              "optional": {
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true,
+                  "nonEmpty": false
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "rooms",
+                "id": "$payload.roomId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.stage.speaker.remove": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                },
+                "targetMemberId": {
+                  "type": "string",
+                  "max": 120
+                }
+              },
+              "optional": {
+                "reason": {
+                  "type": "string",
+                  "max": 500,
+                  "nullable": true,
+                  "nonEmpty": false
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "rooms",
+                "id": "$payload.roomId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.room.update": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                }
+              },
+              "optional": {
+                "locked": {
+                  "type": "boolean"
+                },
+                "allowsVideo": {
+                  "type": "boolean"
+                },
+                "spotlightMemberId": {
+                  "type": "string",
+                  "max": 120
+                },
+                "name": {
+                  "type": "string",
+                  "max": 100
+                },
+                "group": {
+                  "type": "string",
+                  "max": 80,
+                  "nullable": true,
+                  "nonEmpty": false
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "rooms",
+                "id": "$payload.roomId",
+                "fields": {
+                  "locked": "$payload.locked",
+                  "allowsVideo": "$payload.allowsVideo",
+                  "spotlightMemberId": "$payload.spotlightMemberId",
+                  "name": "$payload.name",
+                  "group": "$payload.group",
+                  "updatedAt": "$createdAt"
+                }
+              },
+              {
+                "kind": "appendToArray",
+                "path": "activity",
+                "item": {
+                  "type": "media.room.update",
+                  "actorId": "$actor.memberId",
+                  "actorName": "$actor.displayName",
+                  "createdAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "media.room.archive": {
+            "payload": {
+              "required": {
+                "roomId": {
+                  "type": "string",
+                  "max": 200
+                }
+              }
+            },
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "rooms",
+                  "idField": "roomId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "moderator"
+              }
+            },
+            "effects": [
+              {
+                "kind": "markRecord",
+                "collection": "rooms",
+                "id": "$payload.roomId",
+                "fields": {
+                  "archivedAt": "$createdAt",
+                  "participants": {}
+                }
+              },
+              {
+                "kind": "appendToArray",
+                "path": "activity",
+                "item": {
+                  "type": "media.room.archive",
+                  "actorId": "$actor.memberId",
+                  "actorName": "$actor.displayName",
+                  "createdAt": "$createdAt"
+                }
+              }
+            ]
+          }
+        },
+        "views": {},
+        "publicView": {
+          "kind": "state"
+        }
+      },
+      "config": {
+        "defaultRooms": [
+          {
+            "id": "general_voice",
+            "name": "General",
+            "group": "General",
+            "allowsVideo": true,
+            "scopeType": "channel",
+            "scopeId": "general",
+            "roleAccess": {
+              "member": "editor",
+              "moderator": "editor",
+              "admin": "editor",
+              "owner": "editor"
+            }
+          },
+          {
+            "id": "voice",
+            "name": "Voice",
+            "group": "General",
+            "allowsVideo": false,
+            "scopeType": "channel",
+            "scopeId": "general",
+            "roleAccess": {
+              "member": "editor",
+              "moderator": "editor",
+              "admin": "editor",
+              "owner": "editor"
+            }
+          },
+          {
+            "id": "guest_voice",
+            "name": "Guest",
+            "group": "Guest",
+            "allowsVideo": false,
+            "scopeType": "channel",
+            "scopeId": "guest",
+            "roleAccess": {
+              "guest": "readonly",
+              "member": "editor",
+              "moderator": "editor",
+              "admin": "editor",
+              "owner": "editor"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "screenShare",
+      "id": "gg.matterhorn.examples.plugins.screen-share",
+      "version": "1.0.0",
+      "required": true,
+      "model": {
+        "kind": "matterhorn.primary-model.schema",
+        "schemaVersion": 1,
+        "state": {
+          "initial": {
+            "shares": {},
+            "activity": []
+          }
+        },
+        "operations": {
+          "screenshare.start": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
+            },
+            "effects": [
+              {
+                "kind": "createRecord",
+                "collection": "shares",
+                "idPrefix": "share",
+                "fields": {
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId",
+                  "roomId": "$payload.roomId",
+                  "title": "$payload.title",
+                  "presenterId": "$actor.memberId",
+                  "presenterName": "$actor.displayName",
+                  "startedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "screenshare.stop": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "shares",
+                  "idField": "shareId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId",
+                  "ownerField": "presenterId"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
+            },
+            "guards": [
+              {
+                "kind": "recordOwnerOrRole",
+                "collection": "shares",
+                "id": "$payload.shareId",
+                "ownerField": "presenterId",
+                "roles": [
+                  "moderator"
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "kind": "markRecord",
+                "collection": "shares",
+                "id": "$payload.shareId",
+                "fields": {
+                  "stoppedAt": "$createdAt",
+                  "stoppedBy": "$actor.memberId"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "key": "embeds",
+      "id": "gg.matterhorn.examples.plugins.embeds",
+      "version": "1.0.0",
+      "required": true
+    },
+    {
+      "key": "attachments",
+      "id": "gg.matterhorn.examples.plugins.attachments",
+      "version": "1.0.0",
+      "required": true,
+      "model": {
+        "kind": "matterhorn.primary-model.schema",
+        "schemaVersion": 1,
+        "state": {
+          "initial": {
+            "attachments": {},
+            "activity": []
+          }
+        },
+        "operations": {
+          "attachment.add": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
+            },
+            "effects": [
+              {
+                "kind": "createRecord",
+                "collection": "attachments",
+                "idPrefix": "att",
+                "fields": {
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId",
+                  "title": "$payload.title",
+                  "url": "$payload.url",
+                  "provider": "$payload.provider",
+                  "mimeType": "$payload.mimeType",
+                  "sizeBytes": "$payload.sizeBytes",
+                  "note": "$payload.note",
+                  "addedBy": "$actor.memberId",
+                  "addedByName": "$actor.displayName",
+                  "addedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "attachment.third-party.add": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
+            },
+            "effects": [
+              {
+                "kind": "createRecord",
+                "collection": "attachments",
+                "idPrefix": "att",
+                "fields": {
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId",
+                  "title": "$payload.title",
+                  "url": "$payload.shareUrl",
+                  "shareUrl": "$payload.shareUrl",
+                  "embedUrl": "$payload.embedUrl",
+                  "provider": "$payload.provider",
+                  "providerFileId": "$payload.providerFileId",
+                  "mimeType": "$payload.mimeType",
+                  "sizeBytes": "$payload.sizeBytes",
+                  "addedBy": "$actor.memberId",
+                  "addedByName": "$actor.displayName",
+                  "addedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "attachment.room-asset.add": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
+            },
+            "effects": [
+              {
+                "kind": "createRecord",
+                "collection": "attachments",
+                "idPrefix": "att",
+                "fields": {
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId",
+                  "assetId": "$payload.assetId",
+                  "fileId": "$payload.fileId",
+                  "provider": "$payload.provider",
+                  "title": "$payload.title",
+                  "mimeType": "$payload.mimeType",
+                  "sizeBytes": "$payload.sizeBytes",
+                  "purpose": "$payload.purpose",
+                  "mediaKind": "$payload.mediaKind",
+                  "delivery": "$payload.delivery",
+                  "expectedDimensions": "$payload.expectedDimensions",
+                  "sourceEnvelope": "$payload.sourceEnvelope",
+                  "addedBy": "$actor.memberId",
+                  "addedByName": "$actor.displayName",
+                  "addedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "attachment.remove": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "attachments",
+                  "idField": "attachmentId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId",
+                  "ownerField": "addedBy"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
+            },
+            "guards": [
+              {
+                "kind": "recordOwnerOrRole",
+                "collection": "attachments",
+                "id": "$payload.attachmentId",
+                "ownerField": "addedBy",
+                "roles": [
+                  "moderator"
+                ]
+              }
+            ],
+            "effects": [
+              {
+                "kind": "markRecord",
+                "collection": "attachments",
+                "id": "$payload.attachmentId",
+                "fields": {
+                  "removedAt": "$createdAt",
+                  "removedBy": "$actor.memberId"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "key": "files",
+      "id": "gg.matterhorn.examples.plugins.files",
+      "version": "1.0.0",
+      "required": true
+    },
+    {
+      "key": "reactions",
+      "id": "gg.matterhorn.examples.plugins.reactions",
+      "version": "1.0.0",
+      "required": true,
+      "model": {
+        "kind": "matterhorn.primary-model.schema",
+        "schemaVersion": 1,
+        "state": {
+          "initial": {
+            "reactions": {},
+            "activity": []
+          }
+        },
+        "operations": {
+          "reaction.toggle": {
+            "payload": {},
+            "authorize": {
+              "roles": [
+                "member"
+              ],
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
+            },
+            "effects": [
+              {
+                "kind": "upsertRecord",
+                "collection": "reactions",
+                "scopeIdPrefix": "reaction",
+                "fields": {
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId"
+                }
+              },
+              {
+                "kind": "toggleReaction",
+                "collection": "reactions",
+                "scopeIdPrefix": "reaction",
+                "emojiField": "emoji"
+              },
+              {
+                "kind": "upsertRecord",
+                "collection": "reactions",
+                "scopeIdPrefix": "reaction",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "key": "calendar",
+      "id": "gg.matterhorn.examples.plugins.calendar",
+      "version": "1.0.0",
+      "required": true,
+      "model": {
+        "kind": "matterhorn.primary-model.schema",
+        "schemaVersion": 1,
+        "state": {
+          "initial": {
+            "events": {},
+            "rsvps": {},
+            "notifications": {},
+            "activity": []
+          }
+        },
+        "operations": {
+          "calendar.event.create": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "payloadScopeTypeField": "scopeType",
+                "payloadScopeIdField": "scopeId",
+                "minimumLevel": "editor"
+              }
+            },
+            "effects": [
+              {
+                "kind": "createRecord",
+                "collection": "events",
+                "idPrefix": "cal",
+                "fields": {
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId",
+                  "title": "$payload.title",
+                  "startsAt": "$payload.startsAt",
+                  "endsAt": "$payload.endsAt",
+                  "location": "$payload.location",
+                  "description": "$payload.description",
+                  "createdBy": "$actor.memberId",
+                  "createdByName": "$actor.displayName",
+                  "createdAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "calendar.event.cancel": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "events",
+                  "idField": "eventId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId",
+                  "ownerField": "createdBy"
+                },
+                "minimumLevel": "moderator",
+                "ownerAllowed": true
+              }
+            },
+            "effects": [
+              {
+                "kind": "markRecord",
+                "collection": "events",
+                "id": "$payload.eventId",
+                "fields": {
+                  "cancelledAt": "$createdAt",
+                  "cancelledBy": "$actor.memberId"
+                }
+              }
+            ]
+          },
+          "calendar.event.rsvp": {
+            "payload": {},
+            "authorize": {
+              "scoped": {
+                "record": {
+                  "collection": "events",
+                  "idField": "eventId",
+                  "scopeTypeField": "scopeType",
+                  "scopeIdField": "scopeId"
+                },
+                "minimumLevel": "viewer"
+              }
+            },
+            "effects": [
+              {
+                "kind": "upsertRecord",
+                "collection": "rsvps",
+                "id": "$payload.eventId",
+                "fields": {
+                  "eventId": "$payload.eventId",
+                  "memberId": "$actor.memberId",
+                  "status": "$payload.status",
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "calendar.notification.read": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "notifications",
+                "id": "$payload.notificationId",
+                "fields": {
+                  "readAt": "$createdAt"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "key": "polls",
+      "id": "gg.matterhorn.examples.plugins.polls",
+      "version": "1.0.0",
+      "required": true,
+      "model": {
+        "kind": "matterhorn.primary-model.schema",
+        "schemaVersion": 1,
+        "state": {
+          "initial": {
+            "polls": {},
+            "votes": {},
+            "activity": []
+          }
+        },
+        "stateProjection": {
+          "polls": "polls",
+          "votes": "votes"
+        },
+        "operations": {
+          "poll.create": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "createRecord",
+                "collection": "polls",
+                "idPrefix": "poll",
+                "fields": {
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId",
+                  "question": "$payload.question",
+                  "options": "$payload.options",
+                  "kind": "$payload.kind",
+                  "expiresAt": "$payload.expiresAt",
+                  "createdAt": "$createdAt",
+                  "closedAt": null
+                }
+              }
+            ]
+          },
+          "poll.vote": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "upsertRecord",
+                "collection": "votes",
+                "id": "$payload.pollId",
+                "fields": {
+                  "optionIds": "$payload.optionIds",
+                  "voterId": "$actor.memberId",
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "poll.close": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "polls",
+                "id": "$payload.pollId",
+                "fields": {
+                  "closedAt": "$createdAt"
+                }
+              }
+            ]
+          }
+        },
+        "views": {
+          "pollsForScope": {
+            "kind": "query",
+            "inputType": "{ scopeType: ScopeType; scopeId: string; now?: number }",
+            "resultType": "Poll[]"
+          },
+          "pollForId": {
+            "kind": "query",
+            "inputType": "{ pollId: string; now?: number }",
+            "resultType": "Poll | null"
+          }
+        }
+      }
+    },
+    {
+      "key": "channels",
+      "id": "gg.matterhorn.examples.plugins.channels",
+      "version": "1.0.0",
+      "required": true,
+      "model": {
+        "kind": "matterhorn.primary-model.schema",
+        "schemaVersion": 1,
+        "state": {
+          "initial": {
+            "channels": {},
+            "activity": []
+          }
+        },
+        "stateProjection": {
+          "channels": "channels"
+        },
+        "operations": {
+          "channel.create": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "createRecord",
+                "collection": "channels",
+                "idPrefix": "channel",
+                "fields": {
+                  "scopeType": "$payload.scopeType",
+                  "scopeId": "$payload.scopeId",
+                  "name": "$payload.name",
+                  "kind": "$payload.kind",
+                  "mediaRoomId": "$payload.mediaRoomId",
+                  "postingPolicy": "$payload.postingPolicy",
+                  "threadPolicy": "$payload.threadPolicy",
+                  "speakerPolicy": "$payload.speakerPolicy",
+                  "forumLayout": "$payload.forumLayout",
+                  "forumTags": {},
+                  "createdAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "channel.posting.policy": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "channels",
+                "id": "$payload.channelId",
+                "fields": {
+                  "postingPolicy": "$payload.policy",
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "channel.thread.policy": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "channels",
+                "id": "$payload.channelId",
+                "fields": {
+                  "threadPolicy": "$payload.policy",
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "channel.speaker.policy": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "channels",
+                "id": "$payload.channelId",
+                "fields": {
+                  "speakerPolicy": "$payload.policy",
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "channel.voice-text.bind": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "channels",
+                "id": "$payload.channelId",
+                "fields": {
+                  "kind": "voice-text",
+                  "mediaRoomId": "$payload.mediaRoomId",
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "channel.forum.tag.create": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "mergeRecordMap",
+                "collection": "channels",
+                "id": "$payload.channelId",
+                "mapField": "forumTags",
+                "keyField": "tagId",
+                "keyPrefix": "forum-tag",
+                "fields": {
+                  "name": "$payload.name",
+                  "color": "$payload.color",
+                  "createdAt": "$createdAt"
+                }
+              },
+              {
+                "kind": "updateRecord",
+                "collection": "channels",
+                "id": "$payload.channelId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "channel.forum.tag.update": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "mergeRecordMap",
+                "collection": "channels",
+                "id": "$payload.channelId",
+                "mapField": "forumTags",
+                "keyField": "tagId",
+                "requireExisting": true,
+                "fields": {
+                  "name": "$payload.name",
+                  "color": "$payload.color",
+                  "updatedAt": "$createdAt"
+                }
+              },
+              {
+                "kind": "updateRecord",
+                "collection": "channels",
+                "id": "$payload.channelId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "channel.forum.tag.archive": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "mergeRecordMap",
+                "collection": "channels",
+                "id": "$payload.channelId",
+                "mapField": "forumTags",
+                "keyField": "tagId",
+                "requireExisting": true,
+                "fields": {
+                  "archivedAt": "$createdAt"
+                }
+              },
+              {
+                "kind": "updateRecord",
+                "collection": "channels",
+                "id": "$payload.channelId",
+                "fields": {
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          },
+          "channel.forum.layout": {
+            "payload": {},
+            "effects": [
+              {
+                "kind": "updateRecord",
+                "collection": "channels",
+                "id": "$payload.channelId",
+                "fields": {
+                  "forumLayout": "$payload.layout",
+                  "updatedAt": "$createdAt"
+                }
+              }
+            ]
+          }
+        },
+        "views": {
+          "channelsForScope": {
+            "kind": "query",
+            "inputType": "ScopeRef",
+            "resultType": "ChannelKind[]"
+          },
+          "channelForId": {
+            "kind": "query",
+            "inputType": "{ channelId: ChannelId }",
+            "resultType": "ChannelKind | null"
+          },
+          "postingPolicyForChannel": {
+            "kind": "query",
+            "inputType": "{ channelId: ChannelId }",
+            "resultType": "ChannelPostingPolicy | null"
+          }
+        }
+      }
+    }
+  ],
+  "views": [
+    {
+      "name": "channelSummary",
+      "plugin": "primary",
+      "kind": "collection",
+      "query": "channelSummary",
+      "collection": "channels",
+      "path": "channels"
+    },
+    {
+      "name": "categorySummary",
+      "plugin": "primary",
+      "kind": "collection",
+      "query": "categorySummary",
+      "collection": "categories",
+      "path": "categories"
+    },
+    {
+      "name": "attachmentsForScope",
+      "plugin": "attachments",
+      "kind": "query",
+      "query": "attachmentsForScope"
+    },
+    {
+      "name": "filesForScope",
+      "plugin": "files",
+      "kind": "query",
+      "query": "filesForScope"
+    },
+    {
+      "name": "roomDirectory",
+      "plugin": "mediaRooms",
+      "query": "roomDirectory"
+    },
+    {
+      "name": "onlineMembers",
+      "plugin": "presence",
+      "query": "onlineMembers"
+    },
+    {
+      "name": "upcomingEvents",
+      "plugin": "calendar",
+      "query": "upcomingEvents"
+    },
+    {
+      "name": "eventsForScope",
+      "plugin": "calendar",
+      "query": "eventsForScope"
+    },
+    {
+      "name": "calendarNotificationsForMember",
+      "plugin": "calendar",
+      "query": "notificationsForMember"
+    },
+    {
+      "name": "pollsForScope",
+      "plugin": "polls",
+      "query": "pollsForScope"
+    },
+    {
+      "name": "pollForId",
+      "plugin": "polls",
+      "query": "pollForId"
+    },
+    {
+      "name": "channelsForScope",
+      "plugin": "channels",
+      "query": "channelsForScope"
+    },
+    {
+      "name": "channelForId",
+      "plugin": "channels",
+      "query": "channelForId"
+    },
+    {
+      "name": "postingPolicyForChannel",
+      "plugin": "channels",
+      "query": "postingPolicyForChannel"
+    }
+  ],
+  "actions": [
+    {
+      "name": "categoryArchive",
+      "plugin": "primary",
+      "type": "category.archive",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "categoryCreate",
+      "plugin": "primary",
+      "type": "category.create",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "categoryReorder",
+      "plugin": "primary",
+      "type": "category.reorder",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "categoryUpdate",
+      "plugin": "primary",
+      "type": "category.update",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "channelArchive",
+      "plugin": "primary",
+      "type": "channel.archive",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "channelCreate",
+      "plugin": "primary",
+      "type": "channel.create",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "channelRename",
+      "plugin": "primary",
+      "type": "channel.rename",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "inviteDisable",
+      "plugin": "primary",
+      "type": "invite.disable"
+    },
+    {
+      "name": "inviteRemove",
+      "plugin": "primary",
+      "type": "invite.remove"
+    },
+    {
+      "name": "joinApprove",
+      "plugin": "primary",
+      "type": "join.approve"
+    },
+    {
+      "name": "joinDeny",
+      "plugin": "primary",
+      "type": "join.deny"
+    },
+    {
+      "name": "memberBan",
+      "plugin": "primary",
+      "type": "member.ban"
+    },
+    {
+      "name": "memberCallUpdate",
+      "plugin": "primary",
+      "type": "member.call.update"
+    },
+    {
+      "name": "memberModerate",
+      "plugin": "primary",
+      "type": "member.moderate"
+    },
+    {
+      "name": "memberUnban",
+      "plugin": "primary",
+      "type": "member.unban"
+    },
+    {
+      "name": "messageDelete",
+      "plugin": "primary",
+      "type": "message.delete",
+      "requiredRole": "member"
+    },
+    {
+      "name": "messageEdit",
+      "plugin": "primary",
+      "type": "message.edit"
+    },
+    {
+      "name": "messagePin",
+      "plugin": "primary",
+      "type": "message.pin",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "messageReact",
+      "plugin": "primary",
+      "type": "message.react"
+    },
+    {
+      "name": "messageReply",
+      "plugin": "primary",
+      "type": "message.reply"
+    },
+    {
+      "name": "messageSend",
+      "plugin": "primary",
+      "type": "message.send"
+    },
+    {
+      "name": "messageUnpin",
+      "plugin": "primary",
+      "type": "message.unpin",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "commentsAdd",
+      "plugin": "comments",
+      "type": "comments.add",
+      "payloadSchema": {
+        "required": [
+          "body"
+        ],
+        "optional": [
+          "threadId",
+          "scopeType",
+          "scopeId",
+          "parentId"
+        ],
+        "authorize": {
+          "scoped": {
+            "payloadScopeTypeField": "scopeType",
+            "payloadScopeIdField": "scopeId",
+            "record": {
+              "collection": "threads",
+              "idField": "threadId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "editor"
+          }
+        }
+      }
+    },
+    {
+      "name": "commentsDelete",
+      "plugin": "comments",
+      "type": "comments.delete",
+      "payloadSchema": {
+        "required": [
+          "commentId"
+        ],
+        "optional": [
+          "reason"
+        ],
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "comments",
+              "idField": "commentId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId",
+              "ownerField": "authorId"
+            },
+            "minimumLevel": "moderator",
+            "ownerAllowed": true
+          }
+        }
+      }
+    },
+    {
+      "name": "commentsEdit",
+      "plugin": "comments",
+      "type": "comments.edit",
+      "payloadSchema": {
+        "required": [
+          "commentId",
+          "body"
+        ],
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "comments",
+              "idField": "commentId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId",
+              "ownerField": "authorId"
+            },
+            "minimumLevel": "moderator",
+            "ownerAllowed": true
+          }
+        }
+      }
+    },
+    {
+      "name": "commentsReact",
+      "plugin": "comments",
+      "type": "comments.react",
+      "payloadSchema": {
+        "required": [
+          "commentId",
+          "emoji"
+        ],
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "comments",
+              "idField": "commentId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "editor"
+          }
+        }
+      }
+    },
+    {
+      "name": "commentsResolve",
+      "plugin": "comments",
+      "type": "comments.resolve",
+      "payloadSchema": {
+        "required": [
+          "threadId"
+        ],
+        "optional": [
+          "resolved"
+        ],
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "threads",
+              "idField": "threadId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "commentsThreadArchive",
+      "plugin": "comments",
+      "type": "comments.thread.archive",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "commentsThreadCreate",
+      "plugin": "comments",
+      "type": "comments.thread.create",
+      "payloadSchema": {
+        "required": [
+          "scopeType",
+          "scopeId"
+        ],
+        "optional": [
+          "title",
+          "visibility",
+          "source",
+          "sourceMessage",
+          "memberIds",
+          "privateMemberIds"
+        ],
+        "authorize": {
+          "scoped": {
+            "payloadScopeTypeField": "scopeType",
+            "payloadScopeIdField": "scopeId",
+            "minimumLevel": "editor"
+          }
+        }
+      }
+    },
+    {
+      "name": "commentsThreadFollow",
+      "plugin": "comments",
+      "type": "comments.thread.follow",
+      "requiredRole": "member"
+    },
+    {
+      "name": "commentsThreadLock",
+      "plugin": "comments",
+      "type": "comments.thread.lock",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "commentsThreadMemberAdd",
+      "plugin": "comments",
+      "type": "comments.thread.member.add",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "commentsThreadMemberRemove",
+      "plugin": "comments",
+      "type": "comments.thread.member.remove",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "commentsThreadNotifications",
+      "plugin": "comments",
+      "type": "comments.thread.notifications",
+      "requiredRole": "member"
+    },
+    {
+      "name": "commentsThreadReopen",
+      "plugin": "comments",
+      "type": "comments.thread.reopen",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "commentsThreadUnfollow",
+      "plugin": "comments",
+      "type": "comments.thread.unfollow",
+      "requiredRole": "member"
+    },
+    {
+      "name": "commentsThreadUnlock",
+      "plugin": "comments",
+      "type": "comments.thread.unlock",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "presenceClear",
+      "plugin": "presence",
+      "type": "presence.clear",
+      "payloadSchema": {
+        "optional": [
+          "memberId"
+        ],
+        "authorize": {
+          "roles": [
+            "member"
+          ]
+        }
+      }
+    },
+    {
+      "name": "presencePing",
+      "plugin": "presence",
+      "type": "presence.ping",
+      "payloadSchema": {
+        "optional": [
+          "status"
+        ],
+        "authorize": {
+          "roles": [
+            "member"
+          ]
+        }
+      }
+    },
+    {
+      "name": "presenceUpdate",
+      "plugin": "presence",
+      "type": "presence.update",
+      "payloadSchema": {
+        "required": [
+          "status"
+        ],
+        "optional": [
+          "activity",
+          "location"
+        ],
+        "authorize": {
+          "roles": [
+            "member"
+          ]
+        }
+      }
+    },
+    {
+      "name": "mediaRoomArchive",
+      "plugin": "mediaRooms",
+      "type": "media.room.archive",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaRoomCreate",
+      "plugin": "mediaRooms",
+      "type": "media.room.create",
+      "payloadSchema": {
+        "required": {
+          "name": {
+            "type": "string",
+            "max": 100
+          },
+          "scopeType": {
+            "type": "string",
+            "max": 80
+          },
+          "scopeId": {
+            "type": "string",
+            "max": 160
+          }
+        },
+        "optional": {
+          "allowsVideo": {
+            "type": "boolean",
+            "default": true
+          },
+          "group": {
+            "type": "string",
+            "max": 80,
+            "nullable": true,
+            "nonEmpty": false
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "voice",
+              "stage"
+            ],
+            "default": "voice"
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "payloadScopeTypeField": "scopeType",
+            "payloadScopeIdField": "scopeId",
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaRoomCreateV2",
+      "plugin": "mediaRooms",
+      "type": "media.room.create.v2",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          },
+          "name": {
+            "type": "string",
+            "max": 100
+          },
+          "parentScopeType": {
+            "type": "string",
+            "max": 80
+          },
+          "parentScopeId": {
+            "type": "string",
+            "max": 180
+          }
+        },
+        "optional": {
+          "allowsVideo": {
+            "type": "boolean",
+            "default": true
+          },
+          "group": {
+            "type": "string",
+            "max": 80,
+            "nullable": true,
+            "nonEmpty": false
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "voice",
+              "stage"
+            ],
+            "default": "voice"
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "payloadScopeTypeField": "parentScopeType",
+            "payloadScopeIdField": "parentScopeId",
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaRoomJoin",
+      "plugin": "mediaRooms",
+      "type": "media.room.join",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          }
+        },
+        "optional": {
+          "media": {
+            "type": "object",
+            "required": {},
+            "optional": {
+              "audio": {
+                "type": "boolean",
+                "default": true
+              },
+              "video": {
+                "type": "boolean",
+                "default": false
+              },
+              "screen": {
+                "type": "boolean",
+                "default": false
+              }
+            },
+            "additional": false
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "editor"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaRoomLeave",
+      "plugin": "mediaRooms",
+      "type": "media.room.leave",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "viewer"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaRoomMemberDeafen",
+      "plugin": "mediaRooms",
+      "type": "media.room.member.deafen",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          },
+          "targetMemberId": {
+            "type": "string",
+            "max": 120
+          }
+        },
+        "optional": {
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true,
+            "nonEmpty": false
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaRoomMemberKick",
+      "plugin": "mediaRooms",
+      "type": "media.room.member.kick",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          },
+          "targetMemberId": {
+            "type": "string",
+            "max": 120
+          }
+        },
+        "optional": {
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true,
+            "nonEmpty": false
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaRoomMemberMute",
+      "plugin": "mediaRooms",
+      "type": "media.room.member.mute",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          },
+          "targetMemberId": {
+            "type": "string",
+            "max": 120
+          }
+        },
+        "optional": {
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true,
+            "nonEmpty": false
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaRoomMemberSuppress",
+      "plugin": "mediaRooms",
+      "type": "media.room.member.suppress",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          },
+          "targetMemberId": {
+            "type": "string",
+            "max": 120
+          }
+        },
+        "optional": {
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true,
+            "nonEmpty": false
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaRoomUpdate",
+      "plugin": "mediaRooms",
+      "type": "media.room.update",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "mediaStageClose",
+      "plugin": "mediaRooms",
+      "type": "media.stage.close",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          }
+        },
+        "optional": {
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true,
+            "nonEmpty": false
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaStageOpen",
+      "plugin": "mediaRooms",
+      "type": "media.stage.open",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          }
+        },
+        "optional": {
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true,
+            "nonEmpty": false
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaStageSpeakerApprove",
+      "plugin": "mediaRooms",
+      "type": "media.stage.speaker.approve",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          },
+          "targetMemberId": {
+            "type": "string",
+            "max": 120
+          }
+        },
+        "optional": {
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true,
+            "nonEmpty": false
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaStageSpeakerRemove",
+      "plugin": "mediaRooms",
+      "type": "media.stage.speaker.remove",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          },
+          "targetMemberId": {
+            "type": "string",
+            "max": 120
+          }
+        },
+        "optional": {
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true,
+            "nonEmpty": false
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "mediaStageSpeakerRequest",
+      "plugin": "mediaRooms",
+      "type": "media.stage.speaker.request",
+      "payloadSchema": {
+        "required": {
+          "roomId": {
+            "type": "string",
+            "max": 200
+          }
+        },
+        "optional": {
+          "targetMemberId": {
+            "type": "string",
+            "max": 120
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "rooms",
+              "idField": "roomId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId"
+            },
+            "minimumLevel": "viewer"
+          }
+        }
+      }
+    },
+    {
+      "name": "screenshareStart",
+      "plugin": "screenShare",
+      "type": "screenshare.start",
+      "payloadSchema": {
+        "required": [
+          "scopeType",
+          "scopeId"
+        ],
+        "optional": [
+          "roomId",
+          "title"
+        ],
+        "authorize": {
+          "scoped": {
+            "payloadScopeTypeField": "scopeType",
+            "payloadScopeIdField": "scopeId",
+            "minimumLevel": "editor"
+          }
+        }
+      }
+    },
+    {
+      "name": "screenshareStop",
+      "plugin": "screenShare",
+      "type": "screenshare.stop",
+      "payloadSchema": {
+        "required": [
+          "shareId"
+        ],
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "shares",
+              "idField": "shareId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId",
+              "ownerField": "presenterId"
+            },
+            "minimumLevel": "moderator",
+            "ownerAllowed": true
+          }
+        }
+      }
+    },
+    {
+      "name": "embedAdd",
+      "plugin": "embeds",
+      "type": "embed.add",
+      "payloadSchema": {
+        "required": [
+          "scopeType",
+          "scopeId",
+          "url"
+        ],
+        "optional": [
+          "title",
+          "provider",
+          "note"
+        ],
+        "authorize": {
+          "scoped": {
+            "payloadScopeTypeField": "scopeType",
+            "payloadScopeIdField": "scopeId",
+            "minimumLevel": "editor"
+          }
+        }
+      }
+    },
+    {
+      "name": "embedRemove",
+      "plugin": "embeds",
+      "type": "embed.remove",
+      "payloadSchema": {
+        "required": [
+          "embedId"
+        ],
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "embeds",
+              "idField": "embedId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId",
+              "ownerField": "addedBy"
+            },
+            "minimumLevel": "moderator",
+            "ownerAllowed": true
+          }
+        }
+      }
+    },
+    {
+      "name": "attachmentAdd",
+      "plugin": "attachments",
+      "type": "attachment.add",
+      "requiredRole": "member"
+    },
+    {
+      "name": "attachmentRemove",
+      "plugin": "attachments",
+      "type": "attachment.remove",
+      "requiredRole": "member"
+    },
+    {
+      "name": "attachmentRoom-assetAdd",
+      "plugin": "attachments",
+      "type": "attachment.room-asset.add",
+      "payloadSchema": {
+        "required": {
+          "scopeType": {
+            "type": "string"
+          },
+          "scopeId": {
+            "type": "string"
+          },
+          "assetId": {
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "number"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "sourceEnvelope": {
+            "type": "object"
+          }
+        },
+        "optional": {
+          "mediaKind": {
+            "type": "string"
+          },
+          "delivery": {
+            "type": "string"
+          },
+          "expectedDimensions": {
+            "type": "object"
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "payloadScopeTypeField": "scopeType",
+            "payloadScopeIdField": "scopeId",
+            "minimumLevel": "editor"
+          }
+        }
+      }
+    },
+    {
+      "name": "attachmentThird-partyAdd",
+      "plugin": "attachments",
+      "type": "attachment.third-party.add",
+      "payloadSchema": {
+        "required": {
+          "scopeType": {
+            "type": "string"
+          },
+          "scopeId": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "number"
+          },
+          "providerFileId": {
+            "type": "string"
+          },
+          "shareUrl": {
+            "type": "string"
+          }
+        },
+        "optional": {
+          "embedUrl": {
+            "type": "string"
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "payloadScopeTypeField": "scopeType",
+            "payloadScopeIdField": "scopeId",
+            "minimumLevel": "editor"
+          }
+        }
+      }
+    },
+    {
+      "name": "filePublishV2",
+      "plugin": "files",
+      "type": "file.publish.v2",
+      "requiredRole": "member"
+    },
+    {
+      "name": "filePublishV3",
+      "plugin": "files",
+      "type": "file.publish.v3",
+      "requiredRole": "member"
+    },
+    {
+      "name": "fileRemove",
+      "plugin": "files",
+      "type": "file.remove",
+      "requiredRole": "member"
+    },
+    {
+      "name": "fileReshareRevokeV2",
+      "plugin": "files",
+      "type": "file.reshare.revoke.v2",
+      "payloadSchema": {
+        "required": {
+          "shareId": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "fileReshareV2",
+      "plugin": "files",
+      "type": "file.reshare.v2",
+      "payloadSchema": {
+        "required": {
+          "sourceFileId": {
+            "type": "string"
+          },
+          "targetFileId": {
+            "type": "string"
+          },
+          "sourceScopeType": {
+            "type": "string"
+          },
+          "sourceScopeId": {
+            "type": "string"
+          },
+          "targetScopeType": {
+            "type": "string"
+          },
+          "targetScopeId": {
+            "type": "string"
+          },
+          "provenance": {
+            "type": "object"
+          }
+        },
+        "optional": {
+          "recipientKeyWraps": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "name": "fileRevisionPublishV2",
+      "plugin": "files",
+      "type": "file.revision.publish.v2",
+      "payloadSchema": {
+        "required": {
+          "fileId": {
+            "type": "string"
+          },
+          "scopeType": {
+            "type": "string"
+          },
+          "scopeId": {
+            "type": "string"
+          },
+          "encryptedManifest": {
+            "type": "object",
+            "required": {
+              "encrypted": {
+                "type": "boolean"
+              },
+              "alg": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "iv": {
+                "type": "string"
+              },
+              "data": {
+                "type": "string"
+              }
+            },
+            "optional": {
+              "epochId": {
+                "type": "string"
+              }
+            }
+          },
+          "ciphertextBytes": {
+            "type": "number"
+          },
+          "chunkCount": {
+            "type": "number"
+          },
+          "relays": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": {
+                "relayUrl": {
+                  "type": "string"
+                },
+                "blobId": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "expectedRevision": {
+            "type": "number"
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "files",
+              "idField": "fileId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId",
+              "ownerField": "uploadedBy"
+            },
+            "minimumLevel": "editor",
+            "ownerAllowed": true
+          }
+        }
+      }
+    },
+    {
+      "name": "fileRevisionPublishV3",
+      "plugin": "files",
+      "type": "file.revision.publish.v3",
+      "requiredRole": "member"
+    },
+    {
+      "name": "reactionToggle",
+      "plugin": "reactions",
+      "type": "reaction.toggle",
+      "payloadSchema": {
+        "required": [
+          "scopeType",
+          "scopeId",
+          "emoji"
+        ],
+        "authorize": {
+          "roles": [
+            "member"
+          ],
+          "scoped": {
+            "payloadScopeTypeField": "scopeType",
+            "payloadScopeIdField": "scopeId",
+            "minimumLevel": "editor"
+          }
+        }
+      }
+    },
+    {
+      "name": "calendarEventCancel",
+      "plugin": "calendar",
+      "type": "calendar.event.cancel",
+      "payloadSchema": {
+        "required": {
+          "eventId": {
+            "type": "string"
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "record": {
+              "collection": "events",
+              "idField": "eventId",
+              "scopeTypeField": "scopeType",
+              "scopeIdField": "scopeId",
+              "ownerField": "createdBy"
+            },
+            "minimumLevel": "moderator",
+            "ownerAllowed": true
+          }
+        }
+      }
+    },
+    {
+      "name": "calendarEventCreate",
+      "plugin": "calendar",
+      "type": "calendar.event.create",
+      "payloadSchema": {
+        "required": {
+          "scopeType": {
+            "type": "string"
+          },
+          "scopeId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "number"
+          }
+        },
+        "optional": {
+          "endsAt": {
+            "type": "number"
+          },
+          "location": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "payloadScopeTypeField": "scopeType",
+            "payloadScopeIdField": "scopeId",
+            "minimumLevel": "editor"
+          }
+        }
+      }
+    },
+    {
+      "name": "calendarEventRsvp",
+      "plugin": "calendar",
+      "type": "calendar.event.rsvp",
+      "requiredRole": "member"
+    },
+    {
+      "name": "calendarNotificationRead",
+      "plugin": "calendar",
+      "type": "calendar.notification.read",
+      "requiredRole": "member"
+    },
+    {
+      "name": "pollClose",
+      "plugin": "polls",
+      "type": "poll.close",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "pollCreate",
+      "plugin": "polls",
+      "type": "poll.create",
+      "requiredRole": "member"
+    },
+    {
+      "name": "pollVote",
+      "plugin": "polls",
+      "type": "poll.vote",
+      "requiredRole": "member"
+    },
+    {
+      "name": "channels.channelCreate",
+      "plugin": "channels",
+      "type": "channel.create",
+      "payloadSchema": {
+        "required": {
+          "scopeType": {
+            "type": "string"
+          },
+          "scopeId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "optional": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "forum",
+              "announcement",
+              "onboarding",
+              "rules",
+              "voice-text",
+              "stage"
+            ]
+          },
+          "mediaRoomId": {
+            "type": "string"
+          },
+          "postingPolicy": {
+            "type": "string",
+            "enum": [
+              "members",
+              "moderators",
+              "none"
+            ]
+          },
+          "threadPolicy": {
+            "type": "string",
+            "enum": [
+              "members",
+              "moderators",
+              "none"
+            ]
+          },
+          "speakerPolicy": {
+            "type": "string",
+            "enum": [
+              "members",
+              "moderators",
+              "none"
+            ]
+          }
+        },
+        "authorize": {
+          "scoped": {
+            "payloadScopeTypeField": "scopeType",
+            "payloadScopeIdField": "scopeId",
+            "minimumLevel": "moderator"
+          }
+        }
+      }
+    },
+    {
+      "name": "channelForumLayout",
+      "plugin": "channels",
+      "type": "channel.forum.layout",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "channelForumTagArchive",
+      "plugin": "channels",
+      "type": "channel.forum.tag.archive",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "channelForumTagCreate",
+      "plugin": "channels",
+      "type": "channel.forum.tag.create",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "channelForumTagUpdate",
+      "plugin": "channels",
+      "type": "channel.forum.tag.update",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "channelPostingPolicy",
+      "plugin": "channels",
+      "type": "channel.posting.policy",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "channelSpeakerPolicy",
+      "plugin": "channels",
+      "type": "channel.speaker.policy",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "channelThreadPolicy",
+      "plugin": "channels",
+      "type": "channel.thread.policy",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "channelVoice-textBind",
+      "plugin": "channels",
+      "type": "channel.voice-text.bind",
+      "payloadSchema": {
+        "required": {
+          "channelId": {
+            "type": "string"
+          },
+          "mediaRoomId": {
+            "type": "string"
+          }
+        },
+        "authorize": {
+          "roles": [
+            "moderator"
+          ]
+        }
+      }
+    },
+    {
+      "name": "mediaRoomCreateScoped",
+      "plugin": "mediaRooms",
+      "type": "media.room.create.v2",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "roleCreate",
+      "plugin": "core",
+      "type": "access.role.define",
+      "payloadSchema": {
+        "required": {
+          "roleId": {
+            "type": "string",
+            "max": 120
+          },
+          "rules": {
+            "type": "array",
+            "max": 256
+          }
+        },
+        "optional": {
+          "name": {
+            "type": "string",
+            "max": 120
+          },
+          "description": {
+            "type": "string",
+            "max": 500,
+            "nullable": true
+          },
+          "color": {
+            "type": "string",
+            "max": 40,
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true
+          },
+          "disabledAt": {
+            "type": "number",
+            "min": 0,
+            "nullable": true
+          }
+        }
+      },
+      "requiredRole": "admin"
+    },
+    {
+      "name": "roleUpdate",
+      "plugin": "core",
+      "type": "access.role.update",
+      "payloadSchema": {
+        "required": {
+          "roleId": {
+            "type": "string",
+            "max": 120
+          },
+          "generation": {
+            "type": "number",
+            "min": 1
+          },
+          "revision": {
+            "type": "number",
+            "min": 1
+          },
+          "previousHash": {
+            "type": "string",
+            "max": 80
+          },
+          "rules": {
+            "type": "array",
+            "max": 256
+          }
+        },
+        "optional": {
+          "name": {
+            "type": "string",
+            "max": 120
+          },
+          "description": {
+            "type": "string",
+            "max": 500,
+            "nullable": true
+          },
+          "color": {
+            "type": "string",
+            "max": 40,
+            "nullable": true
+          },
+          "disabledAt": {
+            "type": "number",
+            "min": 0,
+            "nullable": true
+          }
+        }
+      },
+      "requiredRole": "admin"
+    },
+    {
+      "name": "memberRoleAssign",
+      "plugin": "core",
+      "type": "access.role.assign",
+      "payloadSchema": {
+        "required": {
+          "memberId": {
+            "type": "string",
+            "max": 240
+          },
+          "roleId": {
+            "type": "string",
+            "max": 120
+          },
+          "generation": {
+            "type": "number",
+            "min": 1
+          }
+        },
+        "optional": {
+          "expiresAt": {
+            "type": "number",
+            "min": 0
+          },
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true
+          }
+        }
+      },
+      "requiredRole": "admin"
+    },
+    {
+      "name": "memberRoleUnassign",
+      "plugin": "core",
+      "type": "access.role.unassign",
+      "payloadSchema": {
+        "required": {
+          "memberId": {
+            "type": "string",
+            "max": 240
+          },
+          "roleId": {
+            "type": "string",
+            "max": 120
+          },
+          "generation": {
+            "type": "number",
+            "min": 1
+          }
+        },
+        "optional": {
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true
+          }
+        }
+      },
+      "requiredRole": "admin"
+    },
+    {
+      "name": "roleTombstone",
+      "plugin": "core",
+      "type": "access.role.tombstone",
+      "payloadSchema": {
+        "required": {
+          "roleId": {
+            "type": "string",
+            "max": 120
+          },
+          "generation": {
+            "type": "number",
+            "min": 1
+          }
+        },
+        "optional": {
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true
+          }
+        }
+      },
+      "requiredRole": "admin"
+    },
+    {
+      "name": "scopeMemberOverrideSet",
+      "plugin": "core",
+      "type": "scope.member.override.set",
+      "payloadSchema": {
+        "required": {
+          "memberId": {
+            "type": "string",
+            "max": 240
+          },
+          "scopeType": {
+            "type": "string",
+            "max": 80
+          },
+          "scopeId": {
+            "type": "string",
+            "max": 180
+          },
+          "level": {
+            "type": "enum",
+            "values": [
+              "none",
+              "viewer",
+              "editor",
+              "moderator",
+              "admin",
+              "owner"
+            ]
+          },
+          "allowOperations": {
+            "type": "array",
+            "max": 128
+          },
+          "denyOperations": {
+            "type": "array",
+            "max": 128
+          }
+        },
+        "optional": {
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true
+          }
+        }
+      },
+      "requiredRole": "admin"
+    },
+    {
+      "name": "scopeMemberOverrideRemove",
+      "plugin": "core",
+      "type": "scope.member.override.remove",
+      "payloadSchema": {
+        "required": {
+          "memberId": {
+            "type": "string",
+            "max": 240
+          },
+          "scopeType": {
+            "type": "string",
+            "max": 80
+          },
+          "scopeId": {
+            "type": "string",
+            "max": 180
+          }
+        },
+        "optional": {
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true
+          }
+        }
+      },
+      "requiredRole": "admin"
+    },
+    {
+      "name": "scopeParentSet",
+      "plugin": "core",
+      "type": "scope.parent.set",
+      "payloadSchema": {
+        "required": {
+          "scopeType": {
+            "type": "string",
+            "max": 80
+          },
+          "scopeId": {
+            "type": "string",
+            "max": 180
+          },
+          "parentScopeType": {
+            "type": "string",
+            "max": 80
+          },
+          "parentScopeId": {
+            "type": "string",
+            "max": 180
+          }
+        },
+        "optional": {
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true
+          }
+        }
+      },
+      "requiredRole": "admin"
+    },
+    {
+      "name": "scopeParentRemove",
+      "plugin": "core",
+      "type": "scope.parent.remove",
+      "payloadSchema": {
+        "required": {
+          "scopeType": {
+            "type": "string",
+            "max": 80
+          },
+          "scopeId": {
+            "type": "string",
+            "max": 180
+          }
+        },
+        "optional": {
+          "reason": {
+            "type": "string",
+            "max": 500,
+            "nullable": true
+          }
+        }
+      },
+      "requiredRole": "admin"
+    },
+    {
+      "name": "moderateMember",
+      "plugin": "primary",
+      "type": "member.moderate",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "updateMemberCall",
+      "plugin": "primary",
+      "type": "member.call.update",
+      "requiredRole": "member"
+    },
+    {
+      "name": "banMember",
+      "plugin": "primary",
+      "type": "member.ban",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "unbanMember",
+      "plugin": "primary",
+      "type": "member.unban",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "memberTimeout",
+      "plugin": "core",
+      "type": "member.timeout",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "memberQuarantine",
+      "plugin": "core",
+      "type": "member.quarantine",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "channelSlowmode",
+      "plugin": "core",
+      "type": "channel.slowmode",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "memberReport",
+      "plugin": "core",
+      "type": "member.report",
+      "requiredRole": "member"
+    },
+    {
+      "name": "disableInvite",
+      "plugin": "primary",
+      "type": "invite.disable",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "removeInvite",
+      "plugin": "primary",
+      "type": "invite.remove",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "approveJoinRequest",
+      "plugin": "primary",
+      "type": "join.approve",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "denyJoinRequest",
+      "plugin": "primary",
+      "type": "join.deny",
+      "requiredRole": "admin"
+    },
+    {
+      "name": "directMessageSend",
+      "plugin": "core",
+      "type": "dm.message",
+      "requiredRole": "member"
+    },
+    {
+      "name": "directMessageReply",
+      "plugin": "core",
+      "type": "dm.message.reply",
+      "requiredRole": "member"
+    },
+    {
+      "name": "directMessageEdit",
+      "plugin": "core",
+      "type": "dm.message.edit",
+      "requiredRole": "member"
+    },
+    {
+      "name": "directMessageDelete",
+      "plugin": "core",
+      "type": "dm.message.delete",
+      "requiredRole": "member"
+    },
+    {
+      "name": "directMessageReact",
+      "plugin": "core",
+      "type": "dm.message.react",
+      "requiredRole": "member"
+    },
+    {
+      "name": "directMessagePin",
+      "plugin": "core",
+      "type": "dm.message.pin",
+      "requiredRole": "member"
+    },
+    {
+      "name": "directMessageUnpin",
+      "plugin": "core",
+      "type": "dm.message.unpin",
+      "requiredRole": "member"
+    },
+    {
+      "name": "directMessageForward",
+      "plugin": "core",
+      "type": "dm.message.forward",
+      "requiredRole": "member"
+    },
+    {
+      "name": "channelKindCreate",
+      "plugin": "channels",
+      "type": "channel.create",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "channelVoiceTextBind",
+      "plugin": "channels",
+      "type": "channel.voice-text.bind",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "attachmentThirdPartyAdd",
+      "plugin": "attachments",
+      "type": "attachment.third-party.add",
+      "requiredRole": "member"
+    }
+  ],
+  "routes": [
+    {
+      "path": "/",
+      "component": "ChatRoomPage",
+      "requiredPlugins": [
+        "gg.matterhorn.mosh.plugin"
+      ]
+    },
+    {
+      "path": "/dms",
+      "component": "DirectMessagesPage",
+      "requiredPlugins": [
+        "gg.matterhorn.mosh.plugin"
+      ]
+    },
+    {
+      "path": "/rooms",
+      "component": "MediaRoomsPage",
+      "requiredPlugins": [
+        "gg.matterhorn.examples.plugins.media-rooms",
+        "gg.matterhorn.examples.plugins.screen-share"
+      ]
+    }
+  ],
+  "notifications": {
+    "schemaVersion": 1,
+    "definitions": {
+      "messageMention": {
+        "kind": "mosh.message.mention",
+        "on": {
+          "action": "messageSend"
+        },
+        "audience": {
+          "userIds": "$payload.mentionIds",
+          "excludeActor": true
+        },
+        "scope": {
+          "type": "channel",
+          "id": "$payload.channelId"
+        },
+        "presentation": {
+          "title": {
+            "$expr": "$actor.displayName",
+            "fallback": "New mention"
+          },
+          "body": "mentioned you in a message"
+        },
+        "link": {
+          "route": "channel",
+          "params": {
+            "channelId": "$payload.channelId"
+          }
+        },
+        "read": {
+          "scopeKey": "channel:$payload.channelId",
+          "cursor": {
+            "createdAt": "$operation.createdAt",
+            "operationId": "$operation.id"
+          },
+          "defaultPolicy": "route-visible"
+        },
+        "delivery": {
+          "collapse": "scope"
+        }
+      },
+      "replyMention": {
+        "kind": "mosh.reply.mention",
+        "on": {
+          "action": "messageReply"
+        },
+        "audience": {
+          "userIds": "$payload.mentionIds",
+          "excludeActor": true
+        },
+        "scope": {
+          "type": "channel",
+          "id": "$payload.channelId"
+        },
+        "presentation": {
+          "title": {
+            "$expr": "$actor.displayName",
+            "fallback": "New mention"
+          },
+          "body": "mentioned you in a reply"
+        },
+        "link": {
+          "route": "channel",
+          "params": {
+            "channelId": "$payload.channelId"
+          }
+        },
+        "read": {
+          "scopeKey": "channel:$payload.channelId",
+          "cursor": {
+            "createdAt": "$operation.createdAt",
+            "operationId": "$operation.id"
+          },
+          "defaultPolicy": "route-visible"
+        },
+        "delivery": {
+          "collapse": "scope"
+        }
+      },
+      "directMessage": {
+        "kind": "mosh.directMessage",
+        "on": {
+          "action": "directMessageSend"
+        },
+        "audience": {
+          "userIds": "$payload.userIds",
+          "excludeActor": true
+        },
+        "scope": {
+          "type": "direct.thread",
+          "id": "$direct.threadId"
+        },
+        "presentation": {
+          "title": {
+            "$expr": "$actor.displayName",
+            "fallback": "New message"
+          },
+          "body": "sent you a direct message"
+        },
+        "link": {
+          "route": "dm",
+          "params": {
+            "memberId": "$actor.memberId"
+          }
+        },
+        "read": {
+          "scopeKey": "direct.thread:$direct.threadId",
+          "cursor": {
+            "createdAt": "$operation.createdAt",
+            "operationId": "$operation.id"
+          },
+          "defaultPolicy": "route-visible"
+        },
+        "delivery": {
+          "collapse": "scope"
+        }
+      },
+      "directMessageReply": {
+        "kind": "mosh.directMessage.reply",
+        "on": {
+          "action": "directMessageReply"
+        },
+        "audience": {
+          "userIds": "$payload.userIds",
+          "excludeActor": true
+        },
+        "scope": {
+          "type": "direct.thread",
+          "id": "$direct.threadId"
+        },
+        "presentation": {
+          "title": {
+            "$expr": "$actor.displayName",
+            "fallback": "New reply"
+          },
+          "body": "replied in a direct message"
+        },
+        "link": {
+          "route": "dm",
+          "params": {
+            "memberId": "$actor.memberId"
+          }
+        },
+        "read": {
+          "scopeKey": "direct.thread:$direct.threadId",
+          "cursor": {
+            "createdAt": "$operation.createdAt",
+            "operationId": "$operation.id"
+          },
+          "defaultPolicy": "route-visible"
+        },
+        "delivery": {
+          "collapse": "scope"
+        }
+      },
+      "directMessageForward": {
+        "kind": "mosh.directMessage.forward",
+        "on": {
+          "action": "directMessageForward"
+        },
+        "audience": {
+          "userIds": "$payload.userIds",
+          "excludeActor": true
+        },
+        "scope": {
+          "type": "direct.thread",
+          "id": "$direct.threadId"
+        },
+        "presentation": {
+          "title": {
+            "$expr": "$actor.displayName",
+            "fallback": "Forwarded message"
+          },
+          "body": "forwarded a message to you"
+        },
+        "link": {
+          "route": "dm",
+          "params": {
+            "memberId": "$actor.memberId"
+          }
+        },
+        "read": {
+          "scopeKey": "direct.thread:$direct.threadId",
+          "cursor": {
+            "createdAt": "$operation.createdAt",
+            "operationId": "$operation.id"
+          },
+          "defaultPolicy": "route-visible"
+        },
+        "delivery": {
+          "collapse": "scope"
+        }
+      }
+    }
+  },
+  "schemaHash": "sha256-6cbcd8d4aa386d6899b86a7a1612578a7a7f926588720e10e4f82aff1cbfd799"
+}

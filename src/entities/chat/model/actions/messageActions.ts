@@ -5,11 +5,20 @@ import type { MessageForwardTarget } from "@entities/chat/model/messageForwardin
 import {
   directThreadForUsers,
   draftDirectThreadForUsers,
-  forwardedMessageBody,
   hasDirectMessages,
   messageEmbeds
 } from "@entities/chat/model/chatViewModel";
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
+import type { MatterhornCustomMediaMessageReference, MatterhornReshareForForwardResult } from "matterhorn-sdk/browser";
+
+type ForwardMessageResult = false | true | string | MatterhornReshareForForwardResult;
+
+function rejectedForwardReason(result: unknown): string | false | undefined {
+  if (!result || typeof result !== "object" || !("ok" in result)) return undefined;
+  const forward = result as { ok: unknown; reason?: unknown };
+  if (forward.ok === true) return undefined;
+  return typeof forward.reason === "string" && forward.reason.trim() ? forward.reason : false;
+}
 
 export function messageActions(input: ChatActionHandlersInput) {
   const { live, ui, view } = input;
@@ -20,26 +29,35 @@ export function messageActions(input: ChatActionHandlersInput) {
   // surface the data its audience expressions need. Mentions can only be
   // resolved client-side (member names live here), so we attach the resolved
   // recipient ids as `mentionIds`; the relay still never sees message content.
-  async function sendChannelMessageToChannel(channelId: string, body: string) {
+  async function sendChannelMessageToChannel(channelId: string, body: string, attachmentIds: string[] = [], customMediaRefs: MatterhornCustomMediaMessageReference[] = [], tagIds: string[] = []) {
     if (view.actorChatDisabled) return;
     const embeds = messageEmbeds(body);
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
-    await dispatch("messageSend", { channelId: channelId as ChannelId, body, embeds, mentionIds: mentionIds as MemberId[] });
+    const normalizedTagIds = [...new Set(tagIds.map((tagId) => tagId.trim()).filter(Boolean))].slice(0, 32);
+    const payload = { channelId: channelId as ChannelId, body, embeds, mentionIds: mentionIds as MemberId[], attachmentIds, ...(normalizedTagIds.length ? { tagIds: normalizedTagIds } : {}), ...(customMediaRefs.length ? { customMediaRefs } : {}) };
+    await dispatch("messageSend", payload);
     for (const embed of embeds) {
       if (embed.provider === "link") continue;
       await dispatch("embedAdd", { scopeType: "channel", scopeId: channelId, url: embed.url, title: embed.title, provider: embed.provider });
     }
   }
 
-  async function sendChannelMessage(body: string) {
+  async function sendChannelMessage(body: string, attachmentIds: string[] = [], customMediaRefs: MatterhornCustomMediaMessageReference[] = [], tagIds: string[] = []) {
     if (!view.currentChannelId) return;
-    await sendChannelMessageToChannel(view.currentChannelId, body);
+    await sendChannelMessageToChannel(view.currentChannelId, body, attachmentIds, customMediaRefs, tagIds);
   }
 
-  async function sendDirectMessageToThread(threadId: string, userIds: string[], body: string) {
+  async function sendDirectMessageToThread(threadId: string, userIds: string[], body: string, attachmentIds: string[] = [], customMediaRefs: MatterhornCustomMediaMessageReference[] = []) {
     if (view.actorChatDisabled) return;
     try {
-      await dispatch("directMessageSend", { userIds: userIds as MemberId[], body });
+      const payload = {
+        userIds: userIds as MemberId[],
+        ...(view.activeThread?.topicKey ? { topicKey: view.activeThread.topicKey } : {}),
+        body,
+        attachmentIds,
+        ...(customMediaRefs.length ? { customMediaRefs } : {})
+      };
+      await dispatch("directMessageSend", payload);
     } catch {
       return;
     }
@@ -54,68 +72,151 @@ export function messageActions(input: ChatActionHandlersInput) {
     ui.setActiveThreadId(threadId);
   }
 
-  async function sendDirectMessage(body: string) {
+  async function sendDirectMessage(body: string, attachmentIds: string[] = [], customMediaRefs: MatterhornCustomMediaMessageReference[] = []) {
     if (!view.currentThreadId) return;
     const userIds = view.activeThread?.userIds;
     if (!userIds || userIds.length < 2) return;
-    await sendDirectMessageToThread(view.currentThreadId, userIds, body);
+    await sendDirectMessageToThread(view.currentThreadId, userIds, body, attachmentIds, customMediaRefs);
   }
 
-  async function forwardMessage(message: Message, target: MessageForwardTarget) {
-    const body = forwardedMessageBody(message, view.memberNamesById);
-    if (target.type === "channel") {
-      await sendChannelMessageToChannel(target.channelId, body);
+  async function forwardMessage(message: Message, target: MessageForwardTarget): Promise<ForwardMessageResult> {
+    const channelId = "channelId" in message ? message.channelId : undefined;
+    const source = message.threadId
+      ? { kind: "direct.thread" as const, scopeId: message.threadId, messageId: message.id }
+      : channelId
+        ? { kind: "channel" as const, scopeId: channelId, messageId: message.id }
+        : undefined;
+    if (!source) return false;
+    const destination = target.type === "channel"
+      ? { kind: "channel" as const, channelId: target.channelId }
+      : {
+          kind: "direct.thread" as const,
+          ...(target.threadId ? { threadId: target.threadId } : {}),
+          userIds: target.userIds,
+          ...(target.topicKey ? { topicKey: target.topicKey } : {})
+        };
+    const sourceScope = { kind: source.kind, scopeId: source.scopeId };
+    const targetScope = target.type === "channel"
+      ? { kind: "channel" as const, scopeId: target.channelId }
+      : { kind: "direct.thread" as const, scopeId: target.threadId };
+    const hasAttachments = Boolean(message.attachmentIds?.length);
+    const needsAttachmentReshare = hasAttachments
+      && (sourceScope.kind !== targetScope.kind || sourceScope.scopeId !== targetScope.scopeId);
+    try {
+      if (needsAttachmentReshare) {
+        const result = await live.reshareForForward({ source, target: destination });
+        const rejection = rejectedForwardReason(result.forward);
+        return rejection === undefined ? result : rejection;
+      }
+      const result = await live.forwardMessage({ source, target: destination });
+      return rejectedForwardReason(result) ?? true;
+    } catch (error) {
+      // The authoritative host reports provider, abort, fanout, and cleanup
+      // failures. There is intentionally no copied-text or local compensation fallback.
+      if (error instanceof Error) return error.message;
+      if (typeof error === "object" && error !== null && "message" in error) {
+        return String((error as { message: unknown }).message);
+      }
+      return false;
+    }
+  }
+
+  async function replyToMessage(replyToId: string, body: string, attachmentIds: string[] = [], customMediaRefs: MatterhornCustomMediaMessageReference[] = [], tagIds: string[] = []) {
+    const directTarget = state.directMessages?.[replyToId as MessageId];
+    if (directTarget?.threadId && directTarget.userIds?.length) {
+      await dispatch("directMessageReply", {
+        userIds: directTarget.userIds as MemberId[],
+        topicKey: directTarget.topicKey || undefined,
+        replyToId: replyToId as MessageId,
+        body,
+        attachmentIds,
+        ...(customMediaRefs.length ? { customMediaRefs } : {})
+      });
       return;
     }
-    await sendDirectMessageToThread(target.threadId, target.userIds, body);
-  }
-
-  async function replyToMessage(replyToId: string, body: string) {
     if (!view.currentChannelId) return;
     if (view.actorChatDisabled) return;
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
-    await dispatch("messageReply", { channelId: view.currentChannelId as ChannelId, replyToId: replyToId as MessageId, body, mentionIds: mentionIds as MemberId[] });
+    const normalizedTagIds = [...new Set(tagIds.map((tagId) => tagId.trim()).filter(Boolean))].slice(0, 32);
+    await dispatch("messageReply", { channelId: view.currentChannelId as ChannelId, replyToId: replyToId as MessageId, body, mentionIds: mentionIds as MemberId[], attachmentIds, ...(normalizedTagIds.length ? { tagIds: normalizedTagIds } : {}), ...(customMediaRefs.length ? { customMediaRefs } : {}) });
   }
 
   async function reactToMessage(messageId: string, emoji: string) {
+    if (state.directMessages?.[messageId as MessageId]) {
+      await dispatch("directMessageReact", { messageId: messageId as MessageId, emoji });
+      return;
+    }
     await dispatch("messageReact", { messageId: messageId as MessageId, emoji });
   }
 
   async function pinMessage(messageId: string) {
+    if (state.directMessages?.[messageId as MessageId]) {
+      await dispatch("directMessagePin", { messageId: messageId as MessageId });
+      return;
+    }
     await dispatch("messagePin", { messageId: messageId as MessageId });
   }
 
   async function unpinMessage(messageId: string) {
+    if (state.directMessages?.[messageId as MessageId]) {
+      await dispatch("directMessageUnpin", { messageId: messageId as MessageId });
+      return;
+    }
     await dispatch("messageUnpin", { messageId: messageId as MessageId });
   }
 
   async function deleteMessage(messageId: string) {
-    await dispatch("messageDelete", { messageId: messageId as MessageId });
+    const directMessage = state.directMessages?.[messageId as MessageId];
+    const message = directMessage || state.messages?.[messageId as MessageId];
+    const otherMessages = [
+      ...Object.values(state.messages || {}),
+      ...Object.values(state.directMessages || {})
+    ].filter((candidate) => candidate.id !== messageId && !candidate.deletedAt);
+    const exclusiveAttachmentIds = (message?.attachmentIds || []).filter((attachmentId) => (
+      !otherMessages.some((candidate) => candidate.attachmentIds?.includes(attachmentId))
+    ));
+
+    if (directMessage) {
+      await dispatch("directMessageDelete", { messageId: messageId as MessageId });
+    } else {
+      await dispatch("messageDelete", { messageId: messageId as MessageId });
+    }
+
+    const files = Object.entries(state.files || {}) as Array<[string, { id?: string; fileId?: string; removedAt?: number | null }]>;
+    const attachments = Object.entries(state.attachments || {}) as Array<[string, { id?: string; assetId?: string; removedAt?: number | null }]>;
+    for (const attachmentId of exclusiveAttachmentIds) {
+      const file = files.find(([key, record]) => !record.removedAt && (key === attachmentId || record.id === attachmentId || record.fileId === attachmentId));
+      if (file) {
+        await dispatch("fileRemove", { fileId: file[1].fileId || attachmentId });
+        continue;
+      }
+      const attachment = attachments.find(([key, record]) => !record.removedAt && (key === attachmentId || record.id === attachmentId || record.assetId === attachmentId));
+      if (attachment) await dispatch("attachmentRemove", { attachmentId: attachment[1].id || attachment[0] });
+    }
   }
 
   async function editMessage(messageId: string, body: string) {
+    if (state.directMessages?.[messageId as MessageId]) {
+      await dispatch("directMessageEdit", { messageId: messageId as MessageId, body, embeds: messageEmbeds(body) });
+      return;
+    }
     await dispatch("messageEdit", { messageId: messageId as MessageId, body, embeds: messageEmbeds(body) });
   }
 
   function closeDirectThread(threadId: string) {
-    const closingThread = view.threads.find((thread) => thread.id === threadId);
     const nextThreads = view.threads.filter((thread) => thread.id !== threadId);
     ui.closeDirectThread({
       threadId,
       latestMessageAt: latestDirectMessageTime(state, threadId),
       nextThreadId: nextThreads[0]?.id
     });
-    if (closingThread?.userIds) {
-      const draftThread = draftDirectThreadForUsers(live.actor.memberId, closingThread.userIds);
-      if (draftThread) ui.closeDirectThread({ threadId: draftThread.id, latestMessageAt: latestDirectMessageTime(state, draftThread.id), nextThreadId: nextThreads[0]?.id });
-    }
   }
 
   async function openDirectThread(userIds: string[]) {
-    const draftThread = draftDirectThreadForUsers(live.actor.memberId, userIds);
-    if (!draftThread?.userIds) return;
-    ui.showDirectThread(draftThread.id);
-    const committedThread = directThreadForUsers(state, draftThread.userIds);
+    console.error("[mosh] open direct thread", userIds, live.actor.memberId);
+    const participants = Array.from(new Set([live.actor.memberId, ...userIds].filter(Boolean))).sort();
+    if (participants.length < 2) return;
+    const committedThread = directThreadForUsers(state, participants);
     if (committedThread) {
       ui.showDirectThread(committedThread.id);
       ui.setActiveThreadId(committedThread.id);
@@ -123,11 +224,24 @@ export function messageActions(input: ChatActionHandlersInput) {
       ui.bumpComposerFocus();
       return;
     }
-    ui.openDraftDirectThread(draftThread);
+    let reservation: Awaited<ReturnType<typeof live.reserveDirectThread>>;
+    try {
+      reservation = await live.reserveDirectThread({ userIds: participants });
+      console.error("[mosh] direct-thread reservation ready", reservation);
+    } catch (error) {
+      console.error("[mosh] direct-thread reservation failed", error);
+      // Draft creation requires Matterhorn's canonical room-bound reservation;
+      // never synthesize a local id when that primitive is unavailable.
+      return;
+    }
+    const reservedDraft = draftDirectThreadForUsers(live.actor.memberId, reservation.userIds, reservation.threadId);
+    if (!reservedDraft) return;
+    ui.showDirectThread(reservedDraft.id);
+    ui.openDraftDirectThread(reservedDraft);
   }
 
   function openDirectThreadForMember(memberId: string) {
-    void openDirectThread([memberId]);
+    return openDirectThread([memberId]);
   }
 
   return {

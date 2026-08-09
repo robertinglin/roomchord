@@ -5,6 +5,7 @@ import { mediaStreamForTrackRole, mediaTrackRole, normalizeCallMediaSettings, pu
 import type { CallMediaSettings, PeerJsMediaConnection, SfuCallState, ScreenPreviewSnapshot } from "matterhorn-sdk/browser/types";
 import type { MatterhornEphemeralToken, MatterhornEphemeralTokenHandle } from "matterhorn-sdk/browser/liveRoomConnector";
 import { mediaBridgeFromHost } from "@entities/chat/api/callBridge";
+import type { MatterhornMediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { Actor, MediaRoom } from "@entities/chat/model/types";
 import type { MatterhornMedia } from "matterhorn-sdk/client";
@@ -17,6 +18,7 @@ type LiveInput = {
 type Input = {
   heldMediaRoomIds?: Record<string, boolean>;
   live: LiveInput;
+  mediaDeviceController?: MatterhornMediaDeviceController;
   onVoiceConnected?: (roomId: string, media: CallMediaSettings) => void;
   roomName: string;
   voicePreferences: VoicePreferences;
@@ -153,6 +155,7 @@ export function useChatMediaRooms(input: Input) {
       getPeer: () => bridge.getMediaPeer?.(),
       getPeerAddress: () => bridge.getMediaPeerAddress?.(),
       createPeer: bridge.createMediaPeer,
+      mediaDeviceController: input.mediaDeviceController,
       encryptRoomPayload: bridge.encryptRoomPayload,
       decryptRoomPayload: bridge.decryptRoomPayload,
       encryptRelayPayload: bridge.encryptRelayPayload,
@@ -172,6 +175,7 @@ export function useChatMediaRooms(input: Input) {
       getPeer: () => bridge.getMediaPeer?.(),
       getPeerAddress: () => bridge.getMediaPeerAddress?.(),
       createPeer: bridge.createMediaPeer,
+      mediaDeviceController: input.mediaDeviceController,
       sendSignal: (targetClientId, targetPeerId, signal, auth) => {
         return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
       },

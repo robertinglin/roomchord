@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { DirectCallDockOptions } from "matterhorn-sdk/browser/directCallDock";
+import { createMatterhornMediaDeviceController, type MatterhornMediaDeviceController, type MatterhornMediaDeviceState } from "matterhorn-sdk/browser/mediaDevices";
 import { chatActionHandlers, type ChatActionHandlers } from "@entities/chat/model/chatActions";
 import type { CallSwitchDecision, CallSwitchPromptInput } from "@entities/chat/model/actions/types";
 import { useChatDirectCalls, type ChatDirectCalls } from "@entities/chat/model/useChatDirectCalls";
@@ -8,6 +9,8 @@ import { useChatNotifications } from "@entities/chat/model/useChatNotifications"
 import { useChatSyncEffects } from "@entities/chat/model/useChatSyncEffects";
 import { useChatViewData, type ChatViewData } from "@entities/chat/model/useChatViewData";
 import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
+import { useVoiceModerationState } from "@entities/chat/model/voiceModeration";
+import { usePersonalProductivity, type PersonalProductivityController } from "@entities/chat/model/personalProductivity";
 import type { MatterhornRoom } from "matterhorn-sdk/client";
 import type { Mosh} from "../../../../types";
 import { CallSwitchDialog } from "@shared/ui/CallSwitchDialog";
@@ -17,6 +20,9 @@ type ChatRuntime = {
   directCalls: ChatDirectCalls;
   live: MatterhornRoom<Mosh>;
   media: ChatMediaRooms;
+  mediaDevices: MatterhornMediaDeviceController;
+  mediaDeviceState: MatterhornMediaDeviceState;
+  productivity: PersonalProductivityController;
   roomName: string;
   view: ChatViewData;
 };
@@ -42,6 +48,15 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   const selectedMediaRoomId = useChatUiStore((value) => value.selectedMediaRoomId);
   const voicePreferences = useChatUiStore((value) => value.voicePreferences);
   const voiceSettingsOpen = useChatUiStore((value) => value.voiceSettingsOpen);
+  const mediaDevices = React.useMemo(() => createMatterhornMediaDeviceController(), []);
+  const [mediaDeviceState, setMediaDeviceState] = useState<MatterhornMediaDeviceState>(() => mediaDevices.state());
+  useEffect(() => {
+    const unsubscribe = mediaDevices.subscribe(setMediaDeviceState);
+    return () => {
+      unsubscribe();
+      mediaDevices.close();
+    };
+  }, [mediaDevices]);
   const [callSwitchPrompt, setCallSwitchPrompt] = useState<(CallSwitchPromptInput & { resolve: (decision: CallSwitchDecision) => void }) | undefined>();
   const skipNextDirectAcceptPrompt = useRef(false);
   const requestCallSwitch = useCallback((input: CallSwitchPromptInput) => new Promise<CallSwitchDecision>((resolve) => {
@@ -50,10 +65,13 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   const media = useChatMediaRooms({
     heldMediaRoomIds,
     live,
+    mediaDeviceController: mediaDevices,
     onVoiceConnected: (roomId, mediaSettings) => ui.rememberVoiceJoin(roomId, mediaSettings),
     roomName,
     voicePreferences
   });
+  const voiceModerationState = useVoiceModerationState(live.media);
+  const productivity = usePersonalProductivity(live);
   const activeListedRoom = useCallback(() => {
     const roomId = media.sfu.mediaRoomId || joinedMediaRoomId;
     const room = state.rooms.find((item) => item.id === roomId);
@@ -125,6 +143,7 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
     incomingActions: incomingDirectCallActions,
     live,
     onBeforeAccept: handleBeforeAcceptDirectCall,
+    mediaDeviceController: mediaDevices,
     roomName,
     state
   });
@@ -157,7 +176,8 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
     recentVoiceJoin,
     requestCallSwitch,
     ui,
-    view
+    view,
+    voiceModerationState
   });
 
   useEffect(() => {
@@ -185,7 +205,7 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   });
 
   return (
-    <ChatRuntimeContext.Provider value={{ actions, directCalls, live, media, roomName, view }}>
+    <ChatRuntimeContext.Provider value={{ actions, directCalls, live, media, mediaDevices, mediaDeviceState, productivity, roomName, view }}>
       {children}
       {callSwitchPrompt ? (
         <CallSwitchDialog

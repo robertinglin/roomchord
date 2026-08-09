@@ -39,7 +39,7 @@ This app links the local `matterhorn-sdk` from `../matterhorn/packages/matterhor
 
 ## Frontend Architecture
 
-`src/src` uses Feature-Sliced Design:
+`src` uses Feature-Sliced Design:
 
 - `app` for bootstrapping, global styles, and app-level types.
 - `pages` for route-level chat composition.

@@ -11,6 +11,11 @@ import { authorName, focusMessage, formatMessageTime, messageAvatar, previewText
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
 import { parseMentionedMemberIds, renderMentionNames } from "@entities/chat/model/mentions";
 import { tokens } from "../../../shared/ui/theme.stylex";
+import { AttachmentList } from "@shared/ui/AttachmentList";
+import type { AttachmentPreviewLoader, AttachmentRecord, EncryptedFileRecord } from "@shared/model/attachments";
+import type { MatterhornBookmark, MatterhornReminder } from "matterhorn-sdk/browser";
+import type { CustomMediaMessageItem } from "@shared/model/customMediaMessage";
+import { customMediaForMessage } from "@shared/model/customMediaMessage";
 
 type MessageMenuPosition = { anchored: true } | { anchored: false; x: number; y: number };
 
@@ -22,6 +27,8 @@ type MessageMenuItem = {
   label: string;
   onSelect?: () => void;
   sectionBefore?: boolean;
+  section?: "message" | "personal" | "more" | "danger";
+  unavailableReason?: string;
   variant?: "danger";
 };
 
@@ -65,6 +72,11 @@ const styles = stylex.create({
     color: tokens.mentionFg,
     fontSize: "10px",
     fontWeight: 700,
+  },
+  provenance: {
+    color: tokens.quiet,
+    fontSize: "11px",
+    fontStyle: "italic",
   },
   actions: {
     position: "absolute",
@@ -115,7 +127,7 @@ function ReplyPreview({
     );
   }
   const name = authorName(message, memberNamesById);
-  const preview = previewText(renderMentionNames(message.body, memberNamesById));
+  const preview = previewText(renderMentionNames(message.body, memberNamesById)) || (message.attachmentIds?.length ? "File attachment" : "Message");
   return (
     <a className="reply-preview" href={messageHref(message.id)} aria-label={`Replying to ${name}: ${preview}`} onClick={() => onFollow(message.id)}>
       <span>Replying to {name}</span>
@@ -136,6 +148,7 @@ export function MessageRow({
   messagesById,
   onDelete,
   onDirectMessage,
+  onCreateThread,
   onEdit,
   onForward,
   onPin,
@@ -144,7 +157,23 @@ export function MessageRow({
   onReply,
   onUnpin,
   pinnedCopy,
-  recentReactions
+  recentReactions,
+  fileRecords = [],
+  attachmentRecords = [],
+  onDownloadFile,
+  onPreviewFile,
+  onOpenAttachment,
+  onMarkUnread,
+  onClearUnread,
+  unreadMarkerMessageId,
+  bookmarks = [],
+  reminders = [],
+  onAddBookmark,
+  onRemoveBookmark,
+  onAddReminder,
+  onRemoveReminder
+  , customMediaRecords = []
+  , customMediaScope
 }: {
   canDeleteMessage?: (message: Message) => boolean;
   canEditMessage?: (message: Message) => boolean;
@@ -157,6 +186,7 @@ export function MessageRow({
   messagesById: Map<string, Message>;
   onDelete?: (messageId: string) => void;
   onDirectMessage?: (memberId: string) => void;
+  onCreateThread?: (message: Message) => Promise<string | undefined> | string | void;
   onEdit?: (messageId: string, body: string) => void;
   onForward?: (message: Message, target: MessageForwardTarget) => void;
   onPin?: (messageId: string) => void;
@@ -166,6 +196,22 @@ export function MessageRow({
   onUnpin?: (messageId: string) => void;
   pinnedCopy: boolean;
   recentReactions: string[];
+  fileRecords?: EncryptedFileRecord[];
+  attachmentRecords?: AttachmentRecord[];
+  onDownloadFile?: (file: EncryptedFileRecord) => void;
+  onPreviewFile?: AttachmentPreviewLoader;
+  onOpenAttachment?: (attachment: AttachmentRecord) => void;
+  onMarkUnread?: (message: Message) => void;
+  onClearUnread?: () => void;
+  unreadMarkerMessageId?: string;
+  bookmarks?: MatterhornBookmark[];
+  reminders?: MatterhornReminder[];
+  onAddBookmark?: (message: Message) => void;
+  onRemoveBookmark?: (bookmarkId: string) => void;
+  onAddReminder?: (message: Message) => void;
+  onRemoveReminder?: (reminderId: string) => void;
+  customMediaRecords?: CustomMediaMessageItem[];
+  customMediaScope?: { scopeType: string; scopeId: string };
 }) {
   const [editing, setEditing] = useState<{ id: string; body: string } | undefined>();
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
@@ -179,10 +225,33 @@ export function MessageRow({
   const canEdit = Boolean(!pinnedCopy && onEdit && !isDeleted && (!canEditMessage || canEditMessage(message)));
   const canDelete = Boolean(onDelete && !isDeleted && (!canDeleteMessage || canDeleteMessage(message)));
   const canReact = Boolean(onReact);
+  const messageCustomMedia = customMediaScope
+    ? customMediaForMessage(message.customMediaRefs, customMediaRecords, customMediaScope.scopeType, customMediaScope.scopeId)
+    : [];
+  const playableCustomMedia = messageCustomMedia.filter((item) => item.playback.kind === "files-v2"
+    ? Boolean(onDownloadFile && fileRecords.some((file) => file.fileId === item.playback.id && !file.removedAt))
+    : Boolean(onOpenAttachment && attachmentRecords.some((attachment) => attachment.assetId === item.playback.id && !attachment.removedAt)));
+
+  function openCustomMedia(item: CustomMediaMessageItem) {
+    if (item.playback.kind === "files-v2") {
+      const file = fileRecords.find((candidate) => candidate.fileId === item.playback.id && !candidate.removedAt);
+      if (file) onDownloadFile?.(file);
+      return;
+    }
+    const attachment = attachmentRecords.find((candidate) => candidate.assetId === item.playback.id && !candidate.removedAt);
+    if (attachment) onOpenAttachment?.(attachment);
+  }
+  const forwardable = Boolean(message.threadId || ("channelId" in message
+    && message.channelId
+    && !/^message_ui_[1-9]\d*_[1-9]\d*$/.test(message.id)));
+  const availableForwardTargets = forwardable ? forwardTargets : [];
   const showMore = !isDeleted;
   const replyMessage = message.replyToId ? messagesById.get(message.replyToId) : undefined;
   const avatar = <Avatar className="msg-av" name={name} avatar={messageAvatar(message, memberAvatarsById)} />;
   const authoredByCurrentUser = Boolean(currentUserId && message.authorId === currentUserId);
+  const isUnreadMarker = unreadMarkerMessageId === message.id;
+  const bookmark = bookmarks.find((item) => item.messageId === message.id && !item.removedAt);
+  const reminder = reminders.find((item) => item.messageId === message.id && !item.removedAt);
   const mentionedCurrentUser = Boolean(
     currentUserId &&
     !isDeleted &&
@@ -274,20 +343,46 @@ export function MessageRow({
       label: "Forward",
       onSelect: () => setForwardMenuOpen(true)
     },
-    { disabled: true, icon: "▥", id: "create-thread", label: "Create Thread" },
-    { icon: "⧉", id: "copy-text", label: "Copy Text", onSelect: () => copyText(message.body), sectionBefore: true },
+    { disabled: !onCreateThread, icon: "▥", id: "create-thread", label: "Create Thread", onSelect: () => onCreateThread?.(message), section: "message", unavailableReason: "Threads are unavailable because this room has not granted comment-thread creation." },
+    { icon: "⧉", id: "copy-text", label: "Copy Text", onSelect: () => copyText(message.body), sectionBefore: true, section: "more" },
     {
       ariaLabel: canPin ? (message.pinnedAt ? "Unpin Message" : "Pin Message") : undefined,
       disabled: !canPin,
       icon: "⌖",
       id: "pin",
       label: message.pinnedAt ? "Unpin Message" : "Pin Message",
-      onSelect: () => message.pinnedAt ? onUnpin?.(message.id) : onPin?.(message.id)
+      onSelect: () => message.pinnedAt ? onUnpin?.(message.id) : onPin?.(message.id),
+      section: "more"
     },
-    { disabled: true, icon: "›", id: "apps", label: "Apps" },
-    { disabled: true, icon: "◔", id: "mark-unread", label: "Mark Unread" },
-    { icon: "🔗", id: "copy-link", label: "Copy Message Link", onSelect: () => copyText(messageLink()) },
-    { disabled: true, icon: "◉", id: "speak", label: "Speak Message" },
+    { disabled: true, icon: "›", id: "apps", label: "Apps", section: "more", unavailableReason: "No message apps are available in this room." },
+    {
+      disabled: bookmark ? !onRemoveBookmark : !onAddBookmark,
+      icon: "🔖",
+      id: "bookmark",
+      label: bookmark ? "Remove Bookmark" : "Bookmark Message",
+      ariaLabel: bookmark ? "Remove Bookmark" : "Bookmark Message",
+      onSelect: () => bookmark ? onRemoveBookmark?.(bookmark.id) : onAddBookmark?.(message),
+      section: "personal"
+    },
+    {
+      disabled: reminder ? !onRemoveReminder : !onAddReminder,
+      icon: "⏰",
+      id: "reminder",
+      label: reminder ? "Remove Reminder" : "Set Reminder",
+      ariaLabel: reminder ? "Remove Reminder" : "Set Reminder",
+      onSelect: () => reminder ? onRemoveReminder?.(reminder.id) : onAddReminder?.(message),
+      section: "personal"
+    },
+    {
+      disabled: isUnreadMarker ? !onClearUnread : !onMarkUnread,
+      icon: "◔",
+      id: "mark-unread",
+      label: isUnreadMarker ? "Clear Unread" : "Mark Unread",
+      onSelect: () => isUnreadMarker ? onClearUnread?.() : onMarkUnread?.(message),
+      section: "personal"
+    },
+    { icon: "🔗", id: "copy-link", label: "Copy Message Link", onSelect: () => copyText(messageLink()), section: "more" },
+    { disabled: true, icon: "◉", id: "speak", label: "Speak Message", section: "more", unavailableReason: "Read-aloud is not available in this room." },
     {
       ariaLabel: canDelete ? "Delete Message" : undefined,
       disabled: !canDelete,
@@ -296,7 +391,8 @@ export function MessageRow({
       label: "Delete Message",
       onSelect: () => onDelete?.(message.id),
       sectionBefore: true,
-      variant: "danger"
+      variant: "danger",
+      section: "danger"
     }
   ];
 
@@ -318,7 +414,7 @@ export function MessageRow({
       key={instanceKey}
       onMouseEnter={() => setActionsActive(true)}
       onMouseLeave={() => setActionsActive(false)}
-      onFocus={() => setActionsActive(true)}
+      onFocusCapture={() => setActionsActive(true)}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setActionsActive(false);
       }}
@@ -355,6 +451,17 @@ export function MessageRow({
           <a className="message-permalink" href={messageHref(message.id)} aria-label={`Link to message from ${name}`} title="Message link" onClick={() => focusMessage(message.id)}>#</a>
         </div>
         {message.replyToId ? <ReplyPreview message={replyMessage} memberNamesById={memberNamesById} onFollow={focusMessage} /> : null}
+        {message.forwardedFrom ? (
+          <small
+            className={stylex.props(styles.provenance).className}
+            style={stylex.props(styles.provenance).style}
+            data-forwarded-kind={message.forwardedFrom.kind}
+            data-forwarded-scope-id={message.forwardedFrom.scopeId}
+            data-forwarded-message-id={message.forwardedFrom.messageId}
+          >
+            Forwarded from {message.forwardedFrom.kind === "channel" ? `# ${message.forwardedFrom.scopeId}` : "a direct message"}
+          </small>
+        ) : null}
         {isDeleted ? (
           <p className="msg-body message-tombstone">Message deleted</p>
         ) : !pinnedCopy && editing?.id === message.id ? (
@@ -375,6 +482,31 @@ export function MessageRow({
             onDirectMessage={onDirectMessage}
           />
         )}
+        {playableCustomMedia.length ? (
+          <div className="custom-media-message" aria-label="Custom media references">
+            {playableCustomMedia.map((item) => (
+              <span className="custom-media-message-item" key={item.id}>
+                {item.mediaType === "voice" ? "Voice message" : item.name}
+                <small> · {item.mediaType}</small>
+                {item.playback.kind === "files-v2" ? (
+                  <button type="button" aria-label={`${item.mediaType === "voice" ? "Play" : "Open"} ${item.name}`} onClick={() => openCustomMedia(item)}>{item.mediaType === "voice" ? "Play" : "Open"}</button>
+                ) : (
+                  <button type="button" aria-label={`${item.mediaType === "voice" ? "Play" : "Open"} ${item.name}`} onClick={() => openCustomMedia(item)}>{item.mediaType === "voice" ? "Play" : "Open"}</button>
+                )}
+                {item.mediaType === "voice" ? <small data-playback-kind={item.playback.kind} data-playback-id={item.playback.id}> · encrypted playback</small> : null}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        {message.attachmentIds?.length ? (
+          <AttachmentList
+            attachments={attachmentRecords.filter((attachment) => message.attachmentIds?.includes(attachment.id) || message.attachmentIds?.includes(attachment.assetId || ""))}
+            files={fileRecords.filter((file) => message.attachmentIds?.includes(file.fileId))}
+            onDownload={onDownloadFile || (() => undefined)}
+            onOpenAttachment={onOpenAttachment || (() => undefined)}
+            onPreview={onPreviewFile}
+          />
+        ) : null}
         {!isDeleted && canReact && reactions.length > 0 ? (
           <div className="reactions">
             {reactions.map(([emoji, members]) => (
@@ -403,7 +535,7 @@ export function MessageRow({
                 <ReplyIcon className="ico" />
               </button>
             ) : null}
-            {onForward ? (
+            {onForward && forwardable ? (
               <button className="message-action-icon" type="button" aria-label={`Forward message from ${name}`} title="Forward" onClick={() => { closeMenus(); setForwardMenuOpen((open) => !open); }}>
                 <ForwardIcon className="ico" />
               </button>
@@ -441,21 +573,24 @@ export function MessageRow({
                           ))}
                         </span>
                       ) : null}
-                      {messageMenuItems.map((item) => (
+                      {messageMenuItems.map((item, index) => (
+                        <React.Fragment key={item.id}>
+                        {item.section && (index === 0 || messageMenuItems[index - 1].section !== item.section) ? <span className="message-menu-section" aria-hidden="true">{item.section === "message" ? "Conversation" : item.section === "personal" ? "For you" : item.section === "more" ? "More" : "Danger zone"}</span> : null}
                         <button
                           aria-label={item.ariaLabel}
                           className={`${item.sectionBefore ? "sectioned" : ""}${item.variant === "danger" ? " danger" : ""}`}
                           disabled={item.disabled}
+                          title={item.disabled ? item.unavailableReason : undefined}
                           type="button"
                           role="menuitem"
                           onClick={() => selectMessageMenuItem(item)}
-                          key={item.id}
                         >
                           <span>
                             <strong>{item.label}</strong>
                           </span>
                           {item.icon ? <span className="context-menu-icon">{item.icon}</span> : null}
                         </button>
+                        </React.Fragment>
                       ))}
                     </span>
                   </>
@@ -485,10 +620,10 @@ export function MessageRow({
             <div className="message-forward-panel context-menu-popover" onMouseDown={(event) => event.stopPropagation()}>
               <strong>Forward to</strong>
               <div className="message-forward-list">
-                {forwardTargets.length === 0 ? <span>No other chats available</span> : null}
-                {forwardTargets.map((target) => (
+                {availableForwardTargets.length === 0 ? <span>No other chats available</span> : null}
+                {availableForwardTargets.map((target) => (
                   <button key={target.id} type="button" aria-label={`Forward to ${target.label}`} onClick={() => forwardTo(target)}>
-                    {target.type === "channel" ? "Channel" : "DM"}
+                    DM
                     <span>{target.label}</span>
                   </button>
                 ))}

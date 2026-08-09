@@ -7,6 +7,11 @@ import { mentionToken } from "@entities/chat/model/mentions";
 import type { PendingComposerText } from "@entities/chat/model/chatUiStore";
 import { Button, ExternalLinkGlyph, SendGlyph, SmileGlyph } from "@shared/ui/design";
 import { tokens } from "../../../shared/ui/theme.stylex";
+import { AttachmentPicker } from "@shared/ui/AttachmentPicker";
+import type { AttachmentTransferState, PendingAttachmentPreview } from "@shared/model/attachments";
+import type { AttachmentPickerConfig } from "@shared/model/attachmentPicker";
+import type { MatterhornCustomMediaMessageReference } from "matterhorn-sdk/browser";
+import type { ForumTag } from "@entities/community/model/forum";
 
 const ZWSP = "\u200B"; // zero-width space used as a caret anchor around pills
 const MENTION_QUERY_RE = /(?:^|[\s\u200B])@([^\n@]*)$/u;
@@ -50,13 +55,12 @@ const styles = stylex.create({
     backgroundColor: tokens.surface,
     boxShadow: tokens.elevPanel,
   },
-  top: { display: "flex", alignItems: "center", gap: "2px", padding: "6px 6px 0" },
   input: {
     width: "100%",
     minHeight: "46px",
     maxHeight: "160px",
     overflowY: "auto",
-    padding: "6px 14px 8px",
+    padding: "12px 14px 8px",
     border: 0,
     outline: "none",
     backgroundColor: "transparent",
@@ -92,10 +96,21 @@ const styles = stylex.create({
     ":hover": { backgroundColor: tokens.panelHover, color: tokens.fg },
   },
   mentionSelected: { backgroundColor: tokens.panelActive, color: tokens.fg },
-  bottom: { display: "flex", alignItems: "center", gap: "8px", padding: "4px 10px 8px" },
-  left: { display: "flex", gap: "2px" },
+  bottom: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto auto",
+    alignItems: "center",
+    gap: "8px",
+    padding: "6px 10px 9px",
+  },
+  left: {
+    minWidth: 0,
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: "4px",
+  },
   length: {
-    marginLeft: "auto",
     color: tokens.quiet,
     fontFamily: tokens.fontMono,
     fontSize: "11px",
@@ -174,20 +189,46 @@ export function MessageComposer({
   memberNamesById,
   mode,
   onCancelReply,
+  onShareDrive,
+  onUploadFile,
+  advancedPicker,
+  pendingAttachments = [],
+  onRemovePendingAttachment,
+  attachmentUnavailableReason,
+  canSendWithoutText,
   pendingText,
   onSend,
   replyTo,
-  title
+  title,
+  transfer,
+  customMedia,
+  customMediaRefs = [],
+  forumTags = [],
+  forumTagIds = [],
+  onForumTagIdsChange
 }: {
   disabled?: boolean;
   focusKey?: number;
   memberNamesById: Record<string, string>;
   mode: "channel" | "dm";
   onCancelReply: () => void;
+  onShareDrive?: (file: File) => void;
+  onUploadFile?: (file: File) => void;
+  advancedPicker?: AttachmentPickerConfig;
+  pendingAttachments?: PendingAttachmentPreview[];
+  onRemovePendingAttachment?: (id: string) => void;
+  attachmentUnavailableReason?: string;
+  canSendWithoutText?: boolean;
   pendingText?: PendingComposerText;
-  onSend: (body: string) => void;
+  onSend: (body: string, customMediaRefs?: MatterhornCustomMediaMessageReference[], forumTagIds?: string[]) => void;
   replyTo?: Message;
   title: string;
+  transfer?: AttachmentTransferState;
+  customMedia?: React.ReactNode;
+  customMediaRefs?: MatterhornCustomMediaMessageReference[];
+  forumTags?: ForumTag[];
+  forumTagIds?: string[];
+  onForumTagIdsChange?: (tagIds: string[]) => void;
 }) {
   const [composerEmojiOpen, setComposerEmojiOpen] = useState(false);
   const [hasContent, setHasContent] = useState(false);
@@ -198,6 +239,7 @@ export function MessageComposer({
 
   const mentionOptions = mentionQuery === null ? [] : mentionCandidates(memberNamesById, mentionQuery);
   const mentionMenuOpen = mentionOptions.length > 0;
+  const canSendEmpty = canSendWithoutText === true || customMediaRefs.length > 0;
 
   useEffect(() => {
     if (focusKey === undefined) return;
@@ -286,8 +328,10 @@ export function MessageComposer({
     const editor = editorRef.current;
     if (!editor || disabled) return;
     const body = Array.from(editor.childNodes).map(serialize).join("").trim();
-    if (!body) return;
-    onSend(body);
+    if (!body && !canSendEmpty && customMediaRefs.length === 0) return;
+    if (forumTagIds.length) onSend(body, customMediaRefs.length ? customMediaRefs : undefined, forumTagIds);
+    else if (customMediaRefs.length) onSend(body, customMediaRefs);
+    else onSend(body);
     editor.innerHTML = "";
     setHasContent(false);
     setContentLength(0);
@@ -349,11 +393,6 @@ export function MessageComposer({
         </div>
       ) : null}
       <div {...stylex.props(styles.box)}>
-        <div {...stylex.props(styles.top)}>
-          <Button tone="accent" aria-label="Insert link" title="Insert link" disabled={disabled} onClick={insertLink}>
-            <ExternalLinkGlyph size={16} />
-          </Button>
-        </div>
         <div
           ref={editorRef}
           {...stylex.props(styles.input)}
@@ -366,6 +405,16 @@ export function MessageComposer({
           onKeyDown={onKeyDown}
           onPaste={onPaste}
         />
+        {pendingAttachments.length ? (
+          <div className="composer-attachments" role="group" aria-label="Attached files">
+            {pendingAttachments.map((attachment) => (
+              <span className="composer-attachment" key={attachment.id}>
+                <span><strong>{attachment.name}</strong><small>{attachment.destination === "relay" ? "Relay" : "Google Drive"} · {attachment.mimeType}</small></span>
+                <button type="button" aria-label={`Remove ${attachment.name}`} onClick={() => onRemovePendingAttachment?.(attachment.id)}>×</button>
+              </span>
+            ))}
+          </div>
+        ) : null}
         {mentionMenuOpen ? (
           <div {...stylex.props(styles.mentionMenu)} role="listbox" aria-label="Mention suggestions">
             {mentionOptions.map((member, index) => (
@@ -383,11 +432,26 @@ export function MessageComposer({
             ))}
           </div>
         ) : null}
+        {forumTags.length && onForumTagIdsChange ? (
+          <fieldset aria-label="Forum tags" style={{ display: "flex", flexWrap: "wrap", gap: 6, border: 0, padding: "6px 10px", margin: 0 }}>
+            <legend style={{ fontSize: 12, opacity: .7 }}>Tags</legend>
+            {forumTags.map((tag) => {
+              const selected = forumTagIds.includes(tag.id);
+              return <label key={tag.id} style={{ display: "inline-flex", gap: 4, alignItems: "center" }}><input type="checkbox" disabled={disabled} checked={selected} onChange={() => onForumTagIdsChange(selected ? forumTagIds.filter((id) => id !== tag.id) : [...forumTagIds, tag.id])} />{tag.name}</label>;
+            })}
+          </fieldset>
+        ) : null}
         <div {...stylex.props(styles.bottom)}>
           <span {...stylex.props(styles.left)}>
+            <Button aria-label="Insert link" title="Insert link" disabled={disabled} onClick={insertLink}>
+              <ExternalLinkGlyph size={16} />
+            </Button>
             <Button aria-label="Add emoji" title="Add emoji" disabled={disabled} onClick={() => setComposerEmojiOpen((open) => !open)}>
               <SmileGlyph size={16} />
             </Button>
+            {(onUploadFile || attachmentUnavailableReason || advancedPicker) && transfer ? <AttachmentPicker advancedPicker={advancedPicker} disabled={disabled} onShareDrive={onShareDrive} onUpload={onUploadFile} transfer={transfer} unavailableReason={attachmentUnavailableReason} /> : null}
+            {customMedia}
+            {customMediaRefs.length ? <span role="status">{customMediaRefs.length} custom media item{customMediaRefs.length === 1 ? "" : "s"} attached</span> : null}
           </span>
           <span {...stylex.props(styles.length)} aria-live="polite">{contentLength} / 2000</span>
           <Button
@@ -395,12 +459,13 @@ export function MessageComposer({
             tone="accent"
             aria-label={mode === "dm" ? "Send DM" : "Send message"}
             title={mode === "dm" ? "Send DM" : "Send message"}
-            disabled={disabled || !hasContent}
+            disabled={disabled || (!hasContent && !canSendEmpty)}
             onClick={submitMessage}
           >
             <SendGlyph size={15} />
             Send
           </Button>
+          {!customMedia ? <span role="note">Custom media is unavailable for this room connection.</span> : null}
         </div>
       </div>
       {composerEmojiOpen ? (

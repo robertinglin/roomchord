@@ -28,7 +28,7 @@ export default defineConfig({
     lib: { entry: path.resolve(__dirname, "src", "index.tsx"), formats: ["es"], fileName: () => "matterhorn-mosh.js" },
     minify: false,
     rollupOptions: {
-      output: { inlineDynamicImports: true }
+      output: { codeSplitting: false }
     }
   },
   server: { host: "127.0.0.1", port: 42732, strictPort: true, allowedHosts: ["launch.matterhorn.gg", "launch.matterhorn.app", "localhost", "127.0.0.1"] }

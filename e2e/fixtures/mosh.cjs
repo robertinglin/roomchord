@@ -8,6 +8,18 @@ const { test: base, expect } = require("playwright/test");
 const MATTERHORN_ROOT = path.resolve(__dirname, "../../../matterhorn");
 const PROJECT_ROOT = path.resolve(__dirname, "../..");
 const ANSI = /\u001b\[[0-9;]*m/g;
+const LAUNCHER_ASSET_TYPES = new Set(["document", "script", "stylesheet", "font", "manifest", "image"]);
+
+function isLauncherAsset(request) {
+  if (LAUNCHER_ASSET_TYPES.has(request.resourceType())) return true;
+  return /\.(?:css|gif|ico|jpeg|jpg|js|json|map|png|svg|ttf|woff2?)(?:$|[?#])/iu.test(request.url());
+}
+
+function assetDiagnostic(output, pageName, page, phase, kind, request, details = {}) {
+  const status = details.status === undefined ? "n/a" : details.status;
+  const failure = details.error ? ` error=${details.error}` : "";
+  output.text += `\n[launcher asset ${kind}] phase=${phase} page=${pageName} pageUrl=${page.url()} status=${status} url=${request.url()}${failure}`;
+}
 
 function matterhornCli() {
   return process.env.MATTERHORN_PLAYWRIGHT_CLI || path.join(MATTERHORN_ROOT, "bin", "matterhorn.cjs");
@@ -31,6 +43,34 @@ function terminate(child) {
     else process.kill(-child.pid, "SIGTERM");
   } catch {
     child.kill();
+  }
+}
+
+function newestBuildInput(root) {
+  let newest = 0;
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (entry.name === "node_modules" || entry.name === "dist" || entry.name === ".git") continue;
+    const item = path.join(root, entry.name);
+    if (entry.isDirectory()) {
+      newest = Math.max(newest, newestBuildInput(item));
+      continue;
+    }
+    if (/\.test\.[cm]?[jt]sx?$/.test(entry.name) || /\.(map|d\.ts)$/.test(entry.name)) continue;
+    newest = Math.max(newest, fs.statSync(item).mtimeMs);
+  }
+  return newest;
+}
+
+function assertPrebuiltDistFresh() {
+  const bundleEntry = path.join(PROJECT_ROOT, "dist", "index.html");
+  if (!fs.existsSync(bundleEntry)) throw new Error("E2E requires a prebuilt dist/index.html; run pnpm run build:frontend first.");
+  const bundleMtime = fs.statSync(bundleEntry).mtimeMs;
+  const sourceMtime = ["src", "public", "shared", "index.html", "vite.config.ts", "tsconfig.json", "package.json", "pnpm-lock.yaml"]
+    .map((relative) => path.join(PROJECT_ROOT, relative))
+    .filter((input) => fs.existsSync(input))
+    .reduce((newest, input) => Math.max(newest, fs.statSync(input).isDirectory() ? newestBuildInput(input) : fs.statSync(input).mtimeMs), 0);
+  if (sourceMtime > bundleMtime) {
+    throw new Error("E2E prebuilt dist is stale relative to the frontend sources; run pnpm run build:frontend before the linked proof.");
   }
 }
 
@@ -61,7 +101,8 @@ function waitForLinks(child, output) {
   });
 }
 
-function copyProject() {
+function copyProject(usePrebuilt = true) {
+  assertPrebuiltDistFresh();
   const target = fs.mkdtempSync(path.join(os.tmpdir(), "mosh-playwright-"));
   fs.cpSync(PROJECT_ROOT, target, {
     recursive: true,
@@ -69,8 +110,14 @@ function copyProject() {
       const relative = path.relative(PROJECT_ROOT, item);
       return relative !== ".matterhorn"
         && !relative.startsWith(`.matterhorn${path.sep}`)
+        && relative !== ".git"
+        && !relative.startsWith(`.git${path.sep}`)
+        && relative !== "coverage"
+        && !relative.startsWith(`coverage${path.sep}`)
         && relative !== "node_modules"
         && !relative.startsWith(`node_modules${path.sep}`)
+        && relative !== "playwright-report"
+        && !relative.startsWith(`playwright-report${path.sep}`)
         && relative !== "dist"
         && !relative.startsWith(`dist${path.sep}`)
         && relative !== "test-results"
@@ -80,20 +127,31 @@ function copyProject() {
   fs.symlinkSync(path.join(PROJECT_ROOT, "node_modules"), path.join(target, "node_modules"), "dir");
   fs.cpSync(path.join(PROJECT_ROOT, "dist"), path.join(target, "dist"), { recursive: true });
 
-  // The checked-in bundle is the test fixture's runtime artifact. Marking it
-  // prebuilt keeps Matterhorn from rebuilding its sibling SDK on every test
-  // startup; that build belongs to the host workspace, not this app's E2E
-  // contract, and can be unavailable when the host is under active work.
-  const descriptorPath = path.join(target, "gg.matterhorn.mosh.json");
-  const descriptor = JSON.parse(fs.readFileSync(descriptorPath, "utf8"));
-  descriptor.frontend = {
-    ...descriptor.frontend,
-    bundle: {
-      ...descriptor.frontend.bundle,
-      prebuilt: true,
-    },
-  };
-  fs.writeFileSync(descriptorPath, `${JSON.stringify(descriptor, null, 2)}\n`);
+  // The checked-in dist is the fixture's explicit prebuilt runtime contract.
+  // Freshness was checked above before copying it; prebuilt keeps Matterhorn
+  // from rebuilding its sibling SDK during each test startup.
+  if (usePrebuilt) {
+    const descriptorPath = path.join(target, "gg.matterhorn.mosh.json");
+    const descriptor = JSON.parse(fs.readFileSync(descriptorPath, "utf8"));
+    descriptor.frontend = {
+      ...descriptor.frontend,
+      bundle: {
+        ...descriptor.frontend.bundle,
+        prebuilt: true,
+      },
+    };
+    fs.writeFileSync(descriptorPath, `${JSON.stringify(descriptor, null, 2)}\n`);
+  } else {
+    const descriptorPath = path.join(target, "gg.matterhorn.mosh.json");
+    const descriptor = JSON.parse(fs.readFileSync(descriptorPath, "utf8"));
+    for (const command of [descriptor.frontend?.bundle?.dev, descriptor.frontend?.bundle?.build]) {
+      if (!Array.isArray(command?.args)) continue;
+      command.args = command.args.map((argument) => typeof argument === "string" && (argument === PROJECT_ROOT || argument.startsWith(`${PROJECT_ROOT}${path.sep}`))
+        ? path.join(target, path.relative(PROJECT_ROOT, argument))
+        : argument);
+    }
+    fs.writeFileSync(descriptorPath, `${JSON.stringify(descriptor, null, 2)}\n`);
+  }
   return target;
 }
 
@@ -190,7 +248,8 @@ async function waitForMessage(page, body, channel = "general") {
 }
 
 async function createEnvironment(testInfo) {
-  const project = copyProject();
+  const developmentReloadProof = testInfo.file.endsWith("mosh-development-reload.spec.cjs");
+  const project = copyProject(!developmentReloadProof);
   const output = { text: "" };
   const signalingPort = await freePort();
   const child = spawn(process.execPath, [matterhornCli(), "dev", "--local", "--no-install", "--no-emit", "--no-doctor"], {
@@ -206,6 +265,7 @@ async function createEnvironment(testInfo) {
   child.stderr.on("data", (chunk) => { output.text += chunk.toString(); });
   let browser;
   const contexts = [];
+  const lifecycle = { phase: "startup" };
   try {
     const links = await waitForLinks(child, output);
     const playwright = require("playwright");
@@ -245,8 +305,14 @@ async function createEnvironment(testInfo) {
         }
       });
       page.on("pageerror", (error) => { output.text += `\n[${name} pageerror] ${error.stack || error.message}`; });
+      page.on("response", (response) => {
+        if (response.status() !== 404 || !isLauncherAsset(response.request())) return;
+        assetDiagnostic(output, name, page, lifecycle.phase, "404", response.request(), { status: response.status() });
+      });
       page.on("requestfailed", (request) => {
-        if (name === "moderator") output.text += `\n[moderator requestfailed] ${request.url()} ${request.failure()?.errorText || ""}`;
+        const errorText = request.failure()?.errorText || "";
+        if (lifecycle.phase === "teardown" && /ERR_ABORTED/iu.test(errorText)) return;
+        if (isLauncherAsset(request)) assetDiagnostic(output, name, page, lifecycle.phase, "requestfailed", request, { error: errorText || "unknown" });
       });
       const channel = name === "guest" ? "guest" : "general";
       const ready = previousUserReady
@@ -258,8 +324,10 @@ async function createEnvironment(testInfo) {
       }));
     }
     await Promise.all(pending);
-    return { browser, child, contexts, pages, links, output, project, testInfo };
+    lifecycle.phase = "test";
+    return { browser, child, contexts, pages, links, output, project, testInfo, lifecycle };
   } catch (error) {
+    lifecycle.phase = "teardown";
     await browser?.close().catch(() => {});
     terminate(child);
     fs.rmSync(project, { recursive: true, force: true });
@@ -268,6 +336,7 @@ async function createEnvironment(testInfo) {
 }
 
 async function closeEnvironment(environment) {
+  environment.lifecycle.phase = "teardown";
   for (const context of [...environment.contexts].reverse()) await context.close().catch(() => {});
   await environment.browser?.close().catch(() => {});
   terminate(environment.child);

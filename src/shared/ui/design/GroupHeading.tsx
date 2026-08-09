@@ -52,11 +52,13 @@ const styles = stylex.create({
 });
 
 export function GroupHeading({
+  addLabel = "Create channel",
   label,
   open = true,
   onAdd,
   onToggle,
 }: {
+  addLabel?: string;
   label: string;
   open?: boolean;
   onAdd?: () => void;
@@ -88,7 +90,7 @@ export function GroupHeading({
         </>
       )}
       {onAdd && (
-        <Button size="sm" tone="quiet" title="Create channel" onClick={onAdd}>
+        <Button size="sm" tone="quiet" title={addLabel} aria-label={addLabel} onClick={onAdd}>
           <PlusGlyph size={14} />
         </Button>
       )}

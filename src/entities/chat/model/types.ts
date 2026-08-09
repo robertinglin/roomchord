@@ -1,5 +1,9 @@
 import type { Mosh } from "../../../../types";
 import type { MtnHomeData, MtnHomeOpenRoomDetail } from "matterhorn-sdk/browser";
+import type { MatterhornCustomMediaMessageReference } from "matterhorn-sdk/browser";
+import type { CommentThread, ThreadComment } from "@shared/model/commentThreads";
+
+export type { CommentThread, ThreadComment } from "@shared/model/commentThreads";
 
 export type AvatarSource = { avatar?: string; avatarUrl?: string; profileImageUrl?: string };
 export type Actor = Mosh.Actor & AvatarSource;
@@ -13,21 +17,71 @@ export type RoomId = Mosh.RoomId;
 export type ShareId = Mosh.ShareId;
 export type ThreadId = Mosh.ThreadId;
 export type RoomMember = Mosh.Member & AvatarSource;
-export type Channel = Mosh.Channel;
+export type ChannelVisibility = "public" | "private";
+export type ChannelCategory = {
+  id: string;
+  name: string;
+  position: number;
+  archivedAt?: number | null;
+  createdBy?: string;
+  createdAt?: number;
+  updatedAt?: number;
+};
+export type ChannelAccessConfig = {
+  visibility?: ChannelVisibility;
+  allowedRoleIds?: string[];
+  allowedMemberIds?: string[];
+};
+export type Channel = Mosh.Channel & {
+  kind?: "text" | "forum" | "announcement" | "onboarding" | "rules" | "voice-text" | "stage";
+  mediaRoomId?: string;
+  postingPolicy?: "members" | "moderators" | "none";
+  speakerPolicy?: "members" | "moderators" | "none";
+  threadPolicy?: "members" | "moderators" | "none";
+  categoryId?: string | null;
+  position?: number;
+} & ChannelAccessConfig;
 export type RoomRoleAccessLevel = "hidden" | "readonly" | "editor";
 export type RoomRoleAccess = Record<string, "readonly" | "editor">;
 
+export type ForwardedMessageSource = {
+  kind: "channel" | "direct.thread";
+  scopeId: string;
+  messageId: string;
+};
+
 export type Message = (Mosh.Message | Mosh.DirectMessage) & {
+  attachmentIds?: string[];
+  threadId?: ThreadId;
+  userIds?: MemberId[];
+  topicKey?: string | null;
   authorName?: string;
   authorAvatar?: string;
   authorAvatarUrl?: string;
   authorImageUrl?: string;
+  forwardedFrom?: ForwardedMessageSource | null;
+  forwardedFromId?: string | null;
+  customMediaRefs?: MatterhornCustomMediaMessageReference[];
 };
 
 export type DirectThread = Mosh.DirectThread;
 export type DirectMessageThread = Mosh.DirectMessageThread;
 
-export type MediaRoomParticipant = Mosh.MediaRoomParticipant;
+export type MediaRoomParticipant = Mosh.MediaRoomParticipant & {
+  deafened?: boolean;
+  moderationAt?: number;
+  moderationReason?: string | null;
+  moderationRevision?: number;
+  muted?: boolean;
+  suppressed?: boolean;
+};
+export type MediaRoomStage = {
+  closedAt?: number | null;
+  open?: boolean;
+  openedAt?: number | null;
+  requests?: Record<string, { memberId?: string; requestedAt?: number; operationId?: string }>;
+  speakers?: Record<string, boolean>;
+};
 export type MediaRoom = {
   id: RoomId;
   name: string;
@@ -43,6 +97,9 @@ export type MediaRoom = {
   createdAt?: number;
   roleAccess?: RoomRoleAccess;
   participants?: Record<string, MediaRoomParticipant> | string[];
+  blockedMembers?: Record<string, { actorId?: string; reason?: string | null; at?: number }>;
+  kind?: "voice" | "stage";
+  stage?: MediaRoomStage;
 };
 
 export type ScreenShare = Mosh.ScreenShare & {
@@ -62,8 +119,6 @@ export type Presence = AvatarSource & {
 };
 
 export type ChatEmbed = Mosh.Embed;
-export type CommentThread = Mosh.CommentThread;
-export type ThreadComment = Mosh.Comment;
 export type ScopedReaction = Mosh.ScopedReaction;
 export type RoleDefinition = Mosh.RoleDefinition;
 export type MemberRoleAssignment = {

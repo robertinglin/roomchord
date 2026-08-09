@@ -22,8 +22,8 @@ function isolatedSliceRules(layer) {
       name: `fsd-${layer}-${slice}-is-isolated`,
       severity: "error",
       comment: "FSD slices in the same layer must not import sibling slices.",
-      from: { path: `^src/src/${layer}/${escaped}/` },
-      to: { path: `^src/src/${layer}/(?!${escaped}/)` }
+      from: { path: `^src/${layer}/${escaped}/` },
+      to: { path: `^src/${layer}/(?!${escaped}/)` }
     };
   });
 }
@@ -38,8 +38,8 @@ const lowerLayerRules = [
   name: `fsd-${fromLayer}-not-to-higher-layers`,
   severity: "error",
   comment: "FSD lower layers may not import higher layers.",
-  from: { path: `^src/src/${fromLayer}/` },
-  to: { path: `^src/src/(?:${blockedLayers})/` }
+  from: { path: `^src/${fromLayer}/` },
+  to: { path: `^src/(?:${blockedLayers})/` }
 }));
 
 module.exports = {
@@ -54,8 +54,8 @@ module.exports = {
       name: "fsd-entry-imports-app-only",
       severity: "error",
       comment: "The Vite entry adapter should delegate into the app layer.",
-      from: { path: "^src/src/index\\.tsx$" },
-      to: { path: "^src/src/(?!app/)" }
+      from: { path: "^src/index\\.tsx$" },
+      to: { path: "^src/(?!app/)" }
     },
     ...lowerLayerRules,
     ...isolatedSliceRules("pages"),
@@ -79,7 +79,7 @@ module.exports = {
       conditionNames: ["import", "require", "browser", "node", "default"],
       exportsFields: ["exports"]
     },
-    includeOnly: "^src/src",
+    includeOnly: "^src",
     skipAnalysisNotInRules: true,
     tsConfig: { fileName: path.join(__dirname, "tsconfig.json") },
     tsPreCompilationDeps: true

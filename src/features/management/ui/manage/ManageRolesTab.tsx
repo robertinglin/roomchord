@@ -1,9 +1,12 @@
 import React, { useState } from "react";
+import type { MatterhornManagementAction, MatterhornManagementRole, MatterhornManagementScope, MatterhornRoleRule } from "matterhorn-sdk/browser";
 import { cleanRoleId } from "@entities/chat/model/roles";
 import type { RoleDefinition } from "@entities/chat/model/types";
 import type { RoleInput, RoleUpdateInput } from "@entities/chat/model/managementTypes";
+import { cloneRoleRules, roleScopeRules } from "@features/management/model/rolePermissions";
+import { RolePermissionEditor } from "@features/management/ui/manage/RolePermissionEditor";
 import { Glyph } from "@shared/ui/design";
-import { panel, field, button, row, layout, misc } from "@features/management/ui/manage.styles";
+import { panel, field, button, row, layout, misc } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
 
 function roleIdForNewRole(name: string, roles: RoleDefinition[]) {
@@ -11,15 +14,27 @@ function roleIdForNewRole(name: string, roles: RoleDefinition[]) {
   return roles.some((role) => role.id === baseRoleId) ? `${baseRoleId}-${roles.length + 1}` : baseRoleId;
 }
 
+function roleRecord(role: RoleDefinition, managementRoles: MatterhornManagementRole[] | undefined): MatterhornManagementRole {
+  const managed = managementRoles?.find((item) => item.id === role.id);
+  if (managed) return managed;
+  return role as RoleDefinition & MatterhornManagementRole;
+}
+
 export function ManageRolesTab({
   canManageRoles,
   roles,
+  managementRoles,
+  permissionActions = [],
+  permissionScopes = [],
   onArchiveRole,
   onCreateRole,
   onUpdateRole
 }: {
   canManageRoles: boolean;
   roles: RoleDefinition[];
+  managementRoles?: MatterhornManagementRole[];
+  permissionActions?: MatterhornManagementAction[];
+  permissionScopes?: MatterhornManagementScope[];
   onArchiveRole: (roleId: string) => void;
   onCreateRole: (input: RoleInput) => void;
   onUpdateRole: (roleId: string, input: RoleUpdateInput) => void;
@@ -27,20 +42,23 @@ export function ManageRolesTab({
   const [roleName, setRoleName] = useState("");
   const [roleDescription, setRoleDescription] = useState("");
   const [roleColor, setRoleColor] = useState("#38bdf8");
+  const [roleRules, setRoleRules] = useState<MatterhornRoleRule[]>([]);
   const [editingRoleId, setEditingRoleId] = useState<string | undefined>();
   const [editRoleName, setEditRoleName] = useState("");
   const [editRoleDescription, setEditRoleDescription] = useState("");
   const [editRoleColor, setEditRoleColor] = useState("");
+  const [editRoleRules, setEditRoleRules] = useState<MatterhornRoleRule[]>([]);
   const editingRole = editingRoleId ? roles.find((role) => role.id === editingRoleId) : undefined;
 
   function createRole(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const cleanName = roleName.trim();
     if (!cleanName) return;
-    onCreateRole({ roleId: roleIdForNewRole(cleanName, roles), name: cleanName, description: roleDescription.trim() || undefined, color: roleColor.trim() || undefined });
+    onCreateRole({ roleId: roleIdForNewRole(cleanName, roles), name: cleanName, description: roleDescription.trim() || undefined, color: roleColor.trim() || undefined, rules: cloneRoleRules(roleRules) });
     setRoleName("");
     setRoleDescription("");
     setRoleColor("#38bdf8");
+    setRoleRules([]);
   }
 
   function openRoleEditor(role: RoleDefinition) {
@@ -48,12 +66,13 @@ export function ManageRolesTab({
     setEditRoleName(role.name);
     setEditRoleDescription(role.description || "");
     setEditRoleColor(role.color || "");
+    setEditRoleRules(roleScopeRules(roleRecord(role, managementRoles)));
   }
 
   function saveRole(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingRoleId || !editRoleName.trim()) return;
-    onUpdateRole(editingRoleId, { name: editRoleName.trim(), description: editRoleDescription.trim(), color: editRoleColor.trim() });
+    onUpdateRole(editingRoleId, { name: editRoleName.trim(), description: editRoleDescription.trim(), color: editRoleColor.trim(), rules: cloneRoleRules(editRoleRules) });
     setEditingRoleId(undefined);
   }
 
@@ -86,6 +105,7 @@ export function ManageRolesTab({
                 <input aria-label="Role color" value={roleColor} onChange={(event) => setRoleColor(event.target.value)} placeholder="#38bdf8" {...stylex.props(field.input, field.colorHex)} />
               </span>
             </label>
+            {permissionActions.length && permissionScopes.length ? <RolePermissionEditor actions={permissionActions} scopes={permissionScopes} value={roleRules} onChange={setRoleRules} /> : null}
             <div {...stylex.props(button.actions, button.actionsEnd)}>
               <button type="submit" disabled={!roleName.trim()} {...stylex.props(button.btn, button.primary)}>
                 <Glyph size={15}><><path d="M12 5v14M5 12h14" /></></Glyph>
@@ -145,6 +165,7 @@ export function ManageRolesTab({
               <span {...stylex.props(field.label)}>Colour</span>
               <input aria-label="Manage role color" value={editRoleColor} onChange={(event) => setEditRoleColor(event.target.value)} {...stylex.props(field.input)} />
             </label>
+            {permissionActions.length && permissionScopes.length ? <RolePermissionEditor actions={permissionActions} scopes={permissionScopes} value={editRoleRules} onChange={setEditRoleRules} /> : null}
             <div {...stylex.props(button.actions)}>
               <button type="submit" disabled={!editRoleName.trim()} {...stylex.props(button.btn, button.primary)}>Save role</button>
               <button type="button" onClick={() => setEditingRoleId(undefined)} {...stylex.props(button.btn, button.ghost)}>Cancel</button>

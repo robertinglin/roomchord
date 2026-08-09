@@ -69,6 +69,22 @@ export function memberNamesForState(state: ChatState, actor: Actor, memberPrefer
   return names;
 }
 
+export function authoritativeMemberOptions(state: ChatState, memberNamesById: Record<string, string>): Array<{ id: string; name: string }> {
+  return Object.entries(state.members || {})
+    .map(([key, member]) => {
+      const id = member.memberId || member.id || key;
+      const status = String(member.status || "").toLowerCase();
+      return {
+        id,
+        name: memberNamesById[id],
+        active: !member.revokedAt && !member.bannedAt && !["revoked", "banned", "removed", "left"].includes(status)
+      };
+    })
+    .filter(({ id, name, active }) => active && Boolean(name) && name !== id)
+    .map(({ id, name }) => ({ id, name }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
 function avatarValue(source?: AvatarSource) {
   return source?.profileImageUrl || source?.avatarUrl || source?.avatar;
 }
@@ -116,22 +132,17 @@ export function directThreadForUsers(state: ChatState, userIds: string[]) {
   return Object.values(state.directThreads || {}).find((thread) => isCoreDirectThread(thread) && !thread.topicKey && sameParticipants(thread.userIds, userIds));
 }
 
-export function draftDirectThreadForUsers(actorId: string, userIds: string[]): DirectThread | undefined {
+export function draftDirectThreadForUsers(actorId: string, userIds: string[], reservedThreadId?: string): DirectThread | undefined {
   const targetUserIds = normalizeUserIds(userIds).filter((id) => id !== actorId);
   const participants = normalizeUserIds([actorId, ...targetUserIds]);
   if (participants.length < 2) return undefined;
   return {
-    id: directThreadIdForUsers(participants) as ThreadId,
+    id: (reservedThreadId || directThreadIdForUsers(participants)) as ThreadId,
     userIds: participants as MemberId[],
     topic: null,
     createdAt: 0,
     archivedAt: null
   };
-}
-
-export function forwardedMessageBody(message: Message, memberNamesById: Record<string, string>) {
-  const name = (message.authorId ? memberNamesById[message.authorId] : undefined) || message.authorName || message.authorId || "Member";
-  return `Forwarded from ${name}:\n${message.body}`;
 }
 
 export function channelFeed(state: ChatState, channelId?: string) {
@@ -169,11 +180,29 @@ export function forwardTargetsForState(input: {
   for (const memberId of memberIds) {
     const userIds = normalizeUserIds([input.actorId, memberId]);
     if (userIds.length < 2) continue;
-    const threadId = directThreadIdForUsers(userIds);
-    if (input.activeView === "dm" && threadId === input.activeThreadId) continue;
-    if (seenThreads.has(threadId)) continue;
-    seenThreads.add(threadId);
-    targets.push({ id: `direct.thread:${threadId}`, type: "dm", label: input.memberNamesById[memberId] || memberId, threadId, userIds });
+    const committedThreads = Object.values(input.state.directThreads || {})
+      .filter((thread) => isCoreDirectThread(thread) && sameParticipants(thread.userIds, userIds));
+    if (!committedThreads.length) {
+      const targetId = `direct.thread:${userIds.join(",")}`;
+      if (!seenThreads.has(targetId)) {
+        seenThreads.add(targetId);
+        targets.push({ id: targetId, type: "dm", label: input.memberNamesById[memberId] || memberId, userIds });
+      }
+      continue;
+    }
+    for (const committedThread of committedThreads) {
+      if (input.activeView === "dm" && committedThread.id === input.activeThreadId) continue;
+      if (seenThreads.has(committedThread.id)) continue;
+      seenThreads.add(committedThread.id);
+      targets.push({
+        id: committedThread.id,
+        type: "dm",
+        label: committedThread.topicKey ? `${input.memberNamesById[memberId] || memberId} · ${committedThread.topicKey}` : input.memberNamesById[memberId] || memberId,
+        threadId: committedThread.id,
+        ...(committedThread.topicKey ? { topicKey: committedThread.topicKey } : {}),
+        userIds
+      });
+    }
   }
   return targets;
 }

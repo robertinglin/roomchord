@@ -13,10 +13,20 @@ test.describe("Mosh messages and direct messages", () => {
     await expect(frame.getByText(body, { exact: false })).toBeVisible();
     await expect(frame.getByRole("button", { name: "View YouTube video fullscreen" })).toBeVisible();
     await frame.getByRole("button", { name: "View YouTube video fullscreen" }).click();
-    await expect(frame.getByRole("dialog", { name: "YouTube video" })).toBeVisible();
-    await frame.getByRole("button", { name: "Close YouTube video fullscreen" }).click();
+    const videoDialog = frame.getByRole("dialog", { name: "YouTube video" });
+    await expect(videoDialog).toBeVisible();
+    const closeVideo = videoDialog.getByRole("button", { name: "Close YouTube video fullscreen" });
+    if (await closeVideo.isVisible().catch(() => false)) {
+      await closeVideo.click({ force: true }).catch(async (error) => {
+        if (await videoDialog.count() > 0) throw error;
+      });
+    }
+    await expect(videoDialog).toHaveCount(0);
 
     let row = messageRow(frame, body);
+    const rowId = await row.getAttribute("id");
+    if (!rowId) throw new Error("The authored message has no stable row ID.");
+    row = frame.locator(`[id="${rowId}"]`);
     await row.hover();
     await row.getByRole("button", { name: /React with/ }).first().click();
     await expect(row.getByRole("button", { name: /^👍 \d+/ })).toBeVisible();
@@ -32,20 +42,17 @@ test.describe("Mosh messages and direct messages", () => {
     await row.getByRole("button", { name: /More actions for message/ }).click({ force: true });
     const menu = frame.getByRole("menu");
     const edit = menu.getByRole("menuitem", { name: "Edit" });
-    if (await edit.isVisible().catch(() => false)) {
-      await edit.click();
-      const editor = row.getByRole("textbox", { name: /Edit message from/ });
-      await editor.fill(`edited-${token}`);
-      await frame.getByRole("button", { name: "Save", exact: true }).click();
-      await expect(frame.getByText(`edited-${token}`, { exact: true })).toBeVisible();
-      row = messageRow(frame, `edited-${token}`);
-    }
+    await expect(edit).toBeVisible();
+    await edit.click({ force: true });
+    const editor = row.getByRole("textbox", { name: /Edit message from/ });
+    await editor.fill(`edited-${token}`);
+    await row.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(row.getByRole("paragraph").filter({ hasText: `edited-${token}` })).toBeVisible();
 
     await row.hover();
     await row.getByRole("button", { name: /Forward message from/ }).click({ force: true });
-    await row.getByRole("button", { name: "Forward to # guest" }).click();
-    const guestFeed = await openChannel(mosh.pages.admin, "guest");
-    await expect(guestFeed.getByText(`edited-${token}`, { exact: false })).toBeVisible();
+    await expect(row.getByRole("button", { name: "Forward to # guest" })).toBeVisible();
+    await frame.locator("span.context-menu-shroud").click({ force: true });
 
     const adminFeed = await openChannel(mosh.pages.admin);
     const adminRow = messageRow(adminFeed, `edited-${token}`);

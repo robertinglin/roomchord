@@ -32,46 +32,71 @@ export namespace Mosh {
   /** From the mediaRooms plugin. */
   export interface MediaRoomParticipant { memberId: MemberId; name?: string; media?: MediaFlags; joinedAt?: number; }
   /** From the mediaRooms plugin. */
-  export interface MediaRoom { id: RoomId; name: string; group: string | null; allowsVideo: boolean; scopeType: ScopeType; scopeId: string; locked: boolean; spotlightMemberId?: MemberId | null; archivedAt: number | null; participants: Record<MemberId, MediaRoomParticipant>; participantCount: number; createdBy?: MemberId; createdAt?: number; }
+  export interface MediaRoom { id: RoomId; name: string; group: string | null; allowsVideo: boolean; scopeType: ScopeType; scopeId: string; parentScopeType?: ScopeType; parentScopeId?: string; locked: boolean; spotlightMemberId?: MemberId | null; archivedAt: number | null; participants: Record<MemberId, MediaRoomParticipant>; participantCount: number; createdBy?: MemberId; createdAt?: number; }
 
   /** From the presence plugin. */
   export interface PresenceMember { memberId: MemberId; name?: string; status: PresenceStatus; activity: string | null; location: string | null; updatedAt?: number; lastPingAt?: number; visible?: boolean; avatarUrl?: string; }
 
   /** From the comments plugin. */
-  export interface CommentThread { id: ThreadId; scopeType: ScopeType; scopeId: string; title: string | null; resolved: boolean; createdAt: number; lastCommentAt?: number; archivedAt: number | null; }
+  export interface CommentThread { id: ThreadId; scopeType: ScopeType; scopeId: string; title: string | null; visibility: "members" | "moderators" | "private" | (string & {}); source?: { kind: "channel" | "direct.thread" | (string & {}); scopeId: string; messageId: MessageId } | null; privateMemberIds: MemberId[]; followers: MemberId[]; notificationPreferences: Record<MemberId, boolean>; lifecycle: "open" | "archived" | "locked" | (string & {}); resolved: boolean; createdBy?: MemberId; createdByName?: string; createdAt: number; lastCommentAt?: number; resolvedAt?: number; resolvedBy?: MemberId; archivedAt?: number; lockedAt?: number; }
   /** From the comments plugin. */
-  export interface Comment { id: CommentId; threadId: ThreadId; scopeType?: ScopeType; scopeId?: string; parentId?: CommentId | null; body: string; authorId: MemberId; authorName?: string; createdAt: number; deletedAt: number | null; reactions: Reactions; }
+  export interface Comment { id: CommentId; threadId: ThreadId; scopeType?: ScopeType; scopeId?: string; parentId?: CommentId | null; body: string; authorId: MemberId; authorName?: string; createdAt: number; updatedAt?: number; editedAt?: number; deletedAt?: number | null; deleteReason?: string; reactions: Reactions; }
+  /** Comments and threads visible in one scope. */
+  export interface ScopedComments { threads: CommentThread[]; comments: Comment[]; }
 
   /** From the embeds plugin. */
   export interface Embed { id: EmbedId; scopeType: ScopeType; scopeId: string; url: string; provider?: string; kind?: string; title?: string; note: string | null; addedBy?: MemberId; addedByName?: string; addedAt: number; removedAt: number | null; }
 
+  /** From the files plugin. */
+  export interface NostrEvent { kind: number; created_at: number; tags: string[][]; content: string; pubkey: string; id: string; sig: string; }
+  /** From the files plugin. */
+  export interface FileRecord { id: string; scopeType: ScopeType; scopeId: string; scopeKey?: string; eventId: string; event?: NostrEvent; uploadedBy?: MemberId; uploadedByName?: string; uploadedAt: number; removedAt?: number | null; removedBy?: MemberId; }
+  /** Encrypted Files v2 sharing metadata. File bytes and key material are not included. */
+  export interface FileShare { id: string; sourceFileId: string; targetFileId: string; sourceScopeType: ScopeType; sourceScopeId: string; targetScopeType: ScopeType; targetScopeId: string; provenance: Record<string, unknown>; recipientKeyWraps: Record<string, unknown>; createdBy: MemberId; createdAt: number; revokedAt: number | null; revokedBy?: MemberId; }
+
   /** From matterhorn.core scoped access. */
-  export interface CoreScopeAccess { scopeType: string; scopeId: string; role: ScopedRole; canView: boolean; canEdit: boolean; }
+  export interface CoreScopeAccess { scopeType: string; scopeId: string; role: ScopedRole; canView: boolean; canEdit: boolean; source?: string; inheritedFrom?: ScopeRef; }
   /** From matterhorn.core scoped access. */
   export interface CoreAccessState { version?: number; actorId?: MemberId | string; memberId?: MemberId | string; roleIds?: string[]; scopes: Record<string, CoreScopeAccess>; }
 
   /** From the reactions plugin. */
   export interface ScopedReaction { scopeType: ScopeType; scopeId: string; reactions: Reactions; updatedAt?: number; }
+  /** Rendering-ready result from reactionsForScope. */
+  export interface ReactionSummary { emoji: string; count: number; active: boolean; }
 
   /** From the screenShare plugin. */
   export interface ScreenShare { id: ShareId; scopeType?: ScopeType; scopeId?: string; roomId: RoomId | null; title: string | null; presenterId: MemberId; presenterName?: string; startedAt: number; stoppedAt: number | null; stoppedBy?: MemberId; }
 
+  /** From the attachments plugin. */
+  export interface Attachment { id: string; scopeType?: ScopeType; scopeId?: string; url?: string; title?: string; mimeType?: string | null; sizeBytes?: number | null; provider?: string | null; note?: string | null; addedAt?: number; removedAt?: number | null; }
+
+  /** From the calendar plugin. */
+  export interface CalendarEvent { id: string; scopeType?: ScopeType; scopeId?: string; title: string; startsAt?: number; endsAt?: number | null; location?: string | null; description?: string | null; cancelledAt?: number | null; }
+
+  /** From the polls plugin. */
+  export interface PollOption { id: string; label: string; }
+  /** Poll state plus the computed fields returned by pollsForScope and pollForId. */
+  export interface Poll { id: string; scopeType: ScopeType; scopeId: string; question: string; options: PollOption[]; kind: "single" | "multiple"; maxSelections?: number; expiresAt: number | null; createdBy: MemberId; createdByName?: string; createdAt: number; closedAt: number | null; closedBy?: MemberId; expired?: boolean; closed?: boolean; counts?: Record<string, number>; }
+  /** One member's encrypted poll vote projection. */
+  export interface PollVote { id: string; pollId: string; voterId: MemberId; optionIds: string[]; updatedAt: number; }
+
+  /** From the channel kinds plugin. */
+  export type ChannelKindName = "text" | "forum" | "announcement" | "onboarding" | "rules" | "voice-text" | "stage" | (string & {});
+  export type ChannelPolicy = "members" | "moderators" | "none" | (string & {});
+  export type ForumLayout = "list" | "gallery" | (string & {});
+  export interface ForumTag { id: string; name: string; color: string | null; createdAt: number; updatedAt?: number; archivedAt?: number | null; }
+  export interface ChannelKind { id: ChannelId; scopeType: ScopeType; scopeId: string; name: string; kind: ChannelKindName; mediaRoomId: string | null; postingPolicy: ChannelPolicy; threadPolicy: ChannelPolicy; speakerPolicy: ChannelPolicy; forumLayout?: ForumLayout; forumTags?: Record<string, ForumTag>; createdBy: MemberId; createdByName?: string; createdAt: number; updatedAt?: number; }
+  export interface ChannelPostingPolicy { channelId: ChannelId; kind: ChannelKindName; canPost: boolean; postingPolicy: ChannelPolicy; threadPolicy: ChannelPolicy; speakerPolicy: ChannelPolicy; mediaRoomId: string | null; }
+
   /** From matterhorn.core direct messages. */
-  export interface DirectThread { id: ThreadId; protocol?: string; userIds: MemberId[]; topicKey?: string; topic: string | null; createdAt: number; archivedAt: number | null; }
+  export interface DirectThread { id: ThreadId; protocol?: string; userIds: MemberId[]; topicKey?: string; name?: string | null; ownerId?: MemberId; topic: string | null; createdAt: number; archivedAt: number | null; }
   /** Raw encrypted state shape from matterhorn.core direct messages. */
-  export interface DirectMessageRecord { id: MessageId; protocol?: string; threadId?: ThreadId; userIds?: MemberId[]; topicKey?: string; authorId?: MemberId; body?: string; reactions?: Reactions; embeds?: MessageEmbed[]; replyToId?: MessageId | null; pinnedAt?: number | null; pinnedBy?: MemberId | null; editedAt?: number | null; deletedAt?: number | null; deletedBy?: MemberId | null; createdAt?: number; encrypted?: boolean; giftWraps?: Record<string, unknown>; }
+  export interface DirectMessageRecord { id: MessageId; protocol?: string; threadId?: ThreadId; userIds?: MemberId[]; topicKey?: string; authorId?: MemberId; body?: string; reactions?: Reactions; embeds?: MessageEmbed[]; replyToId?: MessageId | null; attachmentIds?: string[]; forwardedFromId?: MessageId | null; forwardedFrom?: { kind: "channel" | "direct.thread"; scopeId: string; messageId: MessageId } | null; pinnedAt?: number | null; pinnedBy?: MemberId | null; editedAt?: number | null; editedBy?: MemberId | null; deletedAt?: number | null; deletedBy?: MemberId | null; createdAt?: number; encrypted?: boolean; giftWraps?: Record<string, unknown>; }
   /** Resolved frontend message from matterhorn.core direct messages. */
   export interface DirectMessage extends DirectMessageRecord { threadId: ThreadId; authorId: MemberId; body: string; reactions: Reactions; embeds: MessageEmbed[]; createdAt: number; encrypted?: false; }
   export interface RoomPresence { memberId?: MemberId; status?: string; activity?: string; updatedAt?: number; lastPingAt?: number; visible?: boolean; avatar?: string; avatarUrl?: string; profileImageUrl?: string; }
   export interface Actor { memberId: MemberId; deviceId: string; role: Role | (string & {}); displayName?: string; avatar?: string; avatarUrl?: string; profileImageUrl?: string; }
   export interface Activity { id: string; operationId?: string; actorId?: MemberId; actorName?: string; message: string; createdAt?: number; }
-  /**
-   * From primary model collection `access`.
-   */
-  export interface Acces {
-    "channel:general": { canEdit: boolean; canView: boolean; role: string; scopeId: string; scopeType: string };
-    "channel:guest": { canEdit: boolean; canView: boolean; role: string; scopeId: string; scopeType: string };
-  }
   /**
    * From primary model collection `callRoutes`.
    */
@@ -86,20 +111,39 @@ export namespace Mosh {
     peerId?: string;
   }
   /**
+   * From primary model collection `categories`.
+   */
+  export interface Category {
+    archivedAt: null | number;
+    createdAt: number;
+    createdBy: MemberId;
+    id: string;
+    name: string;
+    position: number;
+    scopeId: string;
+    scopeType: string;
+    updatedAt?: number;
+  }
+  /**
    * From primary model collection `channels`.
    */
   export interface Channel {
+    allowedMemberIds: string[];
+    allowedRoleIds: string[];
     archivedAt: null | number;
+    categoryId: null | string;
     createdAt: number;
     createdBy: MemberId;
     group: null | string;
     id: ChannelId;
     name: string;
+    position: number;
     requiredRole: string;
     scopeId: string;
     scopeType: string;
     topic: null | string;
     updatedAt?: number;
+    visibility: "private" | "public";
   }
   /**
    * From primary model collection `guests`.
@@ -109,12 +153,12 @@ export namespace Mosh {
     /**
      * omit to leave unchanged; null to clear.
      */
-    bannedAt?: null | number;
-    bannedBy?: string;
+    banReason?: null | string;
     /**
      * omit to leave unchanged; null to clear.
      */
-    banReason?: null | string;
+    bannedAt?: null | number;
+    bannedBy?: string;
     callClientId?: string;
     callPubkey?: string;
     callUpdatedAt?: number;
@@ -143,10 +187,12 @@ export namespace Mosh {
    * From primary model collection `messages`.
    */
   export interface Message {
+    attachmentIds: string[];
     authorId: MemberId;
     body: string;
     channelId: ChannelId;
     createdAt: number;
+    customMediaRefs: { mediaId: string; scopeType: string; scopeId: string; mediaType: "emoji" | "sticker" | "gif" | "voice" }[];
     deletedAt: null | number;
     deletedBy: MemberId | null;
     editedAt: null | number;
@@ -158,6 +204,7 @@ export namespace Mosh {
     replyToId: MessageId | null;
     scopeId: string;
     scopeType: string;
+    tagIds: string[];
   }
   /**
    * From primary model collection `publicInvites`.
@@ -184,26 +231,60 @@ export namespace Mosh {
   export interface State {
     access: CoreAccessState;
     activity: Activity[];
+    attachments: Record<string, Attachment>;
+    calendarEvents: Record<string, CalendarEvent>;
     callRoutes: Record<string, CallRoute>;
+    categories: Category[];
     channels: Channel[];
-    comments: Record<CommentId, Comment>;
     commentThreads: Record<ThreadId, CommentThread>;
+    comments: Record<CommentId, Comment>;
     directMessages: Record<MessageId, DirectMessage>;
     directThreads: Record<ThreadId, DirectThread>;
     embeds: Record<EmbedId, Embed>;
+    files: Record<string, FileRecord>;
     guests: Record<string, Guest>;
     joinRequests: Record<string, JoinRequest>;
     members: Record<string, Member>;
     messages: Record<MessageId, Message>;
+    notifications: unknown;
+    polls: Record<string, Poll>;
     presence: Record<string, RoomPresence>;
     publicInvites: PublicInvite[];
     reactions: Record<string, ScopedReaction>;
     roleDefinitions: Record<RoleId, RoleDefinition>;
     rooms: MediaRoom[];
+    rsvps: unknown;
     screenShares: Record<ShareId, ScreenShare>;
+    shares: Record<string, FileShare>;
+    votes: Record<string, PollVote>;
   }
   export interface DirectMessageThread { thread: DirectThread; messages: DirectMessage[]; readTag?: ReadTagRecord; unreadCount?: number; firstUnreadMessageId?: MessageId; }
   export interface Actions {
+    /**
+     * Requires `admin` role.
+     * categoryId: string, <= 200
+     */
+    categoryArchive: { categoryId: string };
+    /**
+     * Requires `admin` role.
+     * categoryId: string, <= 200
+     * name: string, <= 80
+     * position: number, >= 0
+     */
+    categoryCreate: { categoryId: string; name: string; position?: number };
+    /**
+     * Requires `admin` role.
+     * categoryId: string, <= 200
+     * position: number, >= 0
+     */
+    categoryReorder: { categoryId: string; position: number };
+    /**
+     * Requires `admin` role.
+     * categoryId: string, <= 200
+     * name: string, <= 80
+     * position: number, >= 0
+     */
+    categoryUpdate: { categoryId: string; name?: string; position?: number };
     /**
      * Requires `moderator` role.
      * channelId: string, <= 200
@@ -211,19 +292,32 @@ export namespace Mosh {
     channelArchive: { channelId: ChannelId };
     /**
      * Requires `admin` role.
+     * channelId: string, <= 200
      * name: string, <= 80
+     * requiredRole: string, <= 120
      * topic: string, <= 240, nullable, omit to leave unchanged; null to clear
      * group: string, <= 80, nullable, omit to leave unchanged; null to clear
+     * categoryId: string, <= 200, nullable, omit to leave unchanged; null to clear
+     * position: number, >= 0
+     * visibility: enum
+     * allowedRoleIds: array, <= 64
+     * allowedMemberIds: array, <= 128
      */
-    channelCreate: { name: string; topic?: null | string; group?: null | string };
+    channelCreate: { channelId: ChannelId; name: string; requiredRole: string; topic?: null | string; group?: null | string; categoryId?: null | string; position?: number; visibility?: "public" | "private"; allowedRoleIds?: string[]; allowedMemberIds?: string[] };
     /**
      * Requires `moderator` role.
      * channelId: string, <= 200
      * name: string, <= 80, nullable, omit to leave unchanged; null to clear
      * topic: string, <= 240, nullable, omit to leave unchanged; null to clear
      * group: string, <= 80, nullable, omit to leave unchanged; null to clear
+     * categoryId: string, <= 200, nullable, omit to leave unchanged; null to clear
+     * position: number, >= 0
+     * visibility: enum
+     * requiredRole: string, <= 120
+     * allowedRoleIds: array, <= 64
+     * allowedMemberIds: array, <= 128
      */
-    channelRename: { channelId: ChannelId; name?: null | string; topic?: null | string; group?: null | string };
+    channelRename: { channelId: ChannelId; name?: null | string; topic?: null | string; group?: null | string; categoryId?: null | string; position?: number; visibility?: "public" | "private"; requiredRole?: string; allowedRoleIds?: string[]; allowedMemberIds?: string[] };
     /**
      * Requires `admin` role.
      * inviteId: string, <= 200
@@ -301,16 +395,22 @@ export namespace Mosh {
      * replyToId: string, <= 200
      * body: string, <= 4000
      * mentionIds: array
+     * attachmentIds: array
+     * tagIds: array, <= 32
+     * customMediaRefs: array, <= 64
      */
-    messageReply: { channelId: ChannelId; replyToId: MessageId; body: string; mentionIds?: string[] };
+    messageReply: { channelId: ChannelId; replyToId: MessageId; body: string; mentionIds?: string[]; attachmentIds?: string[]; tagIds?: string[]; customMediaRefs?: { mediaId: string; scopeType: string; scopeId: string; mediaType: "emoji" | "sticker" | "gif" | "voice" }[] };
     /**
      * Requires one of `guest`, `member` roles.
      * channelId: string, <= 200
      * body: string, <= 4000
      * embeds: array
      * mentionIds: array
+     * attachmentIds: array
+     * tagIds: array, <= 32
+     * customMediaRefs: array, <= 64
      */
-    messageSend: { channelId: ChannelId; body: string; embeds?: MessageEmbed[]; mentionIds?: string[] };
+    messageSend: { channelId: ChannelId; body: string; embeds?: MessageEmbed[]; mentionIds?: string[]; attachmentIds?: string[]; tagIds?: string[]; customMediaRefs?: { mediaId: string; scopeType: string; scopeId: string; mediaType: "emoji" | "sticker" | "gif" | "voice" }[] };
     /**
      * Requires `moderator` role.
      * messageId: string, <= 200
@@ -345,12 +445,64 @@ export namespace Mosh {
      */
     commentsResolve: { threadId: ThreadId; resolved?: boolean };
     /**
+     * Requires `moderator` role.
+     * threadId: string
+     */
+    commentsThreadArchive: { threadId: ThreadId };
+    /**
      * scopeType: string
      * scopeId: string
      * title: string
      * visibility: string
+     * source: string
+     * sourceMessage: string
+     * memberIds: string
+     * privateMemberIds: string
      */
-    commentsThreadCreate: { title?: string; visibility?: string } & ScopeRef;
+    commentsThreadCreate: { title?: string; visibility?: string; source?: string; sourceMessage?: string; memberIds?: string; privateMemberIds?: string } & ScopeRef;
+    /**
+     * Requires `member` role.
+     * threadId: string
+     */
+    commentsThreadFollow: { threadId: ThreadId };
+    /**
+     * Requires `moderator` role.
+     * threadId: string
+     */
+    commentsThreadLock: { threadId: ThreadId };
+    /**
+     * Requires `moderator` role.
+     * threadId: string
+     * memberId: string
+     */
+    commentsThreadMemberAdd: { threadId: ThreadId; memberId: MemberId };
+    /**
+     * Requires `moderator` role.
+     * threadId: string
+     * memberId: string
+     */
+    commentsThreadMemberRemove: { threadId: ThreadId; memberId: MemberId };
+    /**
+     * Requires `member` role.
+     * threadId: string
+     * enabled: string
+     */
+    commentsThreadNotifications: { threadId: ThreadId; enabled?: string };
+    /**
+     * Requires `moderator` role.
+     * threadId: string
+     */
+    commentsThreadReopen: { threadId: ThreadId };
+    /**
+     * Requires `member` role.
+     * threadId: string
+     */
+    commentsThreadUnfollow: { threadId: ThreadId };
+    /**
+     * Requires `moderator` role.
+     * threadId: string
+     */
+    commentsThreadUnlock: { threadId: ThreadId };
     /**
      * Requires `member` role.
      * memberId: string
@@ -373,14 +525,24 @@ export namespace Mosh {
      */
     mediaRoomArchive: { roomId: RoomId };
     /**
-     * Requires `moderator` role.
      * name: string, <= 100
      * scopeType: string, <= 80
      * scopeId: string, <= 160
      * allowsVideo: boolean
      * group: string, <= 80, nullable, omit to leave unchanged; null to clear
+     * kind: string
      */
-    mediaRoomCreate: { name: string; allowsVideo?: boolean; group?: null | string } & ScopeRef;
+    mediaRoomCreate: { name: string; allowsVideo?: boolean; group?: null | string; kind?: string } & ScopeRef;
+    /**
+     * roomId: string, <= 200
+     * name: string, <= 100
+     * parentScopeType: string, <= 80
+     * parentScopeId: string, <= 180
+     * allowsVideo: boolean
+     * group: string, <= 80, nullable, omit to leave unchanged; null to clear
+     * kind: string
+     */
+    mediaRoomCreateV2: { roomId: RoomId; name: string; parentScopeType: string; parentScopeId: string; allowsVideo?: boolean; group?: null | string; kind?: string };
     /**
      * roomId: string, <= 200
      * media: object
@@ -391,6 +553,34 @@ export namespace Mosh {
      */
     mediaRoomLeave: { roomId: RoomId };
     /**
+     * roomId: string, <= 200
+     * targetMemberId: string, <= 120
+     * enabled: boolean
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    mediaRoomMemberDeafen: { roomId: RoomId; targetMemberId: MemberId; enabled?: boolean; reason?: null | string };
+    /**
+     * roomId: string, <= 200
+     * targetMemberId: string, <= 120
+     * enabled: boolean
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    mediaRoomMemberKick: { roomId: RoomId; targetMemberId: MemberId; enabled?: boolean; reason?: null | string };
+    /**
+     * roomId: string, <= 200
+     * targetMemberId: string, <= 120
+     * enabled: boolean
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    mediaRoomMemberMute: { roomId: RoomId; targetMemberId: MemberId; enabled?: boolean; reason?: null | string };
+    /**
+     * roomId: string, <= 200
+     * targetMemberId: string, <= 120
+     * enabled: boolean
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    mediaRoomMemberSuppress: { roomId: RoomId; targetMemberId: MemberId; enabled?: boolean; reason?: null | string };
+    /**
      * Requires `moderator` role.
      * roomId: string, <= 200
      * locked: boolean
@@ -400,6 +590,33 @@ export namespace Mosh {
      * group: string, <= 80, nullable, omit to leave unchanged; null to clear
      */
     mediaRoomUpdate: { roomId: RoomId; locked?: boolean; allowsVideo?: boolean; spotlightMemberId?: MemberId; name?: string; group?: null | string };
+    /**
+     * roomId: string, <= 200
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    mediaStageClose: { roomId: RoomId; reason?: null | string };
+    /**
+     * roomId: string, <= 200
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    mediaStageOpen: { roomId: RoomId; reason?: null | string };
+    /**
+     * roomId: string, <= 200
+     * targetMemberId: string, <= 120
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    mediaStageSpeakerApprove: { roomId: RoomId; targetMemberId: MemberId; reason?: null | string };
+    /**
+     * roomId: string, <= 200
+     * targetMemberId: string, <= 120
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    mediaStageSpeakerRemove: { roomId: RoomId; targetMemberId: MemberId; reason?: null | string };
+    /**
+     * roomId: string, <= 200
+     * targetMemberId: string, <= 120
+     */
+    mediaStageSpeakerRequest: { roomId: RoomId; targetMemberId?: MemberId };
     /**
      * scopeType: string
      * scopeId: string
@@ -428,9 +645,241 @@ export namespace Mosh {
      * Requires `member` role.
      * scopeType: string
      * scopeId: string
+     * url: string
+     * title: string
+     * mimeType: string
+     * sizeBytes: number
+     * provider: string
+     * note: string
+     */
+    attachmentAdd: { url: string; title: string; mimeType?: string; sizeBytes?: number; provider?: string; note?: string } & ScopeRef;
+    /**
+     * Requires `member` role.
+     * attachmentId: string
+     */
+    attachmentRemove: { attachmentId: string };
+    /**
+     * scopeType: string
+     * scopeId: string
+     * assetId: string
+     * fileId: string
+     * provider: string
+     * title: string
+     * mimeType: string
+     * sizeBytes: number
+     * purpose: string
+     * sourceEnvelope: object
+     * mediaKind: string
+     * delivery: string
+     * expectedDimensions: object
+     */
+    "attachmentRoom-assetAdd": { assetId: string; fileId: string; provider: string; title: string; mimeType: string; sizeBytes: number; purpose: string; sourceEnvelope: { [key: string]: unknown }; mediaKind?: string; delivery?: string; expectedDimensions?: { [key: string]: unknown } } & ScopeRef;
+    /**
+     * scopeType: string
+     * scopeId: string
+     * provider: string
+     * title: string
+     * mimeType: string
+     * sizeBytes: number
+     * providerFileId: string
+     * shareUrl: string
+     * embedUrl: string
+     */
+    "attachmentThird-partyAdd": { provider: string; title: string; mimeType: string; sizeBytes: number; providerFileId: string; shareUrl: string; embedUrl?: string } & ScopeRef;
+    /**
+     * Requires `member` role.
+     * fileId: string
+     * scopeType: string
+     * scopeId: string
+     * encryptedManifest: object
+     * ciphertextBytes: number
+     * chunkCount: number
+     * relays: array
+     */
+    filePublishV2: { fileId: string; encryptedManifest: { encrypted: boolean; alg: string; kind: string; iv: string; data: string; epochId?: string }; ciphertextBytes: number; chunkCount: number; relays: { relayUrl: string; blobId: string }[] } & ScopeRef;
+    /**
+     * Requires `member` role.
+     * fileId: string
+     * fileKey: string
+     * manifestSha256: string
+     * manifestBytes: number
+     * ciphertextBytes: number
+     * chunkCount: number
+     * relays: array
+     */
+    filePublishV3: { fileId: string; fileKey: string; manifestSha256: string; manifestBytes: number; ciphertextBytes: number; chunkCount: number; relays: { relayUrl: string; blobId: string }[] };
+    /**
+     * Requires `member` role.
+     * fileId: string
+     */
+    fileRemove: { fileId: string };
+    /**
+     * shareId: string
+     */
+    fileReshareRevokeV2: { shareId: ShareId };
+    /**
+     * sourceFileId: string
+     * targetFileId: string
+     * sourceScopeType: string
+     * sourceScopeId: string
+     * targetScopeType: string
+     * targetScopeId: string
+     * provenance: object
+     * recipientKeyWraps: object
+     */
+    fileReshareV2: { sourceFileId: string; targetFileId: string; sourceScopeType: string; sourceScopeId: string; targetScopeType: string; targetScopeId: string; provenance: { [key: string]: unknown }; recipientKeyWraps?: { [key: string]: unknown } };
+    /**
+     * fileId: string
+     * scopeType: string
+     * scopeId: string
+     * encryptedManifest: object
+     * ciphertextBytes: number
+     * chunkCount: number
+     * relays: array
+     * expectedRevision: number
+     */
+    fileRevisionPublishV2: { fileId: string; encryptedManifest: { encrypted: boolean; alg: string; kind: string; iv: string; data: string; epochId?: string }; ciphertextBytes: number; chunkCount: number; relays: { relayUrl: string; blobId: string }[]; expectedRevision: number } & ScopeRef;
+    /**
+     * Requires `member` role.
+     * fileId: string
+     * fileKey: string
+     * manifestSha256: string
+     * manifestBytes: number
+     * ciphertextBytes: number
+     * chunkCount: number
+     * relays: array
+     * expectedRevision: number
+     */
+    fileRevisionPublishV3: { fileId: string; fileKey: string; manifestSha256: string; manifestBytes: number; ciphertextBytes: number; chunkCount: number; relays: { relayUrl: string; blobId: string }[]; expectedRevision: number };
+    /**
+     * Requires `member` role.
+     * scopeType: string
+     * scopeId: string
      * emoji: string
      */
     reactionToggle: { emoji: string } & ScopeRef;
+    /**
+     * eventId: string
+     */
+    calendarEventCancel: { eventId: string };
+    /**
+     * scopeType: string
+     * scopeId: string
+     * title: string
+     * startsAt: number
+     * endsAt: number
+     * location: string
+     * description: string
+     */
+    calendarEventCreate: { title: string; startsAt: number; endsAt?: number; location?: string; description?: string } & ScopeRef;
+    /**
+     * Requires `member` role.
+     * eventId: string
+     * status: string
+     */
+    calendarEventRsvp: { eventId: string; status: string };
+    /**
+     * Requires `member` role.
+     * notificationId: string
+     */
+    calendarNotificationRead: { notificationId: string };
+    /**
+     * Requires `moderator` role.
+     * pollId: string
+     */
+    pollClose: { pollId: string };
+    /**
+     * Requires `member` role.
+     * scopeType: string
+     * scopeId: string
+     * question: string
+     * options: array
+     * title: string
+     * kind: string
+     * maxSelections: number
+     * expiresAt: number
+     */
+    pollCreate: { question: string; options: unknown[]; title?: string; kind?: string; maxSelections?: number; expiresAt?: number } & ScopeRef;
+    /**
+     * Requires `member` role.
+     * pollId: string
+     * optionIds: array
+     */
+    pollVote: { pollId: string; optionIds: unknown[] };
+    /**
+     * scopeType: string
+     * scopeId: string
+     * name: string
+     * kind: string
+     * mediaRoomId: string
+     * postingPolicy: string
+     * threadPolicy: string
+     * speakerPolicy: string
+     */
+    "channels.channelCreate": { name: string; kind?: string; mediaRoomId?: string; postingPolicy?: string; threadPolicy?: string; speakerPolicy?: string } & ScopeRef;
+    /**
+     * Requires `moderator` role.
+     * channelId: string
+     * layout: string
+     */
+    channelForumLayout: { channelId: ChannelId; layout: string };
+    /**
+     * Requires `moderator` role.
+     * channelId: string
+     * tagId: string
+     */
+    channelForumTagArchive: { channelId: ChannelId; tagId: string };
+    /**
+     * Requires `moderator` role.
+     * channelId: string
+     * name: string
+     * tagId: string
+     * color: string
+     */
+    channelForumTagCreate: { channelId: ChannelId; name: string; tagId?: string; color?: string };
+    /**
+     * Requires `moderator` role.
+     * channelId: string
+     * tagId: string
+     * name: string
+     * color: string
+     */
+    channelForumTagUpdate: { channelId: ChannelId; tagId: string; name?: string; color?: string };
+    /**
+     * Requires `moderator` role.
+     * channelId: string
+     * policy: string
+     */
+    channelPostingPolicy: { channelId: ChannelId; policy: string };
+    /**
+     * Requires `moderator` role.
+     * channelId: string
+     * policy: string
+     */
+    channelSpeakerPolicy: { channelId: ChannelId; policy: string };
+    /**
+     * Requires `moderator` role.
+     * channelId: string
+     * policy: string
+     */
+    channelThreadPolicy: { channelId: ChannelId; policy: string };
+    /**
+     * Requires `moderator` role.
+     * channelId: string
+     * mediaRoomId: string
+     */
+    "channelVoice-textBind": { channelId: ChannelId; mediaRoomId: string };
+    /**
+     * Requires `moderator` role.
+     * roomId: string, <= 200
+     * name: string, <= 100
+     * parentScopeType: string, <= 80
+     * parentScopeId: string, <= 180
+     * allowsVideo: boolean
+     * group: string, <= 80, nullable, omit to leave unchanged; null to clear
+     * kind: string
+     */
+    mediaRoomCreateScoped: { roomId: RoomId; name: string; parentScopeType: string; parentScopeId: string; allowsVideo?: boolean; group?: null | string; kind?: string };
     /**
      * Requires `admin` role.
      * roleId: string, <= 120
@@ -500,8 +949,20 @@ export namespace Mosh {
     scopeMemberOverrideRemove: { memberId: MemberId; reason?: null | string } & ScopeRef;
     /**
      * Requires `admin` role.
+     * scopeType: string, <= 80
+     * scopeId: string, <= 180
+     * parentScopeType: string, <= 80
+     * parentScopeId: string, <= 180
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
      */
-    scopeRoleSet: { [key: string]: unknown };
+    scopeParentSet: { parentScopeType: string; parentScopeId: string; reason?: null | string } & ScopeRef;
+    /**
+     * Requires `admin` role.
+     * scopeType: string, <= 80
+     * scopeId: string, <= 180
+     * reason: string, <= 500, nullable, omit to leave unchanged; null to clear
+     */
+    scopeParentRemove: { reason?: null | string } & ScopeRef;
     /**
      * Requires `admin` role.
      * memberId: string, <= 200
@@ -531,6 +992,22 @@ export namespace Mosh {
      */
     unbanMember: { memberId: MemberId };
     /**
+     * Requires `moderator` role.
+     */
+    memberTimeout: { [key: string]: unknown };
+    /**
+     * Requires `moderator` role.
+     */
+    memberQuarantine: { [key: string]: unknown };
+    /**
+     * Requires `moderator` role.
+     */
+    channelSlowmode: { [key: string]: unknown };
+    /**
+     * Requires `member` role.
+     */
+    memberReport: { [key: string]: unknown };
+    /**
      * Requires `admin` role.
      * inviteId: string, <= 200
      */
@@ -555,12 +1032,100 @@ export namespace Mosh {
      * userIds: array
      * body: string
      * topicKey: string
+     * threadId: string
+     * replyToId: string
+     * attachmentIds: array
+     * forwardedFromId: string
      */
-    directMessageSend: { userIds: MemberId[]; body: string; topicKey?: string };
+    directMessageSend: { userIds: MemberId[]; body: string; topicKey?: string; threadId?: ThreadId; replyToId?: MessageId; attachmentIds?: string[]; forwardedFromId?: string };
+    /**
+     * Requires `member` role.
+     * userIds: array
+     * body: string
+     * replyToId: string
+     * topicKey: string
+     * threadId: string
+     * attachmentIds: array
+     */
+    directMessageReply: { userIds: MemberId[]; body: string; replyToId: MessageId; topicKey?: string; threadId?: ThreadId; attachmentIds?: string[] };
+    /**
+     * Requires `member` role.
+     * messageId: string
+     * body: string
+     * embeds: array
+     */
+    directMessageEdit: { messageId: MessageId; body: string; embeds?: unknown[] };
+    /**
+     * Requires `member` role.
+     * messageId: string
+     * reason: string
+     */
+    directMessageDelete: { messageId: MessageId; reason?: string };
+    /**
+     * Requires `member` role.
+     * messageId: string
+     * emoji: string
+     */
+    directMessageReact: { messageId: MessageId; emoji: string };
+    /**
+     * Requires `member` role.
+     * messageId: string
+     */
+    directMessagePin: { messageId: MessageId };
+    /**
+     * Requires `member` role.
+     * messageId: string
+     */
+    directMessageUnpin: { messageId: MessageId };
+    /**
+     * Requires `member` role.
+     * userIds: array
+     * messageId: string
+     * sourceKind: enum
+     * sourceScopeId: string
+     * topicKey: string
+     * threadId: string
+     */
+    directMessageForward: { userIds: MemberId[]; messageId: MessageId; sourceKind?: "channel" | "direct.thread"; sourceScopeId?: string; topicKey?: string; threadId?: ThreadId };
+    /**
+     * Requires `moderator` role.
+     * scopeType: string
+     * scopeId: string
+     * name: string
+     * kind: string
+     * mediaRoomId: string
+     * postingPolicy: string
+     * threadPolicy: string
+     * speakerPolicy: string
+     */
+    channelKindCreate: { name: string; kind?: string; mediaRoomId?: string; postingPolicy?: string; threadPolicy?: string; speakerPolicy?: string } & ScopeRef;
+    /**
+     * Requires `moderator` role.
+     * channelId: string
+     * mediaRoomId: string
+     */
+    channelVoiceTextBind: { channelId: ChannelId; mediaRoomId: string };
+    /**
+     * Requires `member` role.
+     * scopeType: string
+     * scopeId: string
+     * provider: string
+     * title: string
+     * mimeType: string
+     * sizeBytes: number
+     * providerFileId: string
+     * shareUrl: string
+     * embedUrl: string
+     */
+    attachmentThirdPartyAdd: { provider: string; title: string; mimeType: string; sizeBytes: number; providerFileId: string; shareUrl: string; embedUrl?: string } & ScopeRef;
   }
   export type ActionName = keyof Actions;
   export type ActionPayload<K extends ActionName> = Actions[K];
   export type OperationType = {
+    categoryArchive: "category.archive";
+    categoryCreate: "category.create";
+    categoryReorder: "category.reorder";
+    categoryUpdate: "category.update";
     channelArchive: "channel.archive";
     channelCreate: "channel.create";
     channelRename: "channel.rename";
@@ -584,20 +1149,67 @@ export namespace Mosh {
     commentsEdit: "comments.edit";
     commentsReact: "comments.react";
     commentsResolve: "comments.resolve";
+    commentsThreadArchive: "comments.thread.archive";
     commentsThreadCreate: "comments.thread.create";
+    commentsThreadFollow: "comments.thread.follow";
+    commentsThreadLock: "comments.thread.lock";
+    commentsThreadMemberAdd: "comments.thread.member.add";
+    commentsThreadMemberRemove: "comments.thread.member.remove";
+    commentsThreadNotifications: "comments.thread.notifications";
+    commentsThreadReopen: "comments.thread.reopen";
+    commentsThreadUnfollow: "comments.thread.unfollow";
+    commentsThreadUnlock: "comments.thread.unlock";
     presenceClear: "presence.clear";
     presencePing: "presence.ping";
     presenceUpdate: "presence.update";
     mediaRoomArchive: "media.room.archive";
     mediaRoomCreate: "media.room.create";
+    mediaRoomCreateV2: "media.room.create.v2";
     mediaRoomJoin: "media.room.join";
     mediaRoomLeave: "media.room.leave";
+    mediaRoomMemberDeafen: "media.room.member.deafen";
+    mediaRoomMemberKick: "media.room.member.kick";
+    mediaRoomMemberMute: "media.room.member.mute";
+    mediaRoomMemberSuppress: "media.room.member.suppress";
     mediaRoomUpdate: "media.room.update";
+    mediaStageClose: "media.stage.close";
+    mediaStageOpen: "media.stage.open";
+    mediaStageSpeakerApprove: "media.stage.speaker.approve";
+    mediaStageSpeakerRemove: "media.stage.speaker.remove";
+    mediaStageSpeakerRequest: "media.stage.speaker.request";
     screenshareStart: "screenshare.start";
     screenshareStop: "screenshare.stop";
     embedAdd: "embed.add";
     embedRemove: "embed.remove";
+    attachmentAdd: "attachment.add";
+    attachmentRemove: "attachment.remove";
+    "attachmentRoom-assetAdd": "attachment.room-asset.add";
+    "attachmentThird-partyAdd": "attachment.third-party.add";
+    filePublishV2: "file.publish.v2";
+    filePublishV3: "file.publish.v3";
+    fileRemove: "file.remove";
+    fileReshareRevokeV2: "file.reshare.revoke.v2";
+    fileReshareV2: "file.reshare.v2";
+    fileRevisionPublishV2: "file.revision.publish.v2";
+    fileRevisionPublishV3: "file.revision.publish.v3";
     reactionToggle: "reaction.toggle";
+    calendarEventCancel: "calendar.event.cancel";
+    calendarEventCreate: "calendar.event.create";
+    calendarEventRsvp: "calendar.event.rsvp";
+    calendarNotificationRead: "calendar.notification.read";
+    pollClose: "poll.close";
+    pollCreate: "poll.create";
+    pollVote: "poll.vote";
+    "channels.channelCreate": "channel.create";
+    channelForumLayout: "channel.forum.layout";
+    channelForumTagArchive: "channel.forum.tag.archive";
+    channelForumTagCreate: "channel.forum.tag.create";
+    channelForumTagUpdate: "channel.forum.tag.update";
+    channelPostingPolicy: "channel.posting.policy";
+    channelSpeakerPolicy: "channel.speaker.policy";
+    channelThreadPolicy: "channel.thread.policy";
+    "channelVoice-textBind": "channel.voice-text.bind";
+    mediaRoomCreateScoped: "media.room.create.v2";
     roleCreate: "access.role.define";
     roleUpdate: "access.role.update";
     memberRoleAssign: "access.role.assign";
@@ -605,27 +1217,192 @@ export namespace Mosh {
     roleTombstone: "access.role.tombstone";
     scopeMemberOverrideSet: "scope.member.override.set";
     scopeMemberOverrideRemove: "scope.member.override.remove";
-    scopeRoleSet: "scope.role.set";
+    scopeParentSet: "scope.parent.set";
+    scopeParentRemove: "scope.parent.remove";
     moderateMember: "member.moderate";
     updateMemberCall: "member.call.update";
     banMember: "member.ban";
     unbanMember: "member.unban";
+    memberTimeout: "member.timeout";
+    memberQuarantine: "member.quarantine";
+    channelSlowmode: "channel.slowmode";
+    memberReport: "member.report";
     disableInvite: "invite.disable";
     removeInvite: "invite.remove";
     approveJoinRequest: "join.approve";
     denyJoinRequest: "join.deny";
     directMessageSend: "dm.message";
+    directMessageReply: "dm.message.reply";
+    directMessageEdit: "dm.message.edit";
+    directMessageDelete: "dm.message.delete";
+    directMessageReact: "dm.message.react";
+    directMessagePin: "dm.message.pin";
+    directMessageUnpin: "dm.message.unpin";
+    directMessageForward: "dm.message.forward";
+    channelKindCreate: "channel.create";
+    channelVoiceTextBind: "channel.voice-text.bind";
+    attachmentThirdPartyAdd: "attachment.third-party.add";
   };
+  export interface ActionRecordScopePolicy { collection: string; idField: string; scopeTypeField?: string; scopeIdField?: string; ownerField?: string; }
+  export interface ActionScopePolicy { scopeType?: ScopeType; scopeId?: string; payloadScopeTypeField?: string; payloadScopeIdField?: string; record?: ActionRecordScopePolicy; minimumLevel?: string; ownerAllowed?: boolean; }
+  export interface ActionAuthorizationPolicy { roles?: readonly string[]; scoped?: ActionScopePolicy; }
+  export interface ActionPolicy { operationType: string; authorize?: ActionAuthorizationPolicy; }
+  export interface ActionPolicies {
+    categoryArchive: { operationType: "category.archive"; authorize: { roles: ["admin"] } };
+    categoryCreate: { operationType: "category.create"; authorize: { roles: ["admin"] } };
+    categoryReorder: { operationType: "category.reorder"; authorize: { roles: ["admin"] } };
+    categoryUpdate: { operationType: "category.update"; authorize: { roles: ["admin"] } };
+    channelArchive: { operationType: "channel.archive"; authorize: { roles: ["moderator"]; scoped: { scopeType: "channel"; record: { collection: "channels"; idField: "channelId"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    channelCreate: { operationType: "channel.create"; authorize: { roles: ["admin"] } };
+    channelRename: { operationType: "channel.rename"; authorize: { roles: ["moderator"]; scoped: { scopeType: "channel"; record: { collection: "channels"; idField: "channelId"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    inviteDisable: { operationType: "invite.disable"; authorize: { roles: ["admin"] } };
+    inviteRemove: { operationType: "invite.remove"; authorize: { roles: ["admin"] } };
+    joinApprove: { operationType: "join.approve"; authorize: { roles: ["admin"] } };
+    joinDeny: { operationType: "join.deny"; authorize: { roles: ["admin"] } };
+    memberBan: { operationType: "member.ban"; authorize: { roles: ["admin"] } };
+    memberCallUpdate: { operationType: "member.call.update"; authorize: { roles: ["member"] } };
+    memberModerate: { operationType: "member.moderate"; authorize: { roles: ["admin"] } };
+    memberUnban: { operationType: "member.unban"; authorize: { roles: ["admin"] } };
+    messageDelete: { operationType: "message.delete"; authorize: { roles: ["member"]; scoped: { scopeType: "channel"; record: { collection: "messages"; idField: "messageId"; scopeIdField: "channelId"; ownerField: "authorId" }; minimumLevel: "moderator"; ownerAllowed: true } } };
+    messageEdit: { operationType: "message.edit"; authorize: { roles: ["member"]; scoped: { scopeType: "channel"; record: { collection: "messages"; idField: "messageId"; scopeIdField: "channelId"; ownerField: "authorId" }; minimumLevel: "editor"; ownerAllowed: true } } };
+    messagePin: { operationType: "message.pin"; authorize: { roles: ["moderator"]; scoped: { scopeType: "channel"; record: { collection: "messages"; idField: "messageId"; scopeIdField: "channelId" }; minimumLevel: "moderator" } } };
+    messageReact: { operationType: "message.react"; authorize: { roles: ["member"]; scoped: { scopeType: "channel"; record: { collection: "messages"; idField: "messageId"; scopeIdField: "channelId" }; minimumLevel: "editor" } } };
+    messageReply: { operationType: "message.reply"; authorize: { roles: ["guest", "member"]; scoped: { scopeType: "channel"; payloadScopeIdField: "channelId"; minimumLevel: "editor" } } };
+    messageSend: { operationType: "message.send"; authorize: { roles: ["guest", "member"]; scoped: { scopeType: "channel"; payloadScopeIdField: "channelId"; minimumLevel: "editor" } } };
+    messageUnpin: { operationType: "message.unpin"; authorize: { roles: ["moderator"]; scoped: { scopeType: "channel"; record: { collection: "messages"; idField: "messageId"; scopeIdField: "channelId" }; minimumLevel: "moderator" } } };
+    commentsAdd: { operationType: "comments.add"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; record: { collection: "threads"; idField: "threadId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "editor" } } };
+    commentsDelete: { operationType: "comments.delete"; authorize: { scoped: { record: { collection: "comments"; idField: "commentId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId"; ownerField: "authorId" }; minimumLevel: "moderator"; ownerAllowed: true } } };
+    commentsEdit: { operationType: "comments.edit"; authorize: { scoped: { record: { collection: "comments"; idField: "commentId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId"; ownerField: "authorId" }; minimumLevel: "moderator"; ownerAllowed: true } } };
+    commentsReact: { operationType: "comments.react"; authorize: { scoped: { record: { collection: "comments"; idField: "commentId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "editor" } } };
+    commentsResolve: { operationType: "comments.resolve"; authorize: { scoped: { record: { collection: "threads"; idField: "threadId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    commentsThreadArchive: { operationType: "comments.thread.archive" };
+    commentsThreadCreate: { operationType: "comments.thread.create"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
+    commentsThreadFollow: { operationType: "comments.thread.follow" };
+    commentsThreadLock: { operationType: "comments.thread.lock" };
+    commentsThreadMemberAdd: { operationType: "comments.thread.member.add" };
+    commentsThreadMemberRemove: { operationType: "comments.thread.member.remove" };
+    commentsThreadNotifications: { operationType: "comments.thread.notifications" };
+    commentsThreadReopen: { operationType: "comments.thread.reopen" };
+    commentsThreadUnfollow: { operationType: "comments.thread.unfollow" };
+    commentsThreadUnlock: { operationType: "comments.thread.unlock" };
+    presenceClear: { operationType: "presence.clear"; authorize: { roles: ["member"] } };
+    presencePing: { operationType: "presence.ping"; authorize: { roles: ["member"] } };
+    presenceUpdate: { operationType: "presence.update"; authorize: { roles: ["member"] } };
+    mediaRoomArchive: { operationType: "media.room.archive"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    mediaRoomCreate: { operationType: "media.room.create"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "moderator" } } };
+    mediaRoomCreateV2: { operationType: "media.room.create.v2"; authorize: { scoped: { payloadScopeTypeField: "parentScopeType"; payloadScopeIdField: "parentScopeId"; minimumLevel: "moderator" } } };
+    mediaRoomJoin: { operationType: "media.room.join"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "editor" } } };
+    mediaRoomLeave: { operationType: "media.room.leave"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "viewer" } } };
+    mediaRoomMemberDeafen: { operationType: "media.room.member.deafen"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    mediaRoomMemberKick: { operationType: "media.room.member.kick"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    mediaRoomMemberMute: { operationType: "media.room.member.mute"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    mediaRoomMemberSuppress: { operationType: "media.room.member.suppress"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    mediaRoomUpdate: { operationType: "media.room.update"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    mediaStageClose: { operationType: "media.stage.close"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    mediaStageOpen: { operationType: "media.stage.open"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    mediaStageSpeakerApprove: { operationType: "media.stage.speaker.approve"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    mediaStageSpeakerRemove: { operationType: "media.stage.speaker.remove"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    mediaStageSpeakerRequest: { operationType: "media.stage.speaker.request"; authorize: { scoped: { record: { collection: "rooms"; idField: "roomId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "viewer" } } };
+    screenshareStart: { operationType: "screenshare.start"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
+    screenshareStop: { operationType: "screenshare.stop"; authorize: { scoped: { record: { collection: "shares"; idField: "shareId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId"; ownerField: "presenterId" }; minimumLevel: "moderator"; ownerAllowed: true } } };
+    embedAdd: { operationType: "embed.add"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
+    embedRemove: { operationType: "embed.remove"; authorize: { scoped: { record: { collection: "embeds"; idField: "embedId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId"; ownerField: "addedBy" }; minimumLevel: "moderator"; ownerAllowed: true } } };
+    attachmentAdd: { operationType: "attachment.add"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
+    attachmentRemove: { operationType: "attachment.remove"; authorize: { scoped: { record: { collection: "attachments"; idField: "attachmentId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId"; ownerField: "addedBy" }; minimumLevel: "moderator"; ownerAllowed: true } } };
+    "attachmentRoom-assetAdd": { operationType: "attachment.room-asset.add"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
+    "attachmentThird-partyAdd": { operationType: "attachment.third-party.add"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
+    filePublishV2: { operationType: "file.publish.v2"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
+    filePublishV3: { operationType: "file.publish.v3"; authorize: { scoped: { minimumLevel: "editor" } } };
+    fileRemove: { operationType: "file.remove"; authorize: { scoped: { record: { collection: "files"; idField: "fileId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId"; ownerField: "uploadedBy" }; minimumLevel: "moderator"; ownerAllowed: true } } };
+    fileReshareRevokeV2: { operationType: "file.reshare.revoke.v2" };
+    fileReshareV2: { operationType: "file.reshare.v2" };
+    fileRevisionPublishV2: { operationType: "file.revision.publish.v2"; authorize: { scoped: { record: { collection: "files"; idField: "fileId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId"; ownerField: "uploadedBy" }; minimumLevel: "editor"; ownerAllowed: true } } };
+    fileRevisionPublishV3: { operationType: "file.revision.publish.v3"; authorize: { scoped: { record: { collection: "files"; idField: "fileId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId"; ownerField: "uploadedBy" }; minimumLevel: "editor"; ownerAllowed: true } } };
+    reactionToggle: { operationType: "reaction.toggle"; authorize: { roles: ["member"]; scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
+    calendarEventCancel: { operationType: "calendar.event.cancel"; authorize: { scoped: { record: { collection: "events"; idField: "eventId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId"; ownerField: "createdBy" }; minimumLevel: "moderator"; ownerAllowed: true } } };
+    calendarEventCreate: { operationType: "calendar.event.create"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
+    calendarEventRsvp: { operationType: "calendar.event.rsvp"; authorize: { roles: ["member"] } };
+    calendarNotificationRead: { operationType: "calendar.notification.read"; authorize: { roles: ["member"] } };
+    pollClose: { operationType: "poll.close"; authorize: { roles: ["moderator"] } };
+    pollCreate: { operationType: "poll.create"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
+    pollVote: { operationType: "poll.vote"; authorize: { roles: ["member"] } };
+    "channels.channelCreate": { operationType: "channel.create"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "moderator" } } };
+    channelForumLayout: { operationType: "channel.forum.layout"; authorize: { roles: ["moderator"] } };
+    channelForumTagArchive: { operationType: "channel.forum.tag.archive"; authorize: { roles: ["moderator"] } };
+    channelForumTagCreate: { operationType: "channel.forum.tag.create"; authorize: { roles: ["moderator"] } };
+    channelForumTagUpdate: { operationType: "channel.forum.tag.update"; authorize: { roles: ["moderator"] } };
+    channelPostingPolicy: { operationType: "channel.posting.policy"; authorize: { roles: ["moderator"] } };
+    channelSpeakerPolicy: { operationType: "channel.speaker.policy"; authorize: { roles: ["moderator"] } };
+    channelThreadPolicy: { operationType: "channel.thread.policy"; authorize: { roles: ["moderator"] } };
+    "channelVoice-textBind": { operationType: "channel.voice-text.bind"; authorize: { roles: ["moderator"] } };
+    mediaRoomCreateScoped: { operationType: "media.room.create.v2"; authorize: { scoped: { payloadScopeTypeField: "parentScopeType"; payloadScopeIdField: "parentScopeId"; minimumLevel: "moderator" } } };
+    roleCreate: { operationType: "access.role.define"; authorize: { roles: ["admin"] } };
+    roleUpdate: { operationType: "access.role.update"; authorize: { roles: ["admin"] } };
+    memberRoleAssign: { operationType: "access.role.assign"; authorize: { roles: ["admin"] } };
+    memberRoleUnassign: { operationType: "access.role.unassign"; authorize: { roles: ["admin"] } };
+    roleTombstone: { operationType: "access.role.tombstone"; authorize: { roles: ["admin"] } };
+    scopeMemberOverrideSet: { operationType: "scope.member.override.set"; authorize: { roles: ["admin"] } };
+    scopeMemberOverrideRemove: { operationType: "scope.member.override.remove"; authorize: { roles: ["admin"] } };
+    scopeParentSet: { operationType: "scope.parent.set"; authorize: { roles: ["admin"] } };
+    scopeParentRemove: { operationType: "scope.parent.remove"; authorize: { roles: ["admin"] } };
+    moderateMember: { operationType: "member.moderate"; authorize: { roles: ["admin"] } };
+    updateMemberCall: { operationType: "member.call.update"; authorize: { roles: ["member"] } };
+    banMember: { operationType: "member.ban"; authorize: { roles: ["admin"] } };
+    unbanMember: { operationType: "member.unban"; authorize: { roles: ["admin"] } };
+    memberTimeout: { operationType: "member.timeout" };
+    memberQuarantine: { operationType: "member.quarantine" };
+    channelSlowmode: { operationType: "channel.slowmode" };
+    memberReport: { operationType: "member.report" };
+    disableInvite: { operationType: "invite.disable"; authorize: { roles: ["admin"] } };
+    removeInvite: { operationType: "invite.remove"; authorize: { roles: ["admin"] } };
+    approveJoinRequest: { operationType: "join.approve"; authorize: { roles: ["admin"] } };
+    denyJoinRequest: { operationType: "join.deny"; authorize: { roles: ["admin"] } };
+    directMessageSend: { operationType: "dm.message"; authorize: { roles: ["member"] } };
+    directMessageReply: { operationType: "dm.message.reply"; authorize: { roles: ["member"] } };
+    directMessageEdit: { operationType: "dm.message.edit"; authorize: { roles: ["member"] } };
+    directMessageDelete: { operationType: "dm.message.delete"; authorize: { roles: ["member"] } };
+    directMessageReact: { operationType: "dm.message.react"; authorize: { roles: ["member"] } };
+    directMessagePin: { operationType: "dm.message.pin"; authorize: { roles: ["member"] } };
+    directMessageUnpin: { operationType: "dm.message.unpin"; authorize: { roles: ["member"] } };
+    directMessageForward: { operationType: "dm.message.forward"; authorize: { roles: ["member"] } };
+    channelKindCreate: { operationType: "channel.create"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "moderator" } } };
+    channelVoiceTextBind: { operationType: "channel.voice-text.bind"; authorize: { roles: ["moderator"] } };
+    attachmentThirdPartyAdd: { operationType: "attachment.third-party.add"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
+  }
+  export type ActionPolicyName = keyof ActionPolicies;
+  export type ActionPolicyFor<K extends ActionPolicyName> = ActionPolicies[K];
   export interface Queries {
     channelSummary: Channel[];
+    categorySummary: Category[];
+    attachmentsForScope: Attachment[];
+    filesForScope: FileRecord[];
     roomDirectory: MediaRoom[];
     onlineMembers: PresenceMember[];
+    upcomingEvents: CalendarEvent[];
+    eventsForScope: CalendarEvent[];
+    calendarNotificationsForMember: unknown;
+    pollsForScope: Poll[];
+    pollForId: Poll | null;
+    channelsForScope: ChannelKind[];
+    channelForId: ChannelKind | null;
+    postingPolicyForChannel: ChannelPostingPolicy | null;
   }
   export type QueryName = keyof Queries;
   export interface QueryInput {
     channelSummary: void;
+    categorySummary: void;
+    attachmentsForScope: ScopeRef;
+    filesForScope: ScopeRef;
     roomDirectory: void;
     onlineMembers: void;
+    upcomingEvents: { now?: number } | void;
+    eventsForScope: ScopeRef;
+    calendarNotificationsForMember: void;
+    pollsForScope: { scopeType: ScopeType; scopeId: string; now?: number };
+    pollForId: { pollId: string; now?: number };
+    channelsForScope: ScopeRef;
+    channelForId: { channelId: ChannelId };
+    postingPolicyForChannel: { channelId: ChannelId };
   }
   export type RoutePath = "/" | "/dms" | "/rooms";
   export type RouteComponent = "ChatRoomPage" | "DirectMessagesPage" | "MediaRoomsPage";

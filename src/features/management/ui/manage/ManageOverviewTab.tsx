@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import type { Actor, ChatState } from "@entities/chat/model/types";
 import { assignedRoleIds, primaryRoleFor, roleChipFor } from "@entities/chat/model/roles";
 import { Avatar, RoleChip } from "@shared/ui/design";
 import type { ManagementTab } from "@entities/chat/model/managementTypes";
-import { panel, field, stats, row, button, layout } from "@features/management/ui/manage.styles";
+import { panel, stats, row, button, layout, misc, notice } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
 
 export function ManageOverviewTab({
@@ -27,9 +27,6 @@ export function ManageOverviewTab({
   roomCount: number;
   onSelectTab: (tab: ManagementTab) => void;
 }) {
-  const [draftName, setDraftName] = useState(roomName);
-  const [draftTopic, setDraftTopic] = useState("");
-
   const chip = useMemo(() => {
     const roleIds = assignedRoleIds(actor.memberId, actor.role, state);
     const primary = primaryRoleFor(roleIds, actor.role, state);
@@ -60,50 +57,14 @@ export function ManageOverviewTab({
         </button>
       </div>
 
-      {/* Room identity — editable but inert until a room-update action exists */}
+      {/* Do not expose unsaveable room fields: the backend currently has no room update action. */}
       <section {...stylex.props(panel.panel, panel.panelLast)}>
         <header {...stylex.props(panel.head)}>
           <h3 {...stylex.props(panel.h3)}>Room identity</h3>
         </header>
         <div {...stylex.props(panel.body)}>
-          <label {...stylex.props(field.field)}>
-            <span {...stylex.props(field.label)}>Room name</span>
-            <input
-              aria-label="Room name"
-              value={draftName}
-              maxLength={40}
-              onChange={(event) => setDraftName(event.target.value)}
-              {...stylex.props(field.input)}
-            />
-          </label>
-          <label {...stylex.props(field.field, field.fieldLast)}>
-            <span {...stylex.props(field.label)}>Topic</span>
-            <input
-              aria-label="Room topic"
-              value={draftTopic}
-              placeholder="What is this room about?"
-              onChange={(event) => setDraftTopic(event.target.value)}
-              {...stylex.props(field.input)}
-            />
-          </label>
-          <div {...stylex.props(button.actions, button.actionsEnd)}>
-            <button
-              type="button"
-              onClick={() => { setDraftName(roomName); setDraftTopic(""); }}
-              {...stylex.props(button.btn, button.ghost, button.sm)}
-            >
-              Discard
-            </button>
-            <button
-              type="button"
-              disabled
-              title="Room renaming isn't available yet"
-              aria-disabled="true"
-              {...stylex.props(button.btn, button.primary, button.sm, button.disabled)}
-            >
-              Save changes
-            </button>
-          </div>
+          <p {...stylex.props(misc.hint)}>{roomName}</p>
+          <p {...stylex.props(notice.info)}>Room identity is managed by the room owner. Channel, membership, and policy work is available in the sections below.</p>
         </div>
       </section>
 
@@ -145,7 +106,7 @@ export function ManageOverviewTab({
             >
               <span {...stylex.props(row.rowMain)}>
                 <span {...stylex.props(row.rowTitle)}>{pendingAdminCount} item{pendingAdminCount === 1 ? "" : "s"} awaiting review</span>
-                <span {...stylex.props(row.rowSub)}>Open the admin tab to action them.</span>
+                <span {...stylex.props(row.rowSub)}>Review join requests and invites before they become overdue.</span>
               </span>
               <span {...stylex.props(row.rowEnd)}>
                 <button type="button" {...stylex.props(button.btn, button.ghost, button.sm)}>Review</button>

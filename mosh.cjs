@@ -24,6 +24,8 @@ const chat = defineModel({
           name: "general",
           topic: "Room coordination",
           group: "General",
+          categoryId: "general",
+          position: 0,
           requiredRole: "member",
           scopeType: "channel",
           scopeId: "general",
@@ -36,6 +38,8 @@ const chat = defineModel({
           name: "guest",
           topic: "Guest lobby",
           group: "Guest",
+          categoryId: "guest",
+          position: 0,
           requiredRole: "guest",
           scopeType: "channel",
           scopeId: "guest",
@@ -43,6 +47,10 @@ const chat = defineModel({
           createdBy: "system",
           archivedAt: null,
         },
+      ],
+      categories: [
+        { id: "general", name: "General", position: 0, scopeType: "category", scopeId: "general", createdAt: 0, createdBy: "system", archivedAt: null },
+        { id: "guest", name: "Guest", position: 1, scopeType: "category", scopeId: "guest", createdAt: 0, createdBy: "system", archivedAt: null },
       ],
       messages: {},
       guests: {},
@@ -75,18 +83,25 @@ const chat = defineModel({
     // cross-partition validator is not yet wired into defineApp, so these
     // declarations describe intent without blocking the build.
     messages: { readClass: "window", integrityClass: "seq" },
+    // File bytes and provider credentials stay in Matterhorn's Files v2 and
+    // Drive hosts. Only immutable, encrypted file/attachment metadata is
+    // projected into room state.
+    files: { readClass: "head", integrityClass: "signature" },
+    attachments: { readClass: "head", integrityClass: "signature" },
     callRoutes: { readClass: "head", integrityClass: "signature" },
     guests: { readClass: "head", integrityClass: "signature" },
     publicInvites: { readClass: "head", integrityClass: "signature" },
     joinRequests: { readClass: "head", integrityClass: "signature" },
     activity: { readClass: "window", integrityClass: "seq" },
     channels: { readClass: "head", integrityClass: "signature" },
+    categories: { readClass: "head", integrityClass: "signature" },
     roleDefinitions: { readClass: "head", integrityClass: "signature" },
   },
 });
 
 const {
   channels,
+  categories,
   callRoutes,
   messages,
   guests,
@@ -96,27 +111,133 @@ const {
 
 /* ----- operations (faithful to the existing model.json) ----- */
 
+const customMediaRefsPayload = p.array(p.object({
+  mediaId: p.string({ max: 320 }),
+  scopeType: p.string({ max: 120 }),
+  scopeId: p.string({ max: 320 }),
+  mediaType: p.enum(["emoji", "sticker", "gif", "voice"]),
+}), { max: 64 }).optional();
+
 const operations = {
+  "category.create": action(
+    {
+      authorize: { roles: ["admin"] },
+      payload: {
+        categoryId: p.string({ max: 200 }),
+        name: p.string({ max: 80 }),
+        position: p.number({ min: 0 }).optional(),
+      },
+    },
+    ({ ref, fx }) => ({
+      effects: [
+        fx.create(categories, {
+          id: ref.payload("categoryId"),
+          fields: {
+            name: ref.payload("name"),
+            position: ref.payload("position"),
+            scopeType: "category",
+            scopeId: ref.payload("categoryId"),
+            createdAt: ref.now(),
+            createdBy: ref.actor("memberId"),
+            archivedAt: null,
+          },
+          activity: "created category",
+        }),
+      ],
+    }),
+  ),
+
+  "category.update": action(
+    {
+      authorize: { roles: ["admin"] },
+      payload: {
+        categoryId: p.string({ max: 200 }),
+        name: p.string({ max: 80 }).optional(),
+        position: p.number({ min: 0 }).optional(),
+      },
+    },
+    ({ ref, fx }) => ({
+      effects: [
+        fx.update(categories, {
+          id: ref.payload("categoryId"),
+          set: {
+            name: ref.payload("name"),
+            position: ref.payload("position"),
+            updatedAt: ref.now(),
+          },
+          activity: "updated category",
+        }),
+      ],
+    }),
+  ),
+
+  "category.archive": action(
+    {
+      authorize: { roles: ["admin"] },
+      payload: { categoryId: p.string({ max: 200 }) },
+    },
+    ({ ref, fx }) => ({
+      effects: [
+        fx.mark(categories, {
+          id: ref.payload("categoryId"),
+          set: { archivedAt: ref.now() },
+          activity: "archived category",
+        }),
+      ],
+    }),
+  ),
+
+  "category.reorder": action(
+    {
+      authorize: { roles: ["admin"] },
+      payload: {
+        categoryId: p.string({ max: 200 }),
+        position: p.number({ min: 0 }),
+      },
+    },
+    ({ ref, fx }) => ({
+      effects: [
+        fx.update(categories, {
+          id: ref.payload("categoryId"),
+          set: { position: ref.payload("position"), updatedAt: ref.now() },
+          activity: "reordered category",
+        }),
+      ],
+    }),
+  ),
+
   "channel.create": action(
     {
       authorize: { roles: ["admin"] },
       payload: {
+        channelId: p.string({ max: 200 }),
         name: p.string({ max: 80 }),
         topic: p.string({ max: 240 }).nullable().optional(),
         group: p.string({ max: 80 }).nullable().optional(),
+        categoryId: p.string({ max: 200 }).nullable().optional(),
+        position: p.number({ min: 0 }).optional(),
+        visibility: p.enum(["public", "private"]).optional(),
+        requiredRole: p.string({ max: 120 }),
+        allowedRoleIds: p.array(p.string({ max: 120 }), { max: 64 }).optional(),
+        allowedMemberIds: p.array(p.string({ max: 240 }), { max: 128 }).optional(),
       },
     },
     ({ ref, fx }) => ({
       effects: [
         fx.create(channels, {
-          id: ref.newId("channel"),
+          id: ref.payload("channelId"),
           fields: {
             name: ref.payload("name"),
             topic: ref.payload("topic"),
             group: ref.payload("group"),
-            requiredRole: "member",
+            categoryId: ref.payload("categoryId"),
+            position: ref.payload("position"),
+            visibility: ref.payload("visibility"),
+            allowedRoleIds: ref.payload("allowedRoleIds"),
+            allowedMemberIds: ref.payload("allowedMemberIds"),
+            requiredRole: ref.payload("requiredRole"),
             scopeType: "channel",
-            scopeId: ref.newId("channel"),
+            scopeId: ref.payload("channelId"),
             createdAt: ref.now(),
             createdBy: ref.actor("memberId"),
             archivedAt: null,
@@ -142,6 +263,12 @@ const operations = {
         name: p.string({ max: 80 }).nullable().optional(),
         topic: p.string({ max: 240 }).nullable().optional(),
         group: p.string({ max: 80 }).nullable().optional(),
+        categoryId: p.string({ max: 200 }).nullable().optional(),
+        position: p.number({ min: 0 }).optional(),
+        visibility: p.enum(["public", "private"]).optional(),
+        requiredRole: p.string({ max: 120 }).optional(),
+        allowedRoleIds: p.array(p.string({ max: 120 }), { max: 64 }).optional(),
+        allowedMemberIds: p.array(p.string({ max: 240 }), { max: 128 }).optional(),
       },
     },
     ({ ref, fx }) => ({
@@ -152,6 +279,12 @@ const operations = {
             name: ref.payload("name"),
             topic: ref.payload("topic"),
             group: ref.payload("group"),
+            categoryId: ref.payload("categoryId"),
+            position: ref.payload("position"),
+            visibility: ref.payload("visibility"),
+            requiredRole: ref.payload("requiredRole"),
+            allowedRoleIds: ref.payload("allowedRoleIds"),
+            allowedMemberIds: ref.payload("allowedMemberIds"),
             updatedAt: ref.now(),
           },
           activity: "updated record",
@@ -194,6 +327,9 @@ const operations = {
         body: p.string({ max: 4000 }),
         embeds: p.array().optional(),
         mentionIds: p.array(p.string({ max: 120 })).optional(),
+        attachmentIds: p.array(p.string({ max: 200 })).optional(),
+        tagIds: p.array(p.string({ max: 120 }), { max: 32 }).optional(),
+        customMediaRefs: customMediaRefsPayload,
       },
     },
     ({ ref, fx, guard }) => ({
@@ -216,6 +352,9 @@ const operations = {
             pinnedBy: null,
             reactions: {},
             embeds: ref.payload("embeds"),
+            attachmentIds: ref.payload("attachmentIds"),
+            tagIds: ref.payload("tagIds"),
+            customMediaRefs: ref.payload("customMediaRefs"),
           },
           activity: "created message",
         }),
@@ -234,6 +373,9 @@ const operations = {
         replyToId: p.string({ max: 200 }),
         body: p.string({ max: 4000 }),
         mentionIds: p.array(p.string({ max: 120 })).optional(),
+        attachmentIds: p.array(p.string({ max: 200 })).optional(),
+        tagIds: p.array(p.string({ max: 120 }), { max: 32 }).optional(),
+        customMediaRefs: customMediaRefsPayload,
       },
     },
     ({ ref, fx, guard }) => ({
@@ -256,6 +398,9 @@ const operations = {
             pinnedBy: null,
             reactions: {},
             embeds: [],
+            attachmentIds: ref.payload("attachmentIds"),
+            tagIds: ref.payload("tagIds"),
+            customMediaRefs: ref.payload("customMediaRefs"),
           },
           activity: "created message",
         }),
@@ -677,23 +822,52 @@ const notifications = {
     kind: "mosh.directMessage",
     on: { action: "directMessageSend" },
     audience: { userIds: "$payload.userIds", excludeActor: true },
-    // No thread id is in the payload, so group per sender: every recipient
-    // collapses notifications from the same person into one.
-    scope: { type: "dm", id: "$actor.memberId" },
+    scope: { type: "direct.thread", id: "$direct.threadId" },
     presentation: {
       title: { $expr: "$actor.displayName", fallback: "New message" },
-      // The body is static because the schema only accepts a string here.
-      // If you want dynamic DM text, encrypt it client-side into the notification
-      // transport; the relay and schema stay zero-knowledge.
       body: "sent you a direct message",
     },
     link: { route: "dm", params: { memberId: "$actor.memberId" } },
     read: {
-      scopeKey: "dm:$actor.memberId",
+      scopeKey: "direct.thread:$direct.threadId",
       cursor: {
         createdAt: "$operation.createdAt",
         operationId: "$operation.id",
       },
+      defaultPolicy: "route-visible",
+    },
+    delivery: { collapse: "scope" },
+  },
+  directMessageReply: {
+    kind: "mosh.directMessage.reply",
+    on: { action: "directMessageReply" },
+    audience: { userIds: "$payload.userIds", excludeActor: true },
+    scope: { type: "direct.thread", id: "$direct.threadId" },
+    presentation: {
+      title: { $expr: "$actor.displayName", fallback: "New reply" },
+      body: "replied in a direct message",
+    },
+    link: { route: "dm", params: { memberId: "$actor.memberId" } },
+    read: {
+      scopeKey: "direct.thread:$direct.threadId",
+      cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
+      defaultPolicy: "route-visible",
+    },
+    delivery: { collapse: "scope" },
+  },
+  directMessageForward: {
+    kind: "mosh.directMessage.forward",
+    on: { action: "directMessageForward" },
+    audience: { userIds: "$payload.userIds", excludeActor: true },
+    scope: { type: "direct.thread", id: "$direct.threadId" },
+    presentation: {
+      title: { $expr: "$actor.displayName", fallback: "Forwarded message" },
+      body: "forwarded a message to you",
+    },
+    link: { route: "dm", params: { memberId: "$actor.memberId" } },
+    read: {
+      scopeKey: "direct.thread:$direct.threadId",
+      cursor: { createdAt: "$operation.createdAt", operationId: "$operation.id" },
       defaultPolicy: "route-visible",
     },
     delivery: { collapse: "scope" },
@@ -741,12 +915,49 @@ const app = defineApp({
   matterhorn: {
     frontendProjection: "chat",
   },
+  // Drive is optional: the app remains usable with encrypted room files when
+  // no OAuth broker is configured. These are the exact capability keys
+  // consumed by Matterhorn's driveManagement host for Google Drive sharing.
+  appCapabilities: {
+    optional: [
+      "driveManagement.providers.read",
+      "driveManagement.connections.read",
+      "driveManagement.connect",
+      "driveManagement.upload",
+      "driveManagement.accountLabel.read",
+      "driveManagement.googleDrive.files.create",
+      "driveManagement.googleDrive.files.content.read",
+      "driveManagement.googleDrive.files.metadata.read",
+      "driveManagement.googleDrive.files.delete",
+      "driveManagement.googleDrive.permissions.write",
+    ],
+  },
   example: {
     id: "matterhorn-mosh",
     title: "Mosh Matterhorn example",
   },
   model: chat.withOperations(operations),
   actions: {
+    categoryCreate: {
+      plugin: "primary",
+      type: "category.create",
+      requiredRole: "admin",
+    },
+    categoryUpdate: {
+      plugin: "primary",
+      type: "category.update",
+      requiredRole: "admin",
+    },
+    categoryArchive: {
+      plugin: "primary",
+      type: "category.archive",
+      requiredRole: "admin",
+    },
+    categoryReorder: {
+      plugin: "primary",
+      type: "category.reorder",
+      requiredRole: "admin",
+    },
     channelCreate: {
       plugin: "primary",
       type: "channel.create",
@@ -762,17 +973,17 @@ const app = defineApp({
       type: "channel.archive",
       requiredRole: "moderator",
     },
-    mediaRoomCreate: {
+    mediaRoomCreateScoped: {
       plugin: "mediaRooms",
-      type: "media.room.create",
+      type: "media.room.create.v2",
       requiredRole: "moderator",
-      authorize: { scoped: { scopeType: "$payload.scopeType", scopeId: "$payload.scopeId", minimumLevel: "moderator" } },
+      authorize: { scoped: { scopeType: "$payload.parentScopeType", scopeId: "$payload.parentScopeId", minimumLevel: "moderator" } },
     },
     mediaRoomUpdate: {
       plugin: "mediaRooms",
       type: "media.room.update",
       requiredRole: "moderator",
-      authorize: { scoped: { scopeType: "channel", record: { collection: "rooms", idField: "roomId", scopeIdField: "scopeId" }, minimumLevel: "moderator" } },
+      authorize: { scoped: { record: { collection: "rooms", idField: "roomId", scopeTypeField: "scopeType", scopeIdField: "scopeId" }, minimumLevel: "moderator" } },
     },
     ...permissions.roleManagementActions({
       defineName: "roleCreate",
@@ -782,15 +993,9 @@ const app = defineApp({
       tombstoneName: "roleTombstone",
       overrideSetName: "scopeMemberOverrideSet",
       overrideRemoveName: "scopeMemberOverrideRemove",
+      parentSetName: "scopeParentSet",
+      parentRemoveName: "scopeParentRemove",
     }),
-    // Keep the legacy scope-role capability key available to clients that
-    // still use it for permission discovery; scoped member overrides are the
-    // current operation family.
-    scopeRoleSet: {
-      plugin: "core",
-      type: "scope.role.set",
-      requiredRole: "admin",
-    },
     moderateMember: {
       plugin: "primary",
       type: "member.moderate",
@@ -806,6 +1011,26 @@ const app = defineApp({
       plugin: "primary",
       type: "member.unban",
       requiredRole: "admin",
+    },
+    memberTimeout: {
+      plugin: "core",
+      type: "member.timeout",
+      requiredRole: "moderator",
+    },
+    memberQuarantine: {
+      plugin: "core",
+      type: "member.quarantine",
+      requiredRole: "moderator",
+    },
+    channelSlowmode: {
+      plugin: "core",
+      type: "channel.slowmode",
+      requiredRole: "moderator",
+    },
+    memberReport: {
+      plugin: "core",
+      type: "member.report",
+      requiredRole: "member",
     },
     disableInvite: {
       plugin: "primary",
@@ -830,6 +1055,159 @@ const app = defineApp({
     directMessageSend: {
       plugin: "core",
       type: "dm.message",
+      requiredRole: "member",
+    },
+    directMessageReply: {
+      plugin: "core",
+      type: "dm.message.reply",
+      requiredRole: "member",
+    },
+    directMessageEdit: {
+      plugin: "core",
+      type: "dm.message.edit",
+      requiredRole: "member",
+    },
+    directMessageDelete: {
+      plugin: "core",
+      type: "dm.message.delete",
+      requiredRole: "member",
+    },
+    directMessageReact: {
+      plugin: "core",
+      type: "dm.message.react",
+      requiredRole: "member",
+    },
+    directMessagePin: {
+      plugin: "core",
+      type: "dm.message.pin",
+      requiredRole: "member",
+    },
+    directMessageUnpin: {
+      plugin: "core",
+      type: "dm.message.unpin",
+      requiredRole: "member",
+    },
+    directMessageForward: {
+      plugin: "core",
+      type: "dm.message.forward",
+      requiredRole: "member",
+    },
+    pollCreate: {
+      plugin: "polls",
+      type: "poll.create",
+      requiredRole: "member",
+    },
+    pollVote: {
+      plugin: "polls",
+      type: "poll.vote",
+      requiredRole: "member",
+    },
+    pollClose: {
+      plugin: "polls",
+      type: "poll.close",
+      requiredRole: "moderator",
+    },
+    calendarEventRsvp: {
+      plugin: "calendar",
+      type: "calendar.event.rsvp",
+      requiredRole: "member",
+    },
+    calendarNotificationRead: {
+      plugin: "calendar",
+      type: "calendar.notification.read",
+      requiredRole: "member",
+    },
+    channelKindCreate: {
+      plugin: "channels",
+      type: "channel.create",
+      requiredRole: "moderator",
+    },
+    channelPostingPolicy: {
+      plugin: "channels",
+      type: "channel.posting.policy",
+      requiredRole: "moderator",
+    },
+    channelThreadPolicy: {
+      plugin: "channels",
+      type: "channel.thread.policy",
+      requiredRole: "moderator",
+    },
+    channelSpeakerPolicy: {
+      plugin: "channels",
+      type: "channel.speaker.policy",
+      requiredRole: "moderator",
+    },
+    channelVoiceTextBind: {
+      plugin: "channels",
+      type: "channel.voice-text.bind",
+      requiredRole: "moderator",
+    },
+    channelForumLayout: {
+      plugin: "channels",
+      type: "channel.forum.layout",
+      requiredRole: "moderator",
+    },
+    channelForumTagCreate: {
+      plugin: "channels",
+      type: "channel.forum.tag.create",
+      requiredRole: "moderator",
+    },
+    channelForumTagUpdate: {
+      plugin: "channels",
+      type: "channel.forum.tag.update",
+      requiredRole: "moderator",
+    },
+    channelForumTagArchive: {
+      plugin: "channels",
+      type: "channel.forum.tag.archive",
+      requiredRole: "moderator",
+    },
+    commentsThreadArchive: { plugin: "comments", type: "comments.thread.archive", requiredRole: "moderator" },
+    commentsThreadReopen: { plugin: "comments", type: "comments.thread.reopen", requiredRole: "moderator" },
+    commentsThreadLock: { plugin: "comments", type: "comments.thread.lock", requiredRole: "moderator" },
+    commentsThreadUnlock: { plugin: "comments", type: "comments.thread.unlock", requiredRole: "moderator" },
+    commentsThreadFollow: { plugin: "comments", type: "comments.thread.follow", requiredRole: "member" },
+    commentsThreadUnfollow: { plugin: "comments", type: "comments.thread.unfollow", requiredRole: "member" },
+    commentsThreadMemberAdd: { plugin: "comments", type: "comments.thread.member.add", requiredRole: "moderator" },
+    commentsThreadMemberRemove: { plugin: "comments", type: "comments.thread.member.remove", requiredRole: "moderator" },
+    commentsThreadNotifications: { plugin: "comments", type: "comments.thread.notifications", requiredRole: "member" },
+    // These operations are intentionally delegated to Matterhorn's reusable
+    // storage/attachment plugins. The app only exposes typed operation names;
+    // encryption, resumable transfer, provider validation, and OAuth remain
+    // inside Matterhorn SDK hosts.
+    filePublishV2: {
+      plugin: "files",
+      type: "file.publish.v2",
+      requiredRole: "member",
+    },
+    filePublishV3: {
+      plugin: "files",
+      type: "file.publish.v3",
+      requiredRole: "member",
+    },
+    fileRevisionPublishV3: {
+      plugin: "files",
+      type: "file.revision.publish.v3",
+      requiredRole: "member",
+    },
+    fileRemove: {
+      plugin: "files",
+      type: "file.remove",
+      requiredRole: "member",
+    },
+    attachmentAdd: {
+      plugin: "attachments",
+      type: "attachment.add",
+      requiredRole: "member",
+    },
+    attachmentThirdPartyAdd: {
+      plugin: "attachments",
+      type: "attachment.third-party.add",
+      requiredRole: "member",
+    },
+    attachmentRemove: {
+      plugin: "attachments",
+      type: "attachment.remove",
       requiredRole: "member",
     },
     messagePin: {
@@ -904,12 +1282,28 @@ const app = defineApp({
     },
     "screenShare",
     "embeds",
+    "attachments",
+    "files",
     "reactions",
+    "calendar",
+    "polls",
+    "channels",
   ],
   views: {
     channelSummary: query.collection(channels),
+    categorySummary: query.collection(categories),
+    attachmentsForScope: { plugin: "attachments", kind: "query", query: "attachmentsForScope" },
+    filesForScope: { plugin: "files", kind: "query", query: "filesForScope" },
     roomDirectory: { plugin: "mediaRooms", query: "roomDirectory" },
     onlineMembers: { plugin: "presence", query: "onlineMembers" },
+    upcomingEvents: { plugin: "calendar", query: "upcomingEvents" },
+    eventsForScope: { plugin: "calendar", query: "eventsForScope" },
+    calendarNotificationsForMember: { plugin: "calendar", query: "notificationsForMember" },
+    pollsForScope: { plugin: "polls", query: "pollsForScope" },
+    pollForId: { plugin: "polls", query: "pollForId" },
+    channelsForScope: { plugin: "channels", query: "channelsForScope" },
+    channelForId: { plugin: "channels", query: "channelForId" },
+    postingPolicyForChannel: { plugin: "channels", query: "postingPolicyForChannel" },
   },
   routes: [
     {

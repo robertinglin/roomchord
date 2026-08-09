@@ -67,19 +67,18 @@ test.describe("Mosh management and authorization", () => {
         break;
       }
     }
-    if (moderatedMember) {
-      const profileLock = moderatedMember.getByTestId("member-toggle-profile-lock");
-      await profileLock.click();
-      await expect(profileLock).toHaveText("Unlock profile");
-      await profileLock.click();
-      await expect(profileLock).toHaveText("Lock profile");
+    if (!moderatedMember) throw new Error("Admin moderation proof requires an enabled non-admin member.");
+    const profileLock = moderatedMember.getByTestId("member-toggle-profile-lock");
+    await profileLock.click();
+    await expect(profileLock).toHaveText("Unlock profile");
+    await profileLock.click();
+    await expect(profileLock).toHaveText("Lock profile");
 
-      const ban = moderatedMember.getByTestId("member-ban");
-      await ban.click();
-      await expect(moderatedMember.getByTestId("member-unban")).toBeVisible();
-      await moderatedMember.getByTestId("member-unban").click();
-      await expect(moderatedMember.getByTestId("member-ban")).toBeVisible();
-    }
+    const ban = moderatedMember.getByTestId("member-ban");
+    await ban.click();
+    await expect(moderatedMember.getByTestId("member-unban")).toBeVisible();
+    await moderatedMember.getByTestId("member-unban").click();
+    await expect(moderatedMember.getByTestId("member-ban")).toBeVisible();
     const invites = admin.getByTestId("admin-invite-row");
     await expect(invites).toHaveCount(3);
     const invite = invites.first();

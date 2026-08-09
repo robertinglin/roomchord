@@ -1,5 +1,5 @@
-import React from "react";
-import { avatarForActor } from "@entities/chat/model/chatViewModel";
+import React, { useState } from "react";
+import { authoritativeMemberOptions, avatarForActor } from "@entities/chat/model/chatViewModel";
 import { directCallMatchesThread, directCallPresenceLabel, type DirectCallThreadPresence } from "@entities/chat/model/directCallThreads";
 import { useChatRuntime } from "@entities/chat/model/chatRuntime";
 import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
@@ -12,6 +12,10 @@ import chordIconSvg from "../../../../icon.svg?raw";
 import { Button, Sidebar } from "@shared/ui/design";
 import { CloseGlyph, GearGlyph } from "@shared/ui/design/icons";
 import { useIsMobile } from "@shared/ui/useIsMobile";
+import { SearchResults } from "@features/search/ui/SearchResults";
+import type { SearchFilters, SearchScope } from "@features/search/model/search";
+import { useRoomSearch } from "@features/search/model/useRoomSearch";
+import { PersonalProductivityPanel } from "@features/personal-productivity/ui/PersonalProductivityPanel";
 
 /** Map the live connection status to the design kit's dot tone. */
 function statusTone(status: string): "on" | "warn" | "off" {
@@ -45,13 +49,15 @@ export function ChatSidebar({
   onNavigate?: () => void;
   onOpenLaunchHomeRoom?: ChatProps["onOpenLaunchHomeRoom"];
 }) {
-  const { actions, directCalls, live, media, view } = useChatRuntime();
+  const { actions, directCalls, live, media, mediaDevices, productivity, view } = useChatRuntime();
   const ui = useChatUiActions();
   const activeView = useChatUiStore((value) => value.activeView);
   const heldDirectCallRoomId = useChatUiStore((value) => value.heldDirectCallRoomId);
   const localMediaSettings = useChatUiStore((value) => value.localMediaSettings);
   const mutedVoiceParticipantIds = useChatUiStore((value) => value.mutedVoiceParticipantIds);
   const voicePreferences = useChatUiStore((value) => value.voicePreferences);
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({ query: "", scope: "messages", limit: 25, offset: 0 });
+  const searchState = useRoomSearch(live, searchFilters, view.currentChannelId);
   const isMobile = useIsMobile();
   const sidebarOpen = useChatUiStore((value) => value.sidebarOpen);
   const directCallPresence = directCallPresenceByThreadId(
@@ -69,12 +75,15 @@ export function ChatSidebar({
     onNavigate?.();
   }
 
+
   return (
     <Sidebar
       appName="Mosh"
       statusLabel={view.roomLabel}
       tone={statusTone(live.status)}
       searchPlaceholder="Find or start a conversation"
+      searchValue={searchFilters.query}
+      onSearchChange={(query) => setSearchFilters((current) => ({ ...current, query, offset: 0 }))}
       showSearch={true}
       showPill={true}
       open={sidebarOpen}
@@ -97,26 +106,38 @@ export function ChatSidebar({
         </MtnHome>
       ) : undefined}
       manageButton={
-        view.actorCanManageAnything ? (
-          <Button
-            tone="quiet"
-            title="Manage"
-            aria-label="Manage"
-            onClick={() => {
-              actions.openManageDialog("overview");
-              handleNavigate();
-            }}
-          >
-            <GearGlyph size={16} />
-          </Button>
-        ) : null
+        <span role="group" aria-label="Display settings">
+          {view.actorCanManageAnything ? (
+            <Button
+              tone="quiet"
+              title="Manage"
+              aria-label="Manage"
+              onClick={() => {
+                actions.openManageDialog("overview");
+                handleNavigate();
+              }}
+            >
+              <GearGlyph size={16} />
+            </Button>
+          ) : null}
+        </span>
       }
       groups={
         <>
+          <SearchResults
+            filters={searchFilters}
+            state={searchState}
+            memberNamesById={view.memberNamesById}
+            onScopeChange={(scope: SearchScope) => setSearchFilters((current) => ({ ...current, scope, offset: 0 }))}
+            onFiltersChange={(patch) => setSearchFilters((current) => ({ ...current, ...patch, offset: 0 }))}
+          />
+          <PersonalProductivityPanel productivity={productivity} />
           <ChannelSidebar
             channels={view.channels}
+            categories={(live.state.categories || []).filter((category) => !category.archivedAt)}
             activeChannelId={activeView === "channel" ? view.currentChannelId : undefined}
             canCreateChannels={view.actorCanCreateChannels}
+            canManageCategories={view.actorCanManageRoles}
             unreadCounts={view.topicUnreadCounts}
             voice={{
               state: live.state,
@@ -138,6 +159,7 @@ export function ChatSidebar({
               },
               onToggleVoiceParticipantMute: ui.toggleVoiceParticipantMute
             }}
+            onCreateCategory={actions.createCategory}
             onCreateChannel={actions.createTextChannel}
             onSelect={(channelId) => {
               ui.selectChannel(channelId);
@@ -151,6 +173,7 @@ export function ChatSidebar({
               activeThreadId={view.showingDm ? view.currentThreadId : undefined}
               currentUserId={live.actor.memberId}
               memberNamesById={view.memberNamesById}
+              memberOptions={authoritativeMemberOptions(live.state, view.memberNamesById)}
               memberAvatarsById={view.memberAvatarsById}
               unreadCounts={view.unreadCounts}
               callPresenceByThreadId={directCallPresence}
@@ -162,6 +185,14 @@ export function ChatSidebar({
                 actions.closeDirectThread(threadId);
                 handleNavigate();
               }}
+              onCreateGroup={async ({ memberIds, name }) => actions.createDirectThread({
+                userIds: Array.from(new Set([live.actor.memberId, ...memberIds])),
+                name
+              })}
+              onAddMembers={(threadId, memberIds) => actions.addDirectThreadMembers({ threadId, userIds: memberIds })}
+              onRemoveMembers={(threadId, memberIds) => actions.removeDirectThreadMembers({ threadId, userIds: memberIds })}
+              onLeaveThread={(threadId) => actions.leaveDirectThread(threadId)}
+              onRenameThread={(threadId, name) => actions.renameDirectThread({ threadId, name })}
             />
           ) : null}
         </>
@@ -178,6 +209,7 @@ export function ChatSidebar({
           sfu={media.sfu}
           error={media.error}
           voicePreferences={voicePreferences}
+          mediaDeviceController={mediaDevices}
           reconnectRoom={view.reconnectRoom}
           screenShares={view.activeScreenShares}
           onUpdateMedia={actions.updateMediaRoom}

@@ -5,6 +5,7 @@ import {
   roomAccessLevelForActor as matterhornRoomAccessLevelForActor
 } from "matterhorn-sdk/browser";
 import type { MatterhornPermissionActor } from "matterhorn-sdk/browser";
+import type { MatterhornRoleRule } from "matterhorn-sdk/browser";
 import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import type { Actor, ChatState, MediaRoom, Presence, RoleDefinition, RoleId, RoomMember, RoomRoleAccessLevel } from "@entities/chat/model/types";
 
@@ -190,4 +191,49 @@ export function roomAccessSummary(room: MediaRoom, roles: RoleDefinition[]) {
   if (readonlyCount) labels.push(`${readonlyCount} read only`);
   const knownNames = entries.slice(0, 2).map(([roleId]) => roles.find((role) => role.id === roleId)?.name || roleId);
   return `${labels.join(", ")}: ${knownNames.join(", ")}${entries.length > 2 ? ` +${entries.length - 2}` : ""}`;
+}
+
+export type ScopedRoomAccessDecision = RoomRoleAccessLevel | "inherit";
+
+function scopedRuleSpecificity(rule: MatterhornRoleRule, scopeType: string, scopeId: string) {
+  if (rule.scopeType === scopeType && rule.scopeId === scopeId) return 3;
+  if (rule.scopeType === scopeType && rule.scopeId === "*") return 2;
+  if (rule.scopeType === "*" && rule.scopeId === "*") return 1;
+  return 0;
+}
+
+export function scopedRoomAccessDecision(
+  rules: readonly MatterhornRoleRule[] | undefined,
+  scope: { scopeType: string; scopeId: string },
+  operationTypes: readonly string[] = ["media.room.join", "matterhorn.scope.view"]
+): ScopedRoomAccessDecision {
+  const matching = (rules || [])
+    .map((rule) => ({ rule, specificity: scopedRuleSpecificity(rule, scope.scopeType, scope.scopeId) }))
+    .filter((item) => item.specificity > 0);
+  if (!matching.length) return "inherit";
+  const specificity = Math.max(...matching.map((item) => item.specificity));
+  const selected = matching.filter((item) => item.specificity === specificity).map((item) => item.rule);
+  if (selected.some((rule) => rule.denyOperations.some((operation) => operationTypes.includes(operation)))) return "hidden";
+  if (selected.some((rule) => rule.allowOperations.some((operation) => operationTypes.includes(operation)))) return "editor";
+  return "inherit";
+}
+
+export function scopedRoomAccessSummary(
+  room: MediaRoom,
+  roles: RoleDefinition[],
+  rulesByRole: Record<string, readonly MatterhornRoleRule[]> | undefined
+) {
+  if (!rulesByRole) return roomAccessSummary(room, roles);
+  const scope = { scopeType: room.scopeType || "media-room", scopeId: room.scopeId || room.id };
+  const decisions = roles.map((role) => ({ role, decision: scopedRoomAccessDecision(rulesByRole[role.id], scope) }));
+  const explicit = decisions.filter((item) => item.decision !== "inherit");
+  if (!explicit.length) return `Scoped rules inherit legacy access · ${roomAccessSummary(room, roles)}`;
+  const editorNames = explicit.filter((item) => item.decision === "editor").map((item) => item.role.name);
+  const hiddenNames = explicit.filter((item) => item.decision === "hidden").map((item) => item.role.name);
+  const parts = [];
+  if (editorNames.length) parts.push(`${editorNames.length} can join`);
+  if (hiddenNames.length) parts.push(`${hiddenNames.length} hidden`);
+  const inherited = decisions.length - explicit.length;
+  if (inherited) parts.push(`${inherited} inherit`);
+  return `Scoped access: ${parts.join(", ")}`;
 }

@@ -7,6 +7,7 @@ import type { ChatViewData } from "@entities/chat/model/useChatViewData";
 import type { CallMediaSettings } from "matterhorn-sdk/browser/types";
 import type { MatterhornRoom } from "matterhorn-sdk/client";
 import type { Mosh} from "../../../../../types";
+import type { VoiceModerationState } from "@entities/chat/model/voiceModeration";
 
 export type ChatActionHandlersInput = {
   directCalls: ChatDirectCalls;
@@ -21,6 +22,7 @@ export type ChatActionHandlersInput = {
   requestCallSwitch?: (input: CallSwitchPromptInput) => Promise<CallSwitchDecision>;
   ui: ChatUiActions;
   view: ChatViewData;
+  voiceModerationState?: VoiceModerationState;
 };
 
 export type CallSwitchDecision = "hold" | "end" | "cancel";

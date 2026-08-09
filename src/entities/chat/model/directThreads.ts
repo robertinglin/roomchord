@@ -9,6 +9,7 @@ function visibleUsers(thread: DirectThread, memberNamesById: Record<string, stri
 }
 
 export function threadTitle(thread: DirectThread, memberNamesById: Record<string, string> = {}, currentUserId?: string) {
+  if (thread.name?.trim()) return thread.name.trim();
   const users = visibleUsers(thread, memberNamesById, currentUserId);
   return users.join(", ") || thread.topicKey || thread.topic || "Direct message";
 }

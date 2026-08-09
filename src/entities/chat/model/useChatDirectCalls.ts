@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DirectCallOrchestrator } from "matterhorn-sdk/browser/directCalls";
 import type { DirectCallDockOptions } from "matterhorn-sdk/browser/directCallDock";
 import { MeshRoomCallController } from "matterhorn-sdk/browser/meshRoomCalls";
+import type { MatterhornMediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
 import type { CallMediaSettings, CallMode, DirectCallState, PeerJsMediaConnection, RoomParticipant } from "matterhorn-sdk/browser/types";
 import { mediaBridgeFromHost } from "@entities/chat/api/callBridge";
 import { avatarForActor } from "@entities/chat/model/chatViewModel";
@@ -12,6 +13,7 @@ import type { Mosh } from "../../../../types";
 type Input = {
   actor: Actor;
   live: MatterhornRoom<Mosh>;
+  mediaDeviceController?: MatterhornMediaDeviceController;
   incomingActions?: DirectCallDockOptions["incomingActions"];
   onBeforeAccept?: (call: DirectCallState) => boolean | void | Promise<boolean | void>;
   roomName: string;
@@ -155,6 +157,7 @@ export function useChatDirectCalls(input: Input) {
         getPeer: () => bridge.getMediaPeer?.(),
         getPeerAddress: () => bridge.getMediaPeerAddress?.(),
         createPeer: bridge.createMediaPeer,
+        mediaDeviceController: input.mediaDeviceController,
         sendSignal: (targetClientId, targetPeerId, signal, auth) => {
           return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
         },

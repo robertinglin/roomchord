@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useRef } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { Glyph } from "@shared/ui/design";
-import { button, modal } from "@features/management/ui/manage.styles";
+import { button, modal } from "@shared/ui/manage.styles";
 
 export function Modal({
   open,

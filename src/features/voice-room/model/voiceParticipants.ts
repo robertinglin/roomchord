@@ -3,6 +3,27 @@ import type { CallMediaSettings, CallMediaTrackInfo, ScreenPreviewSnapshot } fro
 import type { MatterhornEphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
 import type { VoiceParticipant, VoiceRoomViewProps } from "@features/voice-room/model/types";
 
+function projectedModeration(room: VoiceRoomViewProps["room"], memberId: string | undefined) {
+  if (!memberId || !room.participants || Array.isArray(room.participants)) return {};
+  const participant = room.participants[memberId];
+  return {
+    deafened: participant?.deafened === true,
+    moderationSuppressed: participant?.suppressed === true || (room.kind === "stage" && room.stage?.open === false),
+    muted: participant?.muted === true
+  };
+}
+
+function projectedStage(room: VoiceRoomViewProps["room"], memberId: string | undefined) {
+  return {
+    stageRequest: Boolean(memberId && room.stage?.requests?.[memberId]),
+    stageSpeaker: Boolean(memberId && room.stage?.speakers?.[memberId])
+  };
+}
+
+function blockedByRoom(room: VoiceRoomViewProps["room"], memberId: string | undefined) {
+  return Boolean(memberId && room.blockedMembers?.[memberId]);
+}
+
 function tokenMedia(token: MatterhornEphemeralToken): CallMediaSettings | undefined {
   const media = token.payload?.media;
   if (!media || typeof media !== "object") return undefined;
@@ -57,6 +78,8 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
       .map((token) => token.clientId!)
   );
   if (joinedRoomId === room.id) {
+    const moderation = projectedModeration(room, actorId);
+    const stage = projectedStage(room, actorId);
     participants.set(actorId, {
       avatar: actorAvatar || initialFor(actorName),
       deafened: voicePreferences.deafened,
@@ -65,25 +88,33 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
       memberId: actorId,
       media: sfu.mediaRoomId === room.id ? sfu.media : localMedia,
       mediaTracks: sfu.mediaRoomId === room.id ? sfu.localMediaTracks : undefined,
-      muted: voicePreferences.muted,
+      moderationSuppressed: moderation.moderationSuppressed,
+      muted: moderation.muted || voicePreferences.muted,
       name: actorName,
+      ...stage,
       stream: sfu.mediaRoomId === room.id ? sfu.localStream : undefined
     });
   }
   for (const token of voiceTokens.filter((item) => item.scope === room.id)) {
     const id = token.ownerId === actorId ? actorId : token.clientId || token.ownerId || token.id;
+    const memberId = token.ownerId || (id === actorId ? actorId : undefined);
+    if (blockedByRoom(room, memberId || id)) continue;
     const current = participants.get(id);
     const voiceStatus = tokenVoiceStatus(token);
+    const moderation = projectedModeration(room, memberId);
+    const stage = projectedStage(room, memberId);
     participants.set(id, {
       avatar: current?.avatar || tokenAvatar(token) || initialFor(token.ownerName || id),
-      deafened: voiceStatus.deafened || current?.deafened,
+      deafened: moderation.deafened || voiceStatus.deafened || current?.deafened,
       id,
       isLocal: current?.isLocal,
-      memberId: current?.memberId || token.ownerId,
+      memberId: current?.memberId || memberId,
       media: tokenMedia(token) || current?.media,
       mediaTracks: tokenMediaTracks(token) || current?.mediaTracks,
-      muted: voiceStatus.muted || current?.muted,
+      moderationSuppressed: moderation.moderationSuppressed || current?.moderationSuppressed,
+      muted: moderation.muted || voiceStatus.muted || current?.muted,
       name: token.ownerName || current?.name || id,
+      ...stage,
       screenPreview: tokenScreenPreview(token) || current?.screenPreview,
       stream: current?.stream
     });
@@ -91,18 +122,24 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
   for (const remote of sfu.mediaRoomId === room.id ? sfu.remoteStreams : []) {
     const id = localClientIds.has(remote.clientId) ? actorId : remote.clientId;
     const current = participants.get(id);
+    const memberId = current?.memberId || (id === actorId ? actorId : undefined);
+    if (blockedByRoom(room, memberId || id)) continue;
+    const moderation = projectedModeration(room, memberId);
+    const stage = projectedStage(room, memberId);
     participants.set(id, {
       avatar: remote.avatar || initialFor(remote.name),
       connecting: false,
       connectionError: undefined,
       connectionPhase: "streaming",
-      deafened: current?.deafened,
+      deafened: moderation.deafened || current?.deafened,
       id,
       memberId: current?.memberId,
       media: remote.media || current?.media,
       mediaTracks: current?.mediaTracks || remote.mediaTracks,
-      muted: current?.muted,
+      moderationSuppressed: moderation.moderationSuppressed || current?.moderationSuppressed,
+      muted: moderation.muted || current?.muted,
       name: remote.name,
+      ...stage,
       screenPreview: current?.screenPreview,
       screenStream: current?.screenStream,
       stream: remote.stream
@@ -111,20 +148,26 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
   for (const peer of sfu.mediaRoomId === room.id ? sfu.peers || [] : []) {
     if (peer.clientId === actorId || localClientIds.has(peer.clientId)) continue;
     const current = participants.get(peer.clientId);
+    const memberId = current?.memberId;
+    if (blockedByRoom(room, memberId || peer.clientId)) continue;
+    const moderation = projectedModeration(room, memberId);
+    const stage = projectedStage(room, memberId);
     const isStreaming = peer.phase === "streaming" && Boolean(current?.stream);
     participants.set(peer.clientId, {
       avatar: current?.avatar || peer.avatar || initialFor(peer.name || peer.clientId),
       connecting: !isStreaming && peer.phase !== "failed",
       connectionError: peer.error,
       connectionPhase: peer.phase,
-      deafened: current?.deafened,
+      deafened: moderation.deafened || current?.deafened,
       id: peer.clientId,
       isLocal: current?.isLocal,
       memberId: current?.memberId,
       media: current?.media,
       mediaTracks: current?.mediaTracks,
-      muted: current?.muted,
+      moderationSuppressed: moderation.moderationSuppressed || current?.moderationSuppressed,
+      muted: moderation.muted || current?.muted,
       name: current?.name || peer.name || peer.clientId,
+      ...stage,
       screenPreview: current?.screenPreview,
       screenStream: current?.screenStream,
       stream: current?.stream
@@ -133,16 +176,21 @@ export function roomParticipants({ actorAvatar, actorId, actorName, joinedRoomId
   for (const remote of sfu.mediaRoomId === room.id ? sfu.remoteScreenStreams || [] : []) {
     const id = localClientIds.has(remote.clientId) ? actorId : remote.clientId;
     const current = participants.get(id);
+    const memberId = current?.memberId || (id === actorId ? actorId : undefined);
+    if (blockedByRoom(room, memberId || id)) continue;
+    const moderation = projectedModeration(room, memberId);
+    const stage = projectedStage(room, memberId);
     participants.set(id, {
       avatar: current?.avatar || remote.avatar || initialFor(remote.name),
-      deafened: current?.deafened,
+      deafened: moderation.deafened || current?.deafened,
       id,
       isLocal: current?.isLocal,
       memberId: current?.memberId,
       media: current?.media || remote.media,
       mediaTracks: current?.mediaTracks,
-      muted: current?.muted,
+      moderationSuppressed: moderation.moderationSuppressed || current?.moderationSuppressed,
       name: current?.name || remote.name,
+      ...stage,
       screenPreview: current?.screenPreview,
       screenStream: remote.stream,
       stream: current?.stream
@@ -199,7 +247,7 @@ export function mediaLabel(participant: VoiceParticipant) {
 }
 
 export function isVoiceParticipantMuted(participant: VoiceParticipant, mutedVoiceParticipantIds: Record<string, boolean> = {}) {
-  return Boolean(participant.muted || mutedVoiceParticipantIds[participant.id] || (participant.memberId && mutedVoiceParticipantIds[participant.memberId]));
+  return Boolean(participant.muted || participant.moderationSuppressed || mutedVoiceParticipantIds[participant.id] || (participant.memberId && mutedVoiceParticipantIds[participant.memberId]));
 }
 
 export function participantGridClass(count: number) {

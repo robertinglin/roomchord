@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
+import type { MatterhornActiveRules, MatterhornManagementRole, MatterhornManagementScope, MatterhornMemberModerationStatus, MatterhornModerationAuditEntry } from "matterhorn-sdk/browser";
 import { roleNames, primaryRoleFor, roleChipFor, presenceStatus, type MemberOption } from "@entities/chat/model/roles";
 import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import type { ChatState, RoleDefinition } from "@entities/chat/model/types";
-import { Switch } from "@features/management/ui/Controls";
+import { Switch } from "@shared/ui/SettingsControls";
 import { RoleCheckboxes } from "@features/management/ui/manage/RoleFields";
+import { SafetyControls } from "@features/management/ui/manage/SafetyControls";
+import { MemberAccessInspector } from "@features/management/ui/manage/MemberAccessInspector";
 import { Avatar, RoleChip } from "@shared/ui/design";
-import { panel, button, row, layout, misc, field, option } from "@features/management/ui/manage.styles";
+import { panel, button, row, layout, misc, field, option, notice } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
 
 export function ManageMembersTab({
@@ -16,11 +19,21 @@ export function ManageMembersTab({
   profileOnly,
   roleDefinitions,
   roles,
+  managementRoles,
+  managementScopes,
   onAssignMemberRoles,
   onSetMemberBlock,
   onSetMemberIgnore,
   onSetMemberNickname,
-  onSetMemberNote
+  onSetMemberNote,
+  canReport,
+  onReportMember,
+  onGetStatus,
+  onClearTimeout,
+  onClearQuarantine,
+  onActiveRules,
+  onAcceptRules,
+  onAuditQuery
 }: {
   canManageRoles: boolean;
   initialMemberId?: string;
@@ -29,11 +42,21 @@ export function ManageMembersTab({
   profileOnly?: boolean;
   roleDefinitions?: ChatState["roleDefinitions"];
   roles: RoleDefinition[];
+  managementRoles?: MatterhornManagementRole[];
+  managementScopes?: MatterhornManagementScope[];
   onAssignMemberRoles: (memberId: string, roleIds: string[], displayName?: string) => Promise<void>;
   onSetMemberBlock: (memberId: string, blocked: boolean) => void;
   onSetMemberIgnore: (memberId: string, ignored: boolean) => void;
   onSetMemberNickname: (memberId: string, nickname: string | null) => void;
   onSetMemberNote: (memberId: string, note: string | null) => void;
+  canReport?: boolean;
+  onReportMember?: (memberId: string, reason: string) => Promise<void>;
+  onGetStatus?: (memberId: string) => Promise<MatterhornMemberModerationStatus>;
+  onClearTimeout?: (memberId: string, revision: number, reason?: string) => Promise<void>;
+  onClearQuarantine?: (memberId: string, revision: number, reason?: string) => Promise<void>;
+  onActiveRules?: () => Promise<MatterhornActiveRules | undefined>;
+  onAcceptRules?: (version?: number) => Promise<void>;
+  onAuditQuery?: () => Promise<MatterhornModerationAuditEntry[]>;
 }) {
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(initialMemberId);
   const selectedMember = members.find((member) => member.id === selectedMemberId) || members[0];
@@ -137,6 +160,7 @@ export function ManageMembersTab({
                 <h3 {...stylex.props(panel.h3)}>Profile for {selectedMember.name}</h3>
               </header>
               <div {...stylex.props(panel.body)}>
+                <p {...stylex.props(notice.info)}>These notes and preferences are only visible to you.</p>
                 <label {...stylex.props(field.field)}>
                   <span {...stylex.props(field.label)}>Friend nickname</span>
                   <input
@@ -172,7 +196,7 @@ export function ManageMembersTab({
                 <div {...stylex.props(option.opt, option.optLast, option.optDivider)}>
                   <span {...stylex.props(option.optMain)}>
                     <strong {...stylex.props(option.optTitle)}>Block</strong>
-                    <span {...stylex.props(option.optDesc)}>Prevent direct interaction from this member.</span>
+                    <span {...stylex.props(option.optDesc)}>Prevent direct interaction from this member. You can undo this at any time.</span>
                   </span>
                   <span {...stylex.props(option.optEnd)}>
                     <Switch
@@ -204,6 +228,8 @@ export function ManageMembersTab({
                 </div>
               </form>
             ) : null}
+            {managementRoles && managementScopes ? <MemberAccessInspector memberName={selectedMember.name} roleIds={selectedMember.roleIds} roles={managementRoles} scopes={managementScopes} /> : null}
+            {profileOnly && (canReport || onGetStatus || onActiveRules) ? <SafetyControls members={members} canModerate={false} canReport={Boolean(canReport)} onReportMember={onReportMember} onGetStatus={onGetStatus} onClearTimeout={onClearTimeout} onClearQuarantine={onClearQuarantine} onActiveRules={onActiveRules} onAcceptRules={onAcceptRules} onAuditQuery={onAuditQuery} /> : null}
           </div>
         ) : null}
       </div>

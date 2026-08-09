@@ -16,7 +16,6 @@ import { mountMatterhornChat } from "@app/matterhornChat";
 import { defaultVoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import { voiceReconnectStorageKey } from "@entities/chat/model/localVoiceReconnect";
 import { channelMessages } from "@entities/chat/model/state";
-import { forwardedMessageBody } from "@entities/chat/model/chatViewModel";
 import { directCallCanRenderRoom, directCallMatchesThread, directCallPresenceLabel, directCallThreadForMembers } from "@entities/chat/model/directCallThreads";
 import type { ChatState } from "@entities/chat/model/types";
 
@@ -108,7 +107,7 @@ const testAppMetadata = {
       { name: "banMember", type: "member.ban", authorize: { roles: ["admin"] } },
       { name: "denyJoinRequest", type: "join.deny", authorize: { roles: ["admin"] } },
       { name: "disableInvite", type: "invite.disable", authorize: { roles: ["admin"] } },
-      { name: "mediaRoomCreate", type: "media.room.create", authorize: { roles: ["moderator"] } },
+      { name: "mediaRoomCreateScoped", type: "media.room.create.v2", authorize: { roles: ["moderator"] } },
       { name: "mediaRoomUpdate", type: "media.room.update", authorize: { roles: ["moderator", "admin"] } },
       { name: "messagePin", type: "message.pin", authorize: { roles: ["moderator"] } },
       { name: "directMessageSend", type: "dm.message", authorize: { roles: ["member"] } },
@@ -121,7 +120,9 @@ const testAppMetadata = {
       { name: "roleCreate", type: "access.role.define", authorize: { roles: ["admin"] } },
       { name: "memberRoleAssign", type: "access.role.assign", authorize: { roles: ["admin"] } },
       { name: "memberRoleUnassign", type: "access.role.unassign", authorize: { roles: ["admin"] } },
-      { name: "scopeRoleSet", type: "scope.role.set", authorize: { roles: ["moderator"] } }
+      { name: "scopeMemberOverrideSet", type: "scope.member.override.set", authorize: { roles: ["admin"] } },
+      { name: "scopeParentSet", type: "scope.parent.set", authorize: { roles: ["admin"] } },
+      { name: "scopeParentRemove", type: "scope.parent.remove", authorize: { roles: ["admin"] } }
     ]
   }
 };
@@ -197,6 +198,11 @@ function installTestMatterhornScope(
       getAppMetadata: () => testAppMetadata,
       getState: vi.fn(async () => initialState),
       sendOperation,
+      reserveDirectThread: vi.fn(async ({ userIds, topicKey }: { userIds: string[]; topicKey?: string }) => ({
+        threadId: `reserved-${userIds.join("-")}${topicKey ? `-${topicKey}` : ""}`,
+        userIds,
+        ...(topicKey ? { topicKey } : {})
+      })),
       ...hostOverrides
     } as any,
     initialState,
@@ -551,9 +557,10 @@ describe("ChatApp", () => {
     await user.type(await screen.findByLabelText("Voice channel name"), "Standup");
     await user.click(screen.getByRole("button", { name: "Create voice channel" }));
 
-    await waitFor(() => expect(sent).toHaveLength(2));
+    await waitFor(() => expect(sent).toHaveLength(3));
     expect(sent[0]).toMatchObject({ type: "channelCreate", schemaAction: "channelCreate", payload: { name: "launch", group: undefined } });
-    expect(sent[1]).toMatchObject({ type: "mediaRoomCreate", schemaAction: "mediaRoomCreate", payload: { name: "Standup", group: undefined, allowsVideo: true } });
+    expect(sent[1]).toMatchObject({ schemaAction: "scopeParentSet", payload: { scopeType: "media-room", parentScopeType: "channel", parentScopeId: "general" } });
+    expect(sent[2]).toMatchObject({ type: "mediaRoomCreateScoped", schemaAction: "mediaRoomCreateScoped", payload: { name: "Standup", group: undefined, allowsVideo: true, parentScopeType: "channel", parentScopeId: "general" } });
   });
 
   it("collapses text and voice channel groups", async () => {
@@ -1897,17 +1904,6 @@ describe("ChatApp", () => {
     expect(screen.queryByText("user_0e691c2ca2d2854286f53594")).not.toBeInTheDocument();
   });
 
-  it("uses member display names before stale stored author names when forwarding", () => {
-    const body = forwardedMessageBody({
-      ...state.messages.m1,
-      authorName: "user_0e691c2ca2d2854286f53594",
-      authorId: "lee"
-    }, { lee: "Lee" });
-
-    expect(body).toContain("Forwarded from Lee:");
-    expect(body).not.toContain("user_0e691c2ca2d2854286f53594");
-  });
-
   it("uses emoji avatars when members do not have profile images", async () => {
     renderChat(undefined, {
       ...state,
@@ -2157,7 +2153,7 @@ describe("ChatApp", () => {
     expect(screen.getByRole("button", { name: "Reply to message from Mina" }).closest(".msg-actions")).toHaveStyle({ opacity: "1", pointerEvents: "auto" });
   });
 
-  it("forwards messages to other channels and direct messages", async () => {
+  it("uses Matterhorn's authoritative forwarding bridge for channel targets", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sent: any[] = [];
     const twoChannelState = {
@@ -2167,22 +2163,26 @@ describe("ChatApp", () => {
         { id: "random", name: "random", topic: "Overflow" }
       ]
     };
+    const forwardMessage = vi.fn(async () => ({ ok: true, state: twoChannelState, operation: {} }));
     renderChat(
       vi.fn(async (operation) => { sent.push(operation); return { ok: true, state: twoChannelState, operation }; }),
-      twoChannelState
+      twoChannelState,
+      undefined,
+      {
+        forwardMessage,
+        getPersonalUnreadMarker: vi.fn(async () => undefined),
+        clearPersonalUnread: vi.fn(async () => undefined),
+        subscribePersonalUnread: vi.fn(() => () => undefined)
+      }
     );
 
     await user.click(await screen.findByRole("button", { name: "Forward message from Mina" }));
     await user.click(screen.getByRole("button", { name: "Forward to # random" }));
-    await user.click(screen.getByRole("button", { name: "Forward message from Mina" }));
-    await user.click(screen.getByRole("button", { name: "Forward to Lee" }));
-
-    await waitFor(() => expect(sent.map((op) => op.schemaAction)).toEqual(["messageSend", "directMessageSend"]));
-    expect(sent[0]).toMatchObject({ type: "messageSend", schemaAction: "messageSend", payload: { channelId: "random" } });
-    expect(sent[0].payload.body).toContain("Forwarded from Mina:");
-    expect(sent[0].payload.body).toContain("Welcome to the live chat app");
-    expect(sent[1]).toMatchObject({ type: "directMessageSend", schemaAction: "directMessageSend", payload: { userIds: ["alice", "lee"] } });
-    expect(sent[1].payload.body).toContain("Forwarded from Mina:");
+    await waitFor(() => expect(forwardMessage).toHaveBeenCalledWith({
+      source: { kind: "channel", scopeId: "general", messageId: "m1" },
+      target: { kind: "channel", channelId: "random" }
+    }));
+    expect(sent).toHaveLength(0);
   });
 
   it("sends status changes as transient presence when the injected bridge supports it", async () => {
@@ -2215,10 +2215,10 @@ describe("ChatApp", () => {
     await user.click(within(manageDialog).getByRole("button", { name: "Manage" }));
     await user.click(within(manageDialog).getByRole("button", { name: "Archive voice channel" }));
 
-    await waitFor(() => expect(sent.map((op) => op.schemaAction)).toEqual(["mediaRoomCreate", "mediaRoomArchive"]));
-    expect(sent[0]).toMatchObject({ type: "mediaRoomCreate", schemaAction: "mediaRoomCreate", payload: { name: "Design review", group: "Crits", allowsVideo: true } });
-    expect(sent[0].payload).not.toHaveProperty("mode");
-    expect(sent[1]).toMatchObject({ type: "mediaRoomArchive", schemaAction: "mediaRoomArchive", payload: { roomId: "media1" } });
+    await waitFor(() => expect(sent.map((op) => op.schemaAction)).toEqual(["scopeParentSet", "mediaRoomCreateScoped", "mediaRoomArchive"]));
+    expect(sent[1]).toMatchObject({ type: "mediaRoomCreateScoped", schemaAction: "mediaRoomCreateScoped", payload: { name: "Design review", group: "Crits", allowsVideo: true, parentScopeType: "channel", parentScopeId: "general" } });
+    expect(sent[1].payload).not.toHaveProperty("mode");
+    expect(sent[2]).toMatchObject({ type: "mediaRoomArchive", schemaAction: "mediaRoomArchive", payload: { roomId: "media1" } });
   });
 
   it("filters role-gated rooms and marks read-only rooms as unavailable to join", async () => {
@@ -2325,10 +2325,11 @@ describe("ChatApp", () => {
     await user.click(within(dialog).getByLabelText(/Dynamic gain control/));
     fireEvent.change(within(dialog).getByLabelText("Input gain"), { target: { value: "150" } });
     await user.click(within(dialog).getByLabelText(/Silero VAD/));
-    await user.click(within(dialog).getByLabelText(/DTLN noise suppression/));
-    await user.click(within(dialog).getByLabelText(/Push to talk/));
+    await user.click(within(dialog).getByRole("radio", { name: /Push to Talk/ }));
     await user.click(within(dialog).getByRole("button", { name: "Change" }));
     fireEvent.keyDown(window, { code: "F24", key: "F24" });
+    await user.click(within(dialog).getByRole("tab", { name: "Advanced" }));
+    await user.click(within(dialog).getByLabelText(/DTLN noise suppression/));
 
     expect(updateVoicePreferences).toHaveBeenLastCalledWith(expect.objectContaining({
       dynamicGainControl: true,
@@ -2409,7 +2410,7 @@ describe("ChatApp", () => {
 
     await user.click(within(dialog).getByRole("button", { name: "Start recording" }));
 
-    await waitFor(() => expect(within(dialog).getByText("Recording raw microphone")).toBeInTheDocument());
+    await waitFor(() => expect(within(dialog).getByText("Listening…")).toBeInTheDocument());
     expect(getUserMedia).toHaveBeenCalledTimes(1);
     expect(getUserMedia).toHaveBeenCalledWith({ audio: sdkRawVoiceTestAudioConstraints, video: false });
     expect(fakeMediaRecorders).toHaveLength(1);
@@ -2424,7 +2425,7 @@ describe("ChatApp", () => {
 
     await user.click(within(dialog).getByRole("button", { name: "Stop recording" }));
 
-    await waitFor(() => expect(within(dialog).getByText("Looping processed recording")).toBeInTheDocument());
+    await waitFor(() => expect(within(dialog).getByText("Playing your test…")).toBeInTheDocument());
     expect(playMock).toHaveBeenCalledTimes(1);
     expect(updateMedia).toHaveBeenLastCalledWith(state.rooms[0], { audio: false, video: true, screen: true });
 
@@ -2472,7 +2473,7 @@ describe("ChatApp", () => {
 
     await user.click(within(dialog).getByRole("button", { name: "Start recording" }));
 
-    await waitFor(() => expect(within(dialog).getByText("Recording raw microphone")).toBeInTheDocument());
+    await waitFor(() => expect(within(dialog).getByText("Listening…")).toBeInTheDocument());
     expect(getUserMedia).toHaveBeenCalledTimes(1);
     expect(getUserMedia).toHaveBeenCalledWith({ audio: sdkRawVoiceTestAudioConstraints, video: false });
     expect(fakeMediaRecorders).toHaveLength(1);
@@ -2483,7 +2484,7 @@ describe("ChatApp", () => {
 
     await user.click(within(dialog).getByRole("button", { name: "Stop recording" }));
 
-    await waitFor(() => expect(within(dialog).getByText("Looping processed recording")).toBeInTheDocument());
+    await waitFor(() => expect(within(dialog).getByText("Playing your test…")).toBeInTheDocument());
     expect(playMock).toHaveBeenCalledTimes(1);
     expect(updateMedia).toHaveBeenLastCalledWith(state.rooms[0], { audio: false, video: false, screen: false });
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { MatterhornMediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
 
 type RemoteAudioStream = {
   id: string;
@@ -7,6 +8,7 @@ type RemoteAudioStream = {
 };
 
 type Props = {
+  mediaDeviceController?: MatterhornMediaDeviceController;
   muted?: boolean;
   streams: RemoteAudioStream[];
 };
@@ -26,11 +28,21 @@ function audioContextConstructor(): AudioContextConstructor | undefined {
 
 class RemoteAudioSinkController {
   private readonly elements = new Map<string, HTMLAudioElement>();
+  private readonly playbackReleases = new Map<string, () => void>();
   private readonly nodes = new Map<string, AudioNodes>();
   private audioContext?: AudioContext;
   private interactionHandler?: () => void;
+  private releaseDeviceSubscription?: () => void;
+  private muted = false;
+
+  constructor(private readonly mediaDeviceController?: MatterhornMediaDeviceController) {
+    this.releaseDeviceSubscription = mediaDeviceController?.subscribe((state) => {
+      for (const nodes of this.nodes.values()) nodes.gain.gain.value = this.muted ? 0 : state.outputVolume;
+    });
+  }
 
   sync(streams: RemoteAudioStream[], muted: boolean): void {
+    this.muted = muted;
     const activeIds = new Set(streams.map((stream) => stream.id));
     for (const id of Array.from(this.elements.keys())) {
       if (!activeIds.has(id)) this.detach(id);
@@ -43,6 +55,8 @@ class RemoteAudioSinkController {
   destroy(): void {
     for (const id of Array.from(this.elements.keys())) this.detach(id);
     this.removeInteractionHandler();
+    this.releaseDeviceSubscription?.();
+    this.releaseDeviceSubscription = undefined;
     void this.audioContext?.close().catch(() => undefined);
     this.audioContext = undefined;
   }
@@ -54,10 +68,13 @@ class RemoteAudioSinkController {
     element.setAttribute("aria-label", remote.label);
     if (streamChanged) element.srcObject = remote.stream;
 
-    const context = this.ensureAudioContext();
+    // The device controller owns browser output routing. Keep playback on the
+    // media element when it is available so setSinkId and volume apply to the
+    // actual audible path.
+    const context = this.mediaDeviceController ? undefined : this.ensureAudioContext();
     if (!context) {
       element.muted = muted;
-      element.volume = muted ? 0 : 1;
+      element.volume = muted ? 0 : this.mediaDeviceController?.state().outputVolume ?? 1;
       if (streamChanged || element.paused) this.play(element);
       return;
     }
@@ -69,12 +86,12 @@ class RemoteAudioSinkController {
       this.disconnectNodes(remote.id);
       const source = context.createMediaStreamSource(remote.stream);
       const gain = context.createGain();
-      gain.gain.value = muted ? 0 : 1;
+      gain.gain.value = muted ? 0 : this.mediaDeviceController?.state().outputVolume ?? 1;
       source.connect(gain);
       gain.connect(context.destination);
       this.nodes.set(remote.id, { source, gain, stream: remote.stream });
     } else {
-      existing.gain.gain.value = muted ? 0 : 1;
+      existing.gain.gain.value = muted ? 0 : this.mediaDeviceController?.state().outputVolume ?? 1;
     }
     this.resumeAudioContext();
     if (streamChanged || element.paused) this.play(element);
@@ -85,6 +102,8 @@ class RemoteAudioSinkController {
     const element = this.elements.get(id);
     if (!element) return;
     this.elements.delete(id);
+    this.playbackReleases.get(id)?.();
+    this.playbackReleases.delete(id);
     element.pause();
     element.srcObject = null;
     element.remove();
@@ -126,6 +145,8 @@ class RemoteAudioSinkController {
     (element as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
     this.ensureContainer().appendChild(element);
     this.elements.set(remote.id, element);
+    const release = this.mediaDeviceController?.registerPlaybackElement(element);
+    if (release) this.playbackReleases.set(remote.id, release);
     return element;
   }
 
@@ -174,9 +195,9 @@ class RemoteAudioSinkController {
   }
 }
 
-export function RemoteAudioSink({ muted = false, streams }: Props) {
+export function RemoteAudioSink({ mediaDeviceController, muted = false, streams }: Props) {
   const sinkRef = useRef<RemoteAudioSinkController | undefined>(undefined);
-  if (!sinkRef.current) sinkRef.current = new RemoteAudioSinkController();
+  if (!sinkRef.current) sinkRef.current = new RemoteAudioSinkController(mediaDeviceController);
 
   useEffect(() => () => {
     sinkRef.current?.destroy();

@@ -4,9 +4,13 @@ const DIRECT_MESSAGE_PROTOCOL = "matterhorn.direct.v1";
 
 export function emptyChatState(): ChatState {
   return {
+    categories: [],
     channels: [],
     callRoutes: {},
     messages: {},
+    attachments: {},
+    files: {},
+    calendarEvents: {},
     guests: {},
     publicInvites: [],
     joinRequests: {},
@@ -16,11 +20,16 @@ export function emptyChatState(): ChatState {
     screenShares: {},
     members: {},
     presence: {},
+    notifications: {},
+    polls: {},
     activity: [],
     commentThreads: {},
     comments: {},
     embeds: {},
     reactions: {},
+    rsvps: {},
+    shares: {},
+    votes: {},
     roleDefinitions: {},
     access: { version: 1, roleIds: [], scopes: {} }
   };
