@@ -9,6 +9,7 @@ import type { Actor, ChatState, MemberModeration } from "@entities/chat/model/ty
 import type { InviteInput } from "@entities/chat/model/managementTypes";
 import { panel, button, row, layout, misc, field, notice, section } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
+import { BotBadge } from "@shared/ui/BotBadge";
 
 type AdminMember = {
   id: string;
@@ -16,6 +17,7 @@ type AdminMember = {
   name: string;
   role?: string;
   moderation?: MemberModeration;
+  kind?: "bot";
 };
 
 const USED_INVITE_STATUSES = new Set(["consumed", "expired", "exhausted"]);
@@ -57,6 +59,7 @@ type Props = {
 };
 
 function adminMembers(actor: Actor, state: ChatState, managementSnapshot?: MatterhornManagementSnapshot): AdminMember[] {
+  const authorityMembers = new Map((managementSnapshot?.members || []).map((member) => [member.memberId, member]));
   const currentAuthorityIds = new Set(
     (managementSnapshot?.members || [])
       .filter((member) => member.isCurrent)
@@ -66,6 +69,7 @@ function adminMembers(actor: Actor, state: ChatState, managementSnapshot?: Matte
     id: member.id,
     isCurrent: member.id === actor.memberId || currentAuthorityIds.has(member.id),
     name: member.name,
+    kind: authorityMembers.get(member.id)?.kind === "bot" || member.kind === "bot" ? "bot" : undefined,
     role: member.baseRole || member.roleIds[0],
     moderation: memberModerationFor(state, member.id)
   }));
@@ -179,7 +183,7 @@ export function ManageAdminTab({
                 return (
                   <article {...stylex.props(row.row)} data-testid="admin-member-row" key={member.id}>
                     <span {...stylex.props(row.rowMain)}>
-                      <span {...stylex.props(row.rowTitle)}>{member.name}</span>
+                      <span {...stylex.props(row.rowTitle)}>{member.name} {member.kind === "bot" ? <BotBadge /> : null}</span>
                       <span {...stylex.props(row.rowSub)}>{statusLabel(member)}</span>
                     </span>
                     <span {...stylex.props(row.rowEnd)}>

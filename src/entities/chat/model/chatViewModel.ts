@@ -49,6 +49,8 @@ export function linkedMessageLocation(state: ChatState, hash: string, messageIdF
 }
 
 function roomMemberName(member: RoomMember, id: string) {
+  const serviceName = member.kind === "bot" ? String(member.serviceDisplayName || "").trim() : "";
+  if (serviceName) return serviceName;
   return matterhornDisplayName({ member, fallbackId: id });
 }
 
@@ -60,7 +62,8 @@ export function memberNamesForState(state: ChatState, actor: Actor, memberPrefer
   }
   for (const [key, item] of Object.entries(state.presence || {})) {
     const id = item.memberId || key;
-    if (id) names[id] = matterhornDisplayName({ presence: item, member: state.members?.[id as MemberId], fallback: names[id], fallbackId: id });
+    const member = state.members?.[id as MemberId];
+    if (id && member?.kind !== "bot") names[id] = matterhornDisplayName({ presence: item, member, fallback: names[id], fallbackId: id });
   }
   names[actor.memberId] = matterhornDisplayName({ actor, fallback: names[actor.memberId], fallbackId: actor.memberId });
   for (const [memberId, preference] of Object.entries(memberPreferences)) {

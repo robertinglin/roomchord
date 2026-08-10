@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { messageAnchorId, messageHref } from "@entities/chat/model/messageLinks";
 import type { Message } from "@entities/chat/model/types";
@@ -6,6 +6,7 @@ import { Avatar } from "@shared/ui/Avatar";
 import { ForwardIcon, MoreIcon, ReplyIcon, SmileIcon } from "@shared/ui/Icons";
 import { MarkdownMessage } from "@features/messages/ui/MarkdownMessage";
 import { MemberContextMenu } from "@shared/ui/MemberContextMenu";
+import { BotBadge } from "@shared/ui/BotBadge";
 import { InlineEmojiPicker } from "@features/messages/ui/InlineEmojiPicker";
 import { authorName, focusMessage, formatMessageTime, messageAvatar, previewText } from "@features/messages/model/messageDisplay";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
@@ -144,6 +145,7 @@ export function MessageRow({
   instanceKey,
   memberAvatarsById,
   memberNamesById,
+  memberKindsById = {},
   message,
   messagesById,
   onDelete,
@@ -182,6 +184,7 @@ export function MessageRow({
   instanceKey: string;
   memberAvatarsById: Record<string, string>;
   memberNamesById: Record<string, string>;
+  memberKindsById?: Record<string, "bot" | undefined>;
   message: Message;
   messagesById: Map<string, Message>;
   onDelete?: (messageId: string) => void;
@@ -218,9 +221,20 @@ export function MessageRow({
   const [forwardMenuOpen, setForwardMenuOpen] = useState(false);
   const [messageMenuPosition, setMessageMenuPosition] = useState<MessageMenuPosition | undefined>();
   const [actionsActive, setActionsActive] = useState(false);
+  const [optimisticReactions, setOptimisticReactions] = useState<Record<string, boolean>>({});
   const name = authorName(message, memberNamesById);
   const isDeleted = Boolean(message.deletedAt);
-  const reactions = Object.entries(message.reactions || {}).filter(([, members]) => members.length > 0);
+  const displayedReactions = { ...(message.reactions || {}) };
+  if (currentUserId) {
+    for (const [emoji, included] of Object.entries(optimisticReactions)) {
+      const members = displayedReactions[emoji] || [];
+      const optimisticMemberId = currentUserId as typeof message.authorId;
+      displayedReactions[emoji] = included
+        ? [...new Set([...members, optimisticMemberId])]
+        : members.filter((memberId) => String(memberId) !== currentUserId);
+    }
+  }
+  const reactions = Object.entries(displayedReactions).filter(([, members]) => members.length > 0);
   const canPin = Boolean((message.pinnedAt ? onUnpin : onPin) && !isDeleted);
   const canEdit = Boolean(!pinnedCopy && onEdit && !isDeleted && (!canEditMessage || canEditMessage(message)));
   const canDelete = Boolean(onDelete && !isDeleted && (!canDeleteMessage || canDeleteMessage(message)));
@@ -266,6 +280,16 @@ export function MessageRow({
     pointerEvents: showActions ? "auto" : "none"
   };
 
+  useEffect(() => {
+    if (!currentUserId) return;
+    setOptimisticReactions((current) => {
+      const pending = Object.entries(current).filter(([emoji, included]) => (
+        (message.reactions?.[emoji] || []).some((memberId) => String(memberId) === currentUserId) !== included
+      ));
+      return pending.length === Object.keys(current).length ? current : Object.fromEntries(pending);
+    });
+  }, [currentUserId, message.reactions]);
+
   function closeMenus() {
     setReactionPickerOpen(false);
     setForwardMenuOpen(false);
@@ -301,6 +325,12 @@ export function MessageRow({
   function reactWith(messageId: string, emoji: string) {
     if (!onReact) return;
     onRememberReaction(emoji);
+    if (currentUserId) {
+      setOptimisticReactions((current) => {
+        const authoritative = (message.reactions?.[emoji] || []).some((memberId) => String(memberId) === currentUserId);
+        return { ...current, [emoji]: !(current[emoji] ?? authoritative) };
+      });
+    }
     onReact(messageId, emoji);
   }
 
@@ -438,6 +468,7 @@ export function MessageRow({
           >
             {name}
           </span>
+          {message.authorId && memberKindsById[message.authorId] === "bot" ? <BotBadge /> : null}
           {message.pinnedAt ? (
             <span className={`msg-role ${stylex.props(styles.role).className}`} style={stylex.props(styles.role).style}>Pinned</span>
           ) : authoredByCurrentUser ? (
@@ -479,6 +510,7 @@ export function MessageRow({
             body={message.body}
             currentUserId={currentUserId}
             memberNamesById={memberNamesById}
+            memberKindsById={memberKindsById}
             onDirectMessage={onDirectMessage}
           />
         )}

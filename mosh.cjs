@@ -1087,6 +1087,11 @@ const app = defineApp({
       type: "dm.message.unpin",
       requiredRole: "member",
     },
+    messageForward: {
+      plugin: "core",
+      type: "message.forward",
+      requiredRole: "member",
+    },
     directMessageForward: {
       plugin: "core",
       type: "dm.message.forward",

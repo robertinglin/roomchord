@@ -35,6 +35,7 @@ export type MessageFeedProps = {
   subtitle?: string;
   messages: Message[];
   memberNamesById?: Record<string, string>;
+  memberKindsById?: Record<string, "bot" | undefined>;
   memberAvatarsById?: Record<string, string>;
   forwardTargets?: MessageForwardTarget[];
   focusKey?: number;
@@ -116,6 +117,7 @@ export function MessageFeed({
   subtitle,
   messages,
   memberNamesById = {},
+  memberKindsById = {},
   memberAvatarsById = {},
   forwardTargets = [],
   focusKey,
@@ -350,6 +352,7 @@ export function MessageFeed({
             key={instanceKey}
             memberAvatarsById={memberAvatarsById}
             memberNamesById={memberNamesById}
+            memberKindsById={memberKindsById}
             message={message}
             messagesById={messagesById}
             onDelete={onDelete}
@@ -427,6 +430,7 @@ export function MessageFeed({
         disabled={disabled}
         focusKey={focusKey}
         memberNamesById={memberNamesById}
+        memberKindsById={memberKindsById}
         mode={mode}
         onCancelReply={() => setReplyTo(undefined)}
         onShareDrive={onShareDrive}

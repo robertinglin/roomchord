@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { Actor, Channel, ChannelVisibility, ChatState, MediaRoom, RoleDefinition } from "@entities/chat/model/types";
-import type { MatterhornManagementSnapshot } from "matterhorn-sdk/browser/management";
+import type { MatterhornManagementInvite, MatterhornManagementSnapshot } from "matterhorn-sdk/browser/management";
 import type { MatterhornMediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
 import type { MatterhornActiveRules, MatterhornAutoModDecision, MatterhornAutoModOverrideInput, MatterhornAutoModPolicy, MatterhornMemberModerationStatus, MatterhornModerationAuditEntry, MatterhornModerationReport, MatterhornRoleRule } from "matterhorn-sdk/browser";
 import type { MatterhornIntegrationController } from "matterhorn-sdk/browser";
@@ -19,6 +19,7 @@ import { ManageCommunityTab } from "@features/management/ui/manage/ManageCommuni
 import type { CommunityEvent } from "@entities/community/model/communityCapabilities";
 import type { CommunityChannel, CommunityNotification, CommunityPoll } from "@entities/community/ui/CommunityCapabilityPanel";
 import { ManageIntegrationsTab } from "@features/management/ui/manage/ManageIntegrationsTab";
+import { ManageBotsTab } from "@features/management/ui/manage/ManageBotsTab";
 import { VoiceSettingsPanel } from "@entities/chat/ui/VoiceSettingsPanel";
 import { MANAGEMENT_TABS, type InviteInput, type ManagementTab, type RoleInput, type RoleUpdateInput, type RoomSettings } from "@entities/chat/model/managementTypes";
 import { shell, rail, content } from "@shared/ui/manage.styles";
@@ -63,6 +64,10 @@ type Props = {
   onModerateMember: (memberId: string, input: { chatDisabled?: boolean; nameLocked?: boolean }) => void;
   onRemoveInvite: (inviteId: string) => void;
   onCreateInvite: (input: InviteInput) => Promise<unknown>;
+  onCreateBotInvite?: (input: { serviceId: string; displayName: string }) => Promise<MatterhornManagementInvite>;
+  onRemoveBot?: (memberId: string) => Promise<unknown>;
+  onRotateBotDevice?: (memberId: string, deviceId: string) => Promise<MatterhornManagementInvite>;
+  onSetBotChannelAccess?: (memberId: string, channelIds: string[]) => Promise<unknown>;
   onSetMemberBlock: (memberId: string, blocked: boolean) => void;
   onSetMemberIgnore: (memberId: string, ignored: boolean) => void;
   onSetMemberNickname: (memberId: string, nickname: string | null) => void;
@@ -125,6 +130,7 @@ function allowedTabs(input: {
     if (item.id === "roles") return input.canManageRoles;
     if (item.id === "members") return input.canManageRoles;
     if (item.id === "admin") return input.canManageMembers;
+    if (item.id === "bots") return input.canManageMembers;
     if (item.id === "community") return input.canManageMembers;
     if (item.id === "integrations") return input.canManageMembers;
     if (item.id === "audio") return input.includeAudio;
@@ -148,6 +154,7 @@ function tabDescription(tab: ManagementTab) {
   if (tab === "roles") return "Define role tags, their colour, and their permissions.";
   if (tab === "members") return "Manage the roster, role tags, invites, and join requests.";
   if (tab === "admin") return "Room-level access, invites, moderation, and join requests.";
+  if (tab === "bots") return "Create bot-bound invites and manage admitted bot devices.";
   if (tab === "community") return "Polls, scheduled events, rules, and community workflows.";
   if (tab === "integrations") return "Install and manage encrypted room integrations.";
   if (tab === "audio") return "Microphone processing for this device.";
@@ -168,7 +175,7 @@ function tabIcon(tab: ManagementTab) {
   if (tab === "roles" || tab === "admin") {
     return <><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4Z" />{tab === "admin" ? <path d="m9 12 2 2 4-4" /> : null}</>;
   }
-  if (tab === "integrations") return <><path d="M8 8h8v8H8z" /><path d="M4 12h4M16 12h4M12 4v4M12 16v4" /></>;
+  if (tab === "integrations" || tab === "bots") return <><path d="M8 8h8v8H8z" /><path d="M4 12h4M16 12h4M12 4v4M12 16v4" /></>;
   return <><circle cx="9" cy="8" r="3.2" /><path d="M3 20a6 6 0 0 1 12 0" /><path d="M16 5.5a3 3 0 0 1 0 5.5M21 20a6 6 0 0 0-4-5.6" /></>;
 }
 
@@ -209,6 +216,10 @@ export function ManageOverviewDialog({
   onModerateMember,
   onRemoveInvite,
   onCreateInvite,
+  onCreateBotInvite,
+  onRemoveBot,
+  onRotateBotDevice,
+  onSetBotChannelAccess,
   onSetMemberBlock,
   onSetMemberIgnore,
   onSetMemberNickname,
@@ -279,6 +290,18 @@ export function ManageOverviewDialog({
       .sort((left, right) => (Number(right.rank) || 0) - (Number(left.rank) || 0) || left.name.localeCompare(right.name));
   }, [managementSnapshot?.roles, state]);
   const channels = useMemo(() => activeChannels(state.channels || []), [state.channels]);
+  const botChannelAccessByMemberId = useMemo(() => {
+    const overrides = (state as ChatState & { scopedRoles?: { overrides?: Record<string, Record<string, { level?: string }>> } }).scopedRoles?.overrides || {};
+    const result: Record<string, string[]> = {};
+    for (const channel of channels) {
+      const members = overrides[`${channel.scopeType || "channel"}:${channel.scopeId || channel.id}`] || {};
+      for (const [memberId, rule] of Object.entries(members)) {
+        if (rule.level === "none") continue;
+        (result[memberId] ||= []).push(String(channel.id));
+      }
+    }
+    return result;
+  }, [channels, state]);
   const rooms = useMemo(() => activeRooms(state.rooms || []), [state.rooms]);
   const scopedRulesByRoom = useMemo(() => Object.fromEntries(rooms.map((room) => {
     const scopeType = room.scopeType || "media-room";
@@ -297,7 +320,8 @@ export function ManageOverviewDialog({
       const customRoleIds = (current?.roleIds || []).filter((roleId) => !SYSTEM_ROLE_IDS.has(roleId));
       byMemberId.set(authorityMember.memberId, {
         id: authorityMember.memberId,
-        name: current?.name || authorityMember.username || authorityMember.memberId,
+        name: current?.name || authorityMember.serviceDisplayName || authorityMember.username || authorityMember.memberId,
+        kind: authorityMember.kind === "bot" ? "bot" : current?.kind,
         roleIds: [...new Set([...authorityMember.roleIds, ...customRoleIds])],
         ...(current?.baseRole ? { baseRole: current.baseRole } : {}),
         ...(current?.avatar ? { avatar: current.avatar } : {}),
@@ -317,7 +341,7 @@ export function ManageOverviewDialog({
     includeAudio: initialTab === "audio"
   }), [canCreateChannels, canManageAnything, canManageMembers, canManageRoles, canManageRooms, initialTab]);
   const workspaceTabs = tabs.filter((item) => ["overview", "channels", "voice", "roles", "members"].includes(item.id));
-  const governanceTabs = tabs.filter((item) => ["admin", "community", "integrations"].includes(item.id));
+  const governanceTabs = tabs.filter((item) => ["bots", "admin", "community", "integrations"].includes(item.id));
   const deviceTabs = tabs.filter((item) => item.id === "audio");
   const fallbackTab = tabs[0]?.id || "overview";
   const [tab, setTab] = useState<ManagementTab>(initialTab || fallbackTab);
@@ -404,6 +428,7 @@ export function ManageOverviewDialog({
                     </span>
                     <span {...stylex.props(rail.itemLabel)}>{item.label}</span>
                     {item.id === "admin" && pendingAdminCount > 0 ? <small {...stylex.props(rail.itemCount)}>{pendingAdminCount}</small> : null}
+                    {item.id === "bots" ? <small {...stylex.props(rail.itemCount)}>{managementSnapshot?.members.filter((member) => member.kind === "bot").length || 0}</small> : null}
                   </button>
                 ))}
               </div>
@@ -513,6 +538,18 @@ export function ManageOverviewDialog({
                 onArchiveRole={onArchiveRole}
                 onCreateRole={onCreateRole}
                 onUpdateRole={onUpdateRole}
+              />
+            ) : null}
+            {tab === "bots" ? (
+              <ManageBotsTab
+                managementSnapshot={managementSnapshot}
+                channels={channels.map((channel) => ({ id: String(channel.id), name: channel.name }))}
+                channelAccessByMemberId={botChannelAccessByMemberId}
+                healthByMemberId={Object.fromEntries(Object.entries(state.presence || {}).map(([memberId, presence]) => [memberId, presence.serviceHealth ? { ...presence.serviceHealth, status: presence.status, visible: presence.visible } : undefined]))}
+                onCreateInvite={onCreateBotInvite || (async () => { throw new Error("Bot invite management is unavailable."); })}
+                onRemove={onRemoveBot || (async () => { throw new Error("Bot membership management is unavailable."); })}
+                onRotate={onRotateBotDevice || (async () => { throw new Error("Bot device rotation is unavailable."); })}
+                onSetChannelAccess={onSetBotChannelAccess || (async () => { throw new Error("Bot channel access management is unavailable."); })}
               />
             ) : null}
             {tab === "members" ? (

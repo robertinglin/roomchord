@@ -63,6 +63,22 @@ describe("management safety integration", () => {
     expect(screen.getByRole("button", { name: "Submit private report" })).toBeInTheDocument();
   });
 
+  it("shows the authoritative bot marker in member profiles", () => {
+    render(<ManageMembersTab
+      canManageRoles={false}
+      initialMemberId="helper"
+      members={[{ id: "helper", name: "Helper", kind: "bot", roleIds: ["member"], status: "online" }]}
+      profileOnly
+      roles={[]}
+      onAssignMemberRoles={vi.fn(async () => undefined)}
+      onSetMemberBlock={noop}
+      onSetMemberIgnore={noop}
+      onSetMemberNickname={noop}
+      onSetMemberNote={noop}
+    />);
+    expect(screen.getByRole("heading", { name: /Profile for Helper/ })).toContainElement(screen.getByLabelText("Bot account"));
+  });
+
   it("forwards safety capabilities and handlers through the management dialog", () => {
     render(<ManageOverviewDialog
       actor={actor}

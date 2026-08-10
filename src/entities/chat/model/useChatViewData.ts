@@ -7,7 +7,7 @@ import type { MemberPreference } from "@entities/chat/model/localMemberPreferenc
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { canEditRoom, canViewRoom, assignedRoleIds } from "@entities/chat/model/roles";
-import { channelThreads, latestDirectMessageTime, memberChatDisabled, visibleChannelMessages } from "@entities/chat/model/state";
+import { channelThreads, latestDirectMessageTime, memberChatDisabled } from "@entities/chat/model/state";
 import { directCallMatchesThread, directCallThreadForMembers } from "@entities/chat/model/directCallThreads";
 import type { ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
 import type { Channel, ChannelId, DirectThread, MediaRoom, ThreadId } from "@entities/chat/model/types";
@@ -149,7 +149,7 @@ export function useChatViewData(input: ChatViewDataInput) {
     if (!currentChannelId) return { embeds: [], messages: [], threads: [] };
     return {
       embeds: live.select.embedsByScope({ scopeType: "channel", scopeId: currentChannelId }),
-      messages: visibleChannelMessages(live.select.messagesByChannel(currentChannelId as ChannelId)),
+      messages: live.select.messagesByChannel(currentChannelId as ChannelId),
       threads: channelThreads(state, currentChannelId)
     };
   }, [currentChannelId, live.select, state]);

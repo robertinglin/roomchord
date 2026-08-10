@@ -1,7 +1,10 @@
 packages:
   - "."
+  - "services/lfm-bot"
 overrides:
   matterhorn-sdk: link:../matterhorn/packages/matterhorn-sdk
 allowBuilds:
   esbuild: true
+  onnxruntime-node: true
   protobufjs: true
+  sharp: true

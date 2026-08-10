@@ -1,0 +1,23 @@
+{
+  "name": "@mosh/lfm-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local LFM2.5-230M room bot for Mosh.",
+  "type": "commonjs",
+  "main": "src/index.cjs",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.cjs",
+    "demo:two-bots": "node --env-file-if-exists=.env.demo src/two-bot-demo.cjs",
+    "test": "node --test test/*.test.cjs",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-functions=80 --test-coverage-branches=80 --test-coverage-include=src/bot.cjs --test-coverage-include=src/config.cjs --test-coverage-include=src/index.cjs --test-coverage-include=src/model.cjs --test-coverage-include=src/persona.cjs --test-coverage-include=src/profile.cjs --test-coverage-include=src/two-bot-demo.cjs test/*.test.cjs",
+    "check": "node --check src/index.cjs && node --check src/two-bot-demo.cjs && node --check src/bot.cjs && node --check src/config.cjs && node --check src/model.cjs && node --check src/persona.cjs && node --check src/profile.cjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "4.2.0",
+    "matterhorn-node-service": "link:../../../matterhorn/packages/matterhorn-node-service",
+    "matterhorn-sdk": "link:../../../matterhorn/packages/matterhorn-sdk"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}

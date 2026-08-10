@@ -20,6 +20,53 @@ function message(): Message {
 }
 
 describe("MessageRow personal-state actions", () => {
+  it("shows a bot badge only from the authoritative member kind", () => {
+    const current = message();
+    const { rerender } = render(<MessageRow
+      forwardTargets={[]}
+      instanceKey={current.id}
+      memberAvatarsById={{}}
+      memberNamesById={{ mina: "Mina" }}
+      memberKindsById={{}}
+      message={current}
+      messagesById={new Map([[current.id, current]])}
+      onRememberReaction={vi.fn()}
+      pinnedCopy={false}
+      recentReactions={[]}
+    />);
+    expect(screen.queryByText("BOT")).not.toBeInTheDocument();
+    rerender(<MessageRow
+      forwardTargets={[]}
+      instanceKey={current.id}
+      memberAvatarsById={{}}
+      memberNamesById={{ mina: "Mina" }}
+      memberKindsById={{ mina: "bot" }}
+      message={current}
+      messagesById={new Map([[current.id, current]])}
+      onRememberReaction={vi.fn()}
+      pinnedCopy={false}
+      recentReactions={[]}
+    />);
+    expect(screen.getByText("BOT")).toBeInTheDocument();
+  });
+
+  it("marks authoritative bots in rendered mentions", () => {
+    const current = { ...message(), body: "Ask @[helper] about it" };
+    render(<MessageRow
+      forwardTargets={[]}
+      instanceKey={current.id}
+      memberAvatarsById={{}}
+      memberNamesById={{ mina: "Mina", helper: "Helper" }}
+      memberKindsById={{ helper: "bot" }}
+      message={current}
+      messagesById={new Map([[current.id, current]])}
+      onRememberReaction={vi.fn()}
+      pinnedCopy={false}
+      recentReactions={[]}
+    />);
+    expect(screen.getByText("@Helper")).toContainElement(screen.getByLabelText("Bot account"));
+  });
+
   it("does not offer forwarding until an optimistic channel message is authoritative", () => {
     const current = { ...message(), id: "message_ui_1786232172582_2" } as Message;
     const { container } = render(
@@ -313,6 +360,68 @@ describe("MessageRow personal-state actions", () => {
     await user.click(screen.getByRole("button", { name: /Roadmap.pdf/ }));
     expect(onDownloadFile).toHaveBeenCalledWith(file);
     expect(onOpenAttachment).toHaveBeenCalledWith(attachment);
+  });
+
+  it("does not reload an unchanged attachment preview during reaction and room-state renders", async () => {
+    const current = { ...message(), attachmentIds: ["encrypted-1"] } as Message;
+    const file = { fileId: "encrypted-1", revision: 1, title: "photo.webp", mimeType: "image/webp", scopeType: "channel", scopeId: "general", encryptedManifest: {}, ciphertextBytes: 12, chunkCount: 1, relays: [] };
+    const onPreviewFile = vi.fn(async () => new Blob(["image"], { type: "image/webp" }));
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:reaction-preview");
+    const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const props = {
+      currentUserId: "alice",
+      forwardTargets: [],
+      instanceKey: current.id,
+      memberAvatarsById: {},
+      memberNamesById: { mina: "Mina" },
+      messagesById: new Map([[current.id, current]]),
+      onPreviewFile,
+      onReact: vi.fn(),
+      onRememberReaction: vi.fn(),
+      pinnedCopy: false,
+      recentReactions: ["🔥"]
+    };
+    const { container, rerender } = render(<MessageRow {...props} message={current} fileRecords={[file]} />);
+    expect(await screen.findByRole("img", { name: "Preview of photo.webp" })).toHaveAttribute("src", "blob:reaction-preview");
+
+    fireEvent.mouseEnter(container.querySelector("article")!);
+    fireEvent.click(screen.getByRole("button", { name: "React with 🔥" }));
+    fireEvent.click(screen.getByRole("button", { name: "🔥 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "React with 🔥" }));
+    const unrelatedUpdate = { ...current, body: "Unrelated room-state projection" } as Message;
+    rerender(<MessageRow {...props} message={unrelatedUpdate} messagesById={new Map([[current.id, unrelatedUpdate]])} fileRecords={[{ ...file }]} />);
+
+    expect(onPreviewFile).toHaveBeenCalledTimes(1);
+    expect(revokeObjectUrl).not.toHaveBeenCalled();
+  });
+
+  it("keeps an optimistic reaction visible until authoritative state contains it", async () => {
+    const current = message();
+    const onReact = vi.fn();
+    const props = {
+      currentUserId: "alice",
+      forwardTargets: [],
+      instanceKey: current.id,
+      memberAvatarsById: {},
+      memberNamesById: { mina: "Mina" },
+      onReact,
+      onRememberReaction: vi.fn(),
+      pinnedCopy: false,
+      recentReactions: ["🔥"]
+    };
+    const { container, rerender } = render(<MessageRow {...props} message={current} messagesById={new Map([[current.id, current]])} />);
+    fireEvent.mouseEnter(container.querySelector("article")!);
+    fireEvent.click(screen.getByRole("button", { name: "React with 🔥" }));
+    expect(screen.getByRole("button", { name: "🔥 1" })).toBeInTheDocument();
+
+    const unrelatedUpdate = { ...current, body: "Unrelated room-state projection", reactions: {} } as Message;
+    rerender(<MessageRow {...props} message={unrelatedUpdate} messagesById={new Map([[current.id, unrelatedUpdate]])} />);
+    expect(screen.getByRole("button", { name: "🔥 1" })).toBeInTheDocument();
+
+    const authoritative = { ...unrelatedUpdate, reactions: { "🔥": ["alice"] } } as Message;
+    rerender(<MessageRow {...props} message={authoritative} messagesById={new Map([[current.id, authoritative]])} />);
+    expect(screen.getByRole("button", { name: "🔥 1" })).toBeInTheDocument();
+    expect(onReact).toHaveBeenCalledTimes(1);
   });
 
   it("offers channel and DM targets and preserves the authoritative callback", async () => {

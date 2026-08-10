@@ -83,9 +83,13 @@ describe("chat view projections", () => {
   const state = {
     members: {
       alice: { memberId: "alice", displayName: "Alice", avatarUrl: "alice.png" },
-      bob: { memberId: "bob", displayName: "Bob", avatar: "bob.png" }
+      bob: { memberId: "bob", displayName: "Bob", avatar: "bob.png" },
+      helper: { memberId: "helper", kind: "bot", displayName: "Guest 123", serviceDisplayName: "Helper" }
     },
-    presence: { bob: { memberId: "bob", status: "online", avatarUrl: "presence.png" } },
+    presence: {
+      bob: { memberId: "bob", status: "online", avatarUrl: "presence.png" },
+      helper: { memberId: "helper", displayName: "Guest 999", status: "online" }
+    },
     messages: {
       channelMessage: { id: "channelMessage", channelId: "general", body: "hello", deletedAt: null }
     },
@@ -101,7 +105,7 @@ describe("chat view projections", () => {
   } as any;
 
   it("projects names, avatars, author checks, and direct-thread presence", () => {
-    expect(memberNamesForState(state, actor, { bob: { nickname: "Bobby" } } as any)).toMatchObject({ alice: "Alice", bob: "Bobby" });
+    expect(memberNamesForState(state, actor, { bob: { nickname: "Bobby" } } as any)).toMatchObject({ alice: "Alice", bob: "Bobby", helper: "Helper" });
     expect(memberAvatarsForState(state, actor)).toMatchObject({ alice: "alice.png", bob: "presence.png" });
     expect(avatarForActor(actor)).toBe("alice.png");
     expect(isMessageAuthor(actor, { authorId: "alice" } as any)).toBe(true);

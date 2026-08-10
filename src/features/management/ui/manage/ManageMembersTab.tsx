@@ -8,6 +8,7 @@ import { RoleCheckboxes } from "@features/management/ui/manage/RoleFields";
 import { SafetyControls } from "@features/management/ui/manage/SafetyControls";
 import { MemberAccessInspector } from "@features/management/ui/manage/MemberAccessInspector";
 import { Avatar, RoleChip } from "@shared/ui/design";
+import { BotBadge } from "@shared/ui/BotBadge";
 import { panel, button, row, layout, misc, field, option, notice } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
 
@@ -134,7 +135,7 @@ export function ManageMembersTab({
                           <Avatar src={member.avatar} name={member.name} size="md" status={presenceStatus(member.status)} alt={member.name} />
                         </span>
                         <span {...stylex.props(row.rowMain)}>
-                          <span {...stylex.props(row.rowTitle)}>{member.name}</span>
+                          <span {...stylex.props(row.rowTitle)}>{member.name} {member.kind === "bot" ? <BotBadge /> : null}</span>
                           <span {...stylex.props(row.rowSub)}>{roleNames(member.roleIds, roleDefinitions).join(", ") || "No role tags"}</span>
                         </span>
                         {chip ? (
@@ -157,7 +158,7 @@ export function ManageMembersTab({
           <div {...stylex.props(layout.col)}>
             <form {...stylex.props(panel.panel)} onSubmit={saveMemberProfile}>
               <header {...stylex.props(panel.head)}>
-                <h3 {...stylex.props(panel.h3)}>Profile for {selectedMember.name}</h3>
+                <h3 {...stylex.props(panel.h3)}>Profile for {selectedMember.name} {selectedMember.kind === "bot" ? <BotBadge /> : null}</h3>
               </header>
               <div {...stylex.props(panel.body)}>
                 <p {...stylex.props(notice.info)}>These notes and preferences are only visible to you.</p>
@@ -215,7 +216,7 @@ export function ManageMembersTab({
             {canManageRoles ? (
               <form {...stylex.props(panel.panel, panel.panelLast)} onSubmit={saveMemberRoles}>
                 <header {...stylex.props(panel.head)}>
-                  <h3 {...stylex.props(panel.h3)}>Role tags for {selectedMember.name}</h3>
+                  <h3 {...stylex.props(panel.h3)}>Role tags for {selectedMember.name} {selectedMember.kind === "bot" ? <BotBadge /> : null}</h3>
                 </header>
                 <div {...stylex.props(panel.body)}>
                   <RoleCheckboxes roles={roles} selectedRoleIds={selectedRoleIds} onChange={setSelectedRoleIds} />

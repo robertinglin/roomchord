@@ -12,6 +12,7 @@ import type { AttachmentTransferState, PendingAttachmentPreview } from "@shared/
 import type { AttachmentPickerConfig } from "@shared/model/attachmentPicker";
 import type { MatterhornCustomMediaMessageReference } from "matterhorn-sdk/browser";
 import type { ForumTag } from "@entities/community/model/forum";
+import { BotBadge } from "@shared/ui/BotBadge";
 
 const ZWSP = "\u200B"; // zero-width space used as a caret anchor around pills
 const MENTION_QUERY_RE = /(?:^|[\s\u200B])@([^\n@]*)$/u;
@@ -187,6 +188,7 @@ export function MessageComposer({
   disabled,
   focusKey,
   memberNamesById,
+  memberKindsById = {},
   mode,
   onCancelReply,
   onShareDrive,
@@ -210,6 +212,7 @@ export function MessageComposer({
   disabled?: boolean;
   focusKey?: number;
   memberNamesById: Record<string, string>;
+  memberKindsById?: Record<string, "bot" | undefined>;
   mode: "channel" | "dm";
   onCancelReply: () => void;
   onShareDrive?: (file: File) => void;
@@ -427,7 +430,7 @@ export function MessageComposer({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => insertMention(member)}
               >
-                {member.name}
+                {member.name} {memberKindsById[member.id] === "bot" ? <BotBadge /> : null}
               </button>
             ))}
           </div>

@@ -1920,7 +1920,7 @@ describe("ChatApp", () => {
     expect(screen.getAllByLabelText("Lee avatar").some((avatar) => avatar.textContent === "🚀")).toBe(true);
   });
 
-  it("keeps middle deleted channel messages as tombstones and hides trailing deletes", () => {
+  it("preserves channel tombstones selected by Matterhorn", () => {
     const projected = channelMessages({
       ...state,
       messages: {
@@ -1930,7 +1930,7 @@ describe("ChatApp", () => {
       }
     }, "general");
 
-    expect(projected.map((message) => message.id)).toEqual(["old_deleted", "current"]);
+    expect(projected.map((message) => message.id)).toEqual(["old_deleted", "current", "trailing_deleted"]);
     expect(projected[0].deletedAt).toBe(4);
   });
 

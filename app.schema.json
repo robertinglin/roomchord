@@ -5530,6 +5530,12 @@
       "requiredRole": "member"
     },
     {
+      "name": "messageForward",
+      "plugin": "core",
+      "type": "message.forward",
+      "requiredRole": "member"
+    },
+    {
       "name": "directMessageForward",
       "plugin": "core",
       "type": "dm.message.forward",
@@ -5773,5 +5779,5 @@
       }
     }
   },
-  "schemaHash": "sha256-6cbcd8d4aa386d6899b86a7a1612578a7a7f926588720e10e4f82aff1cbfd799"
+  "schemaHash": "sha256-0d0186adc338a19b218462309bf56f6703e5da3a227c524ba2562d58abe4e086"
 }

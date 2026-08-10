@@ -1,6 +1,7 @@
 import * as stylex from "@stylexjs/stylex";
 import { tokens } from "../theme.stylex";
 import { Avatar, type PresenceStatus } from "./Avatar";
+import { BotBadge } from "../BotBadge";
 
 const styles = stylex.create({
   member: {
@@ -35,11 +36,13 @@ const styles = stylex.create({
 export function RailMember({
   avatar,
   name,
+  isBot = false,
   sub,
   status,
 }: {
   avatar: string;
   name: string;
+  isBot?: boolean;
   sub: string;
   status: PresenceStatus;
 }) {
@@ -48,7 +51,7 @@ export function RailMember({
     <div {...stylex.props(styles.member)}>
       <Avatar src={avatar} size="md" status={status} desaturate={offline} alt={name} />
       <span {...stylex.props(styles.info)}>
-        <span {...stylex.props(styles.name, offline && styles.nameOff)}>{name}</span>
+        <span {...stylex.props(styles.name, offline && styles.nameOff)}>{name} {isBot ? <BotBadge /> : null}</span>
         <span {...stylex.props(styles.sub)}>{sub}</span>
       </span>
     </div>

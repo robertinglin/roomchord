@@ -31,6 +31,14 @@ test("Mosh declares optional Google Drive host capabilities and channel attachme
     ["filePublishV3", "file.publish.v3"],
     ["fileRevisionPublishV3", "file.revision.publish.v3"]
   ]) assert.ok(fileActions.some((action) => action[0] === expected[0] && action[1] === expected[1]), `missing ${expected[0]}`);
+  const channelForward = artifact.appPack.composition.actions
+    .find((action) => action.name === "messageForward");
+  assert.deepEqual(channelForward, {
+    name: "messageForward",
+    plugin: "core",
+    type: "message.forward",
+    requiredRole: "member"
+  });
   const dmActions = artifact.appPack.composition.actions
     .filter((action) => action.name.startsWith("directMessage"));
   assert.deepEqual(

@@ -116,6 +116,7 @@ export type Presence = AvatarSource & {
   updatedAt?: number;
   lastPingAt?: number;
   visible?: boolean;
+  serviceHealth?: Mosh.RoomPresence["serviceHealth"];
 };
 
 export type ChatEmbed = Mosh.Embed;

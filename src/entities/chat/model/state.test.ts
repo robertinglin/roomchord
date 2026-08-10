@@ -17,8 +17,7 @@ import {
   participantCount,
   publicInvitesForState,
   reactionCount,
-  scopedReactionCount,
-  visibleChannelMessages
+  scopedReactionCount
 } from "@entities/chat/model/state";
 
 describe("chat state projections", () => {
@@ -49,7 +48,6 @@ describe("chat state projections", () => {
 
     expect(channelMessages(state, "general").map((message) => message.id)).toEqual(["old", "removed", "latest"]);
     expect(channelMessages(state).length).toBe(0);
-    expect(visibleChannelMessages([{ id: "only", deletedAt: 1 } as never]).map((message) => message.id)).toEqual([]);
     expect(directMessages(state, "direct-1").map((message) => message.id)).toEqual(["dm"]);
     expect(directMessages(state).length).toBe(0);
     expect(latestDirectMessageTime(state, "direct-1")).toBe(2);
@@ -135,14 +133,5 @@ describe("chat state projections", () => {
     expect(channelThreads(state, "general").map((thread) => thread.id)).toEqual(["recent", "created"]);
     expect(participantCount({})).toBe(0);
     expect(scopedReactionCount({} as never)).toBe(0);
-  });
-
-  it("keeps trailing channel tombstones out of the visible projection", () => {
-    const messages = [
-      { id: "first", deletedAt: null },
-      { id: "middle", deletedAt: 2 },
-      { id: "last", deletedAt: 3 },
-    ] as never;
-    expect(visibleChannelMessages(messages).map((message) => message.id)).toEqual(["first"]);
   });
 });

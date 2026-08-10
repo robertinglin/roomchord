@@ -141,7 +141,7 @@ describe("direct-message view projection", () => {
     await waitFor(() => expect(result.current.threads.map((thread) => thread.id)).toEqual(["group-1", "dm-1", "draft-erin", "dm_alice__dave"]));
     expect(result.current.channels).toHaveLength(1);
     expect(result.current.currentChannelId).toBe("general");
-    expect(result.current.feedMessages).toHaveLength(1);
+    expect(result.current.feedMessages).toHaveLength(2);
     expect(result.current.threadsForChannel).toHaveLength(1);
     expect(result.current.unreadCounts["dm-1"]).toBe(1);
     expect(result.current.unreadCounts["group-1"]).toBe(0);

@@ -26,7 +26,7 @@ export namespace Mosh {
   export interface MediaFlags { audio?: boolean; video?: boolean; screen?: boolean; }
   export interface MessageEmbed { id?: EmbedId; url: string; provider?: string; kind?: string; title?: string; thumbnailUrl?: string; renderMode?: string; }
   export interface ReadTagRecord { kind?: "matterhorn.read-tag" | (string & {}); version?: number; key?: string; scopeType?: string; scopeId?: string; ledgerId?: string; operationId?: string; messageId?: string; readAt?: number; updatedAt?: number; updatedBy?: MemberId | string; label?: string; }
-  export interface Member { id?: MemberId; memberId?: MemberId; name?: string; displayName?: string; role?: Role | (string & {}); status?: string; avatarUrl?: string; revokedAt?: number | null; bannedAt?: number | null; readTags?: Record<string, ReadTagRecord>; }
+  export interface Member { id?: MemberId; memberId?: MemberId; name?: string; displayName?: string; role?: Role | (string & {}); status?: string; avatarUrl?: string; kind?: "bot"; serviceId?: string; serviceDisplayName?: string; credentialFingerprint?: string; revokedAt?: number | null; bannedAt?: number | null; readTags?: Record<string, ReadTagRecord>; }
   export type ScopedRole = "none" | "viewer" | "editor" | "moderator" | "admin" | "owner";
 
   /** From the mediaRooms plugin. */
@@ -94,7 +94,7 @@ export namespace Mosh {
   export interface DirectMessageRecord { id: MessageId; protocol?: string; threadId?: ThreadId; userIds?: MemberId[]; topicKey?: string; authorId?: MemberId; body?: string; reactions?: Reactions; embeds?: MessageEmbed[]; replyToId?: MessageId | null; attachmentIds?: string[]; forwardedFromId?: MessageId | null; forwardedFrom?: { kind: "channel" | "direct.thread"; scopeId: string; messageId: MessageId } | null; pinnedAt?: number | null; pinnedBy?: MemberId | null; editedAt?: number | null; editedBy?: MemberId | null; deletedAt?: number | null; deletedBy?: MemberId | null; createdAt?: number; encrypted?: boolean; giftWraps?: Record<string, unknown>; }
   /** Resolved frontend message from matterhorn.core direct messages. */
   export interface DirectMessage extends DirectMessageRecord { threadId: ThreadId; authorId: MemberId; body: string; reactions: Reactions; embeds: MessageEmbed[]; createdAt: number; encrypted?: false; }
-  export interface RoomPresence { memberId?: MemberId; status?: string; activity?: string; updatedAt?: number; lastPingAt?: number; visible?: boolean; avatar?: string; avatarUrl?: string; profileImageUrl?: string; }
+  export interface RoomPresence { memberId?: MemberId; status?: string; activity?: string; updatedAt?: number; lastPingAt?: number; visible?: boolean; avatar?: string; avatarUrl?: string; profileImageUrl?: string; serviceHealth?: { state: "connecting" | "loading-model" | "ready" | "degraded" | "stopping"; model?: "loading" | "ready" | "degraded" | "lazy"; queueSaturated?: boolean }; }
   export interface Actor { memberId: MemberId; deviceId: string; role: Role | (string & {}); displayName?: string; avatar?: string; avatarUrl?: string; profileImageUrl?: string; }
   export interface Activity { id: string; operationId?: string; actorId?: MemberId; actorName?: string; message: string; createdAt?: number; }
   /**
@@ -1079,6 +1079,16 @@ export namespace Mosh {
     directMessageUnpin: { messageId: MessageId };
     /**
      * Requires `member` role.
+     * sourceKind: enum
+     * sourceScopeId: string
+     * messageId: string
+     * targetChannelId: string
+     * body: string
+     * attachmentIds: array
+     */
+    messageForward: { sourceKind: "channel" | "direct.thread"; sourceScopeId: string; messageId: MessageId; targetChannelId: string; body: string; attachmentIds?: string[] };
+    /**
+     * Requires `member` role.
      * userIds: array
      * messageId: string
      * sourceKind: enum
@@ -1238,6 +1248,7 @@ export namespace Mosh {
     directMessageReact: "dm.message.react";
     directMessagePin: "dm.message.pin";
     directMessageUnpin: "dm.message.unpin";
+    messageForward: "message.forward";
     directMessageForward: "dm.message.forward";
     channelKindCreate: "channel.create";
     channelVoiceTextBind: "channel.voice-text.bind";
@@ -1364,6 +1375,7 @@ export namespace Mosh {
     directMessageReact: { operationType: "dm.message.react"; authorize: { roles: ["member"] } };
     directMessagePin: { operationType: "dm.message.pin"; authorize: { roles: ["member"] } };
     directMessageUnpin: { operationType: "dm.message.unpin"; authorize: { roles: ["member"] } };
+    messageForward: { operationType: "message.forward"; authorize: { roles: ["member"] } };
     directMessageForward: { operationType: "dm.message.forward"; authorize: { roles: ["member"] } };
     channelKindCreate: { operationType: "channel.create"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "moderator" } } };
     channelVoiceTextBind: { operationType: "channel.voice-text.bind"; authorize: { roles: ["moderator"] } };

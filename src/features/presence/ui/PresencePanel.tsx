@@ -21,6 +21,7 @@ type MemberRow = {
   roleIds: string[];
   self: boolean;
   canMessage: boolean;
+  kind?: "bot";
 };
 
 const styles = stylex.create({
@@ -79,6 +80,8 @@ const styles = stylex.create({
 });
 
 function memberName(member: RoomMember, id: string) {
+  const serviceName = member.kind === "bot" ? String(member.serviceDisplayName || "").trim() : "";
+  if (serviceName) return serviceName;
   return matterhornDisplayName({ member, fallbackId: id });
 }
 
@@ -95,6 +98,7 @@ function memberRows(roomMembers: Record<string, RoomMember> | undefined, presenc
     if (!id || member.revokedAt || member.bannedAt) continue;
     rows.set(id, {
       id,
+      kind: member.kind === "bot" ? "bot" : undefined,
       name: memberName(member, id),
       status: member.status || "offline",
       activity: member.role || member.status || "offline",
@@ -110,7 +114,8 @@ function memberRows(roomMembers: Record<string, RoomMember> | undefined, presenc
     const current = rows.get(memberId);
     rows.set(memberId, {
       id: memberId,
-      name: matterhornDisplayName({ presence: item, fallback: current?.name, fallbackId: memberId }),
+      kind: current?.kind,
+      name: current?.kind === "bot" ? current.name : matterhornDisplayName({ presence: item, fallback: current?.name, fallbackId: memberId }),
       status: item.visible === false ? "offline" : item.status || current?.status || "online",
       activity: item.activity ?? current?.activity,
       avatar: avatarFor(safeRoomMembers[memberId], item, actor?.memberId === memberId ? actor : undefined) || current?.avatar,
@@ -123,6 +128,7 @@ function memberRows(roomMembers: Record<string, RoomMember> | undefined, presenc
   if (actor && !rows.has(actor.memberId)) {
     rows.set(actor.memberId, {
       id: actor.memberId,
+      kind: safeRoomMembers[actor.memberId]?.kind === "bot" ? "bot" : undefined,
       name: matterhornDisplayName({ actor, fallbackId: actor.memberId }),
       status: "online",
       activity: actor.role,
@@ -251,6 +257,7 @@ export function PresencePanel({
           >
             <RailMember
               avatar={member.avatar || ""}
+              isBot={member.kind === "bot"}
               name={member.self ? `${member.name} (you)` : member.name}
               status={presenceStatus(member.status)}
               sub={member.role || member.status}

@@ -20,6 +20,7 @@ const DEFAULT_ROLE_LABELS: Record<string, string> = {
 export type MemberOption = {
   id: string;
   name: string;
+  kind?: "bot";
   baseRole?: string;
   roleIds: string[];
   avatar?: string;
@@ -107,6 +108,11 @@ function memberIdFromEntry(key: string, member?: (RoomMember | Presence) & { id?
   return member?.memberId || member?.id || key;
 }
 
+function roomMemberDisplayName(member: RoomMember, id: string) {
+  const serviceName = member.kind === "bot" ? String(member.serviceDisplayName || "").trim() : "";
+  return serviceName || matterhornDisplayName({ member, fallbackId: id });
+}
+
 export function assignedRoleIds(memberId: string, baseRole?: string, state?: Partial<ChatState>) {
   return roleIdsForActor({ memberId, role: baseRole }, state);
 }
@@ -117,7 +123,7 @@ export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMemb
     if (member.revokedAt || member.bannedAt) continue;
     const id = memberIdFromEntry(key, member);
     if (!id) continue;
-    members.set(id, { id, name: matterhornDisplayName({ member, fallbackId: id }), baseRole: member.role, avatar: avatarFor(member), status: member.status });
+    members.set(id, { id, name: roomMemberDisplayName(member, id), kind: member.kind === "bot" ? "bot" : undefined, baseRole: member.role, avatar: avatarFor(member), status: member.status });
   }
   for (const [key, item] of Object.entries(presence || {})) {
     const id = memberIdFromEntry(key, item);
@@ -126,7 +132,8 @@ export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMemb
     const visible = item.visible === false ? false : true;
     members.set(id, {
       id,
-      name: matterhornDisplayName({ presence: item, fallback: current?.name, fallbackId: id }),
+      name: current?.kind === "bot" ? current.name : matterhornDisplayName({ presence: item, fallback: current?.name, fallbackId: id }),
+      kind: current?.kind,
       baseRole: current?.baseRole,
       avatar: avatarFor(roomMembers?.[id], item, actor.memberId === id ? actor : undefined) || current?.avatar,
       status: visible ? (item.status || current?.status || "online") : current?.status || "offline"
@@ -135,6 +142,7 @@ export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMemb
   members.set(actor.memberId, {
     id: actor.memberId,
     name: matterhornDisplayName({ actor, fallback: members.get(actor.memberId)?.name, fallbackId: actor.memberId }),
+    kind: members.get(actor.memberId)?.kind,
     baseRole: actor.role,
     avatar: avatarFor(roomMembers?.[actor.memberId], presence?.[actor.memberId], actor) || members.get(actor.memberId)?.avatar,
     status: "online"

@@ -24,8 +24,10 @@ export type EncryptedFileRecord = {
   scopeType: string;
   scopeId: string;
   encryptedManifest: unknown;
+  manifestSha256?: string;
   ciphertextBytes: number;
   chunkCount: number;
+  revision?: number;
   relays: Array<{ relayUrl: string; blobId: string }>;
   removedAt?: number | null;
 };

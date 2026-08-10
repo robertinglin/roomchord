@@ -9,6 +9,7 @@ import { ManageOverviewDialog } from "@features/management/ui/ManageOverviewDial
 import type { CommunityEvent } from "@features/community/model/communityCapabilities";
 import type { CommunityChannel, CommunityChannelKind, CommunityNotification, CommunityPoll } from "@features/community/ui/CommunityCapabilityPanel";
 import { MATTERHORN_INTEGRATIONS_READY } from "@shared/model/matterhornFeatureGates";
+import { botChannelAccessOverrides } from "@features/management/model/botChannelAccess";
 
 type CommunityProjection = {
   events: CommunityEvent[];
@@ -228,6 +229,19 @@ export function ChatManageDialog() {
       onModerateMember={actions.moderateMember}
       onRemoveInvite={actions.removeInvite}
       onCreateInvite={actions.createInvite}
+      onCreateBotInvite={({ serviceId, displayName }) => live.management.invites.create({
+        name: `${displayName} bot`,
+        roleId: "member",
+        maxUses: 1,
+        expiresAt: Date.now() + 15 * 60 * 1000,
+        principal: { kind: "bot", serviceId, displayName }
+      })}
+      onRemoveBot={(memberId) => live.management.members.remove(memberId, "Bot membership revoked")}
+      onRotateBotDevice={(memberId, deviceId) => live.management.members.rotateDevice(memberId, deviceId)}
+      onSetBotChannelAccess={async (memberId, channelIds) => {
+        const overrides = botChannelAccessOverrides(memberId, live.state.channels || [], channelIds);
+        await Promise.all(overrides.map((payload) => live.dispatch("scopeMemberOverrideSet", payload)));
+      }}
       onSetMemberBlock={ui.setMemberBlock}
       onSetMemberIgnore={ui.setMemberIgnore}
       onSetMemberNickname={ui.setMemberNickname}

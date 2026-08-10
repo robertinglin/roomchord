@@ -1,9 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { scopedRoomAccessDecision, scopedRoomAccessSummary } from "@entities/chat/model/roles";
+import { memberOptions, scopedRoomAccessDecision, scopedRoomAccessSummary } from "@entities/chat/model/roles";
 
 const scope = { scopeType: "channel", scopeId: "general" };
 
 describe("scoped voice access", () => {
+  it("projects bot kind only from the authoritative member record", () => {
+    const actor = { memberId: "self", role: "member", name: "Self" } as never;
+    const members = memberOptions(actor, {
+      bot: { memberId: "bot", kind: "bot", displayName: "Guest 123", serviceDisplayName: "Helper" },
+      spoof: { memberId: "spoof", displayName: "Definitely a BOT", serviceId: "fake.service" }
+    } as never, {
+      bot: { memberId: "bot", displayName: "Guest 999", status: "online" },
+      spoof: { memberId: "spoof", status: "online", activity: "bot" }
+    } as never);
+    expect(members.find((member) => member.id === "bot")?.kind).toBe("bot");
+    expect(members.find((member) => member.id === "bot")?.name).toBe("Helper");
+    expect(members.find((member) => member.id === "spoof")?.kind).toBeUndefined();
+    expect(members.find((member) => member.id === "bot")?.roleIds).toEqual(members.find((member) => member.id === "spoof")?.roleIds);
+  });
   it("uses the most specific scoped rule and honors explicit deny", () => {
     expect(scopedRoomAccessDecision([
       { scopeType: "*", scopeId: "*", allowOperations: ["media.room.join"], denyOperations: [] },

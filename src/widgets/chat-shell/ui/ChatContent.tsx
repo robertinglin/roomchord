@@ -318,6 +318,7 @@ export function ChatContent() {
       attachmentTransfer={attachments.transfer}
       fileRecords={attachments.files}
       memberNamesById={view.memberNamesById}
+      memberKindsById={Object.fromEntries(Object.entries(live.state.members || {}).map(([memberId, member]) => [memberId, member.kind]))}
       memberAvatarsById={view.memberAvatarsById}
       forwardTargets={view.forwardTargets}
       focusKey={composerFocusKey > 0 ? composerFocusKey : undefined}

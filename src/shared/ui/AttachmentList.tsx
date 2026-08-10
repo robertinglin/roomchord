@@ -1,15 +1,23 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { AttachmentPreviewLoader, AttachmentRecord, EncryptedFileRecord } from "@shared/model/attachments";
 
 function EncryptedImagePreview({ file, load }: { file: EncryptedFileRecord; load: AttachmentPreviewLoader }) {
   const [url, setUrl] = useState<string>();
   const [failed, setFailed] = useState(false);
+  const fileRef = useRef(file);
+  const loadRef = useRef(load);
+  fileRef.current = file;
+  loadRef.current = load;
+  const contentVersion = file.revision !== undefined
+    ? `revision:${file.revision}`
+    : `manifest:${file.manifestSha256 || "initial"}`;
 
   useEffect(() => {
     let active = true;
     let objectUrl: string | undefined;
+    setUrl(undefined);
     setFailed(false);
-    void load(file).then((blob) => {
+    void loadRef.current(fileRef.current).then((blob) => {
       if (!active) return;
       objectUrl = URL.createObjectURL(blob);
       setUrl(objectUrl);
@@ -20,7 +28,7 @@ function EncryptedImagePreview({ file, load }: { file: EncryptedFileRecord; load
       active = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [file, load]);
+  }, [file.fileId, contentVersion]);
 
   if (failed) return <span className="attachment-preview-status">Preview unavailable</span>;
   if (!url) return <span className="attachment-preview-status" role="status">Loading preview…</span>;

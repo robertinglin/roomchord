@@ -67,9 +67,7 @@ test.describe("Mosh messages and direct messages", () => {
       await adminFeed.locator("span.context-menu-shroud").click({ force: true });
     }
 
-    // Trailing deleted messages are intentionally omitted from the feed. Keep
-    // a later message in the channel so the target remains as a visible
-    // tombstone and the delete assertion checks the actual UI contract.
+    // A message that already has a later channel message keeps its tombstone.
     const deleteSentinel = `delete-sentinel-${token}`;
     await message(mosh.pages.moderator, deleteSentinel);
     await waitForMessage(mosh.pages.member, deleteSentinel);

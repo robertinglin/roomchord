@@ -1,11 +1,13 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AttachmentList } from "@shared/ui/AttachmentList";
 import type { AttachmentRecord, EncryptedFileRecord } from "@shared/model/attachments";
 
 const file: EncryptedFileRecord = { fileId: "file-1", title: "Meeting notes.txt", mimeType: "text/plain", scopeType: "channel", scopeId: "general", encryptedManifest: {}, ciphertextBytes: 1, chunkCount: 1, relays: [] };
 const attachment: AttachmentRecord = { id: "attachment-1", title: "Drive doc", provider: "google-drive", assetId: "asset-1" };
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("AttachmentList", () => {
   it("renders nothing for an empty scope", () => {
@@ -26,19 +28,39 @@ describe("AttachmentList", () => {
     expect(screen.getByText("google-drive")).toBeInTheDocument();
   });
 
-  it("decrypts image attachments into inline previews and releases the object URL", async () => {
-    const imageFile = { ...file, title: "photo.webp", mimeType: "image/webp" };
+  it("keeps an unchanged image preview across reconstructed records and callbacks", async () => {
+    const imageFile = { ...file, title: "photo.webp", mimeType: "image/webp", revision: 1 };
     const preview = vi.fn(async () => new Blob(["image"], { type: "image/webp" }));
     const createObjectUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:preview");
     const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
-    const { unmount } = render(<AttachmentList attachments={[]} files={[imageFile]} onDownload={vi.fn()} onOpenAttachment={vi.fn()} onPreview={preview} />);
+    const { rerender, unmount } = render(<AttachmentList attachments={[]} files={[imageFile]} onDownload={vi.fn()} onOpenAttachment={vi.fn()} onPreview={preview} />);
 
     expect(screen.getByRole("status")).toHaveTextContent("Loading preview");
     expect(await screen.findByRole("img", { name: "Preview of photo.webp" })).toHaveAttribute("src", "blob:preview");
     expect(preview).toHaveBeenCalledWith(imageFile);
-    expect(createObjectUrl).toHaveBeenCalled();
+    rerender(<AttachmentList attachments={[]} files={[{ ...imageFile }]} onDownload={vi.fn()} onOpenAttachment={vi.fn()} onPreview={vi.fn(preview)} />);
+    expect(preview).toHaveBeenCalledTimes(1);
+    expect(createObjectUrl).toHaveBeenCalledTimes(1);
+    expect(revokeObjectUrl).not.toHaveBeenCalled();
     unmount();
     await waitFor(() => expect(revokeObjectUrl).toHaveBeenCalledWith("blob:preview"));
+  });
+
+  it("loads exactly one new preview when the encrypted file revision changes", async () => {
+    const imageFile = { ...file, title: "photo.webp", mimeType: "image/webp", revision: 1 };
+    const preview = vi.fn(async (record: EncryptedFileRecord) => new Blob([String(record.revision)], { type: "image/webp" }));
+    const createObjectUrl = vi.spyOn(URL, "createObjectURL").mockReturnValueOnce("blob:revision-1").mockReturnValueOnce("blob:revision-2");
+    const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const { rerender } = render(<AttachmentList attachments={[]} files={[imageFile]} onDownload={vi.fn()} onOpenAttachment={vi.fn()} onPreview={preview} />);
+    expect(await screen.findByRole("img")).toHaveAttribute("src", "blob:revision-1");
+
+    rerender(<AttachmentList attachments={[]} files={[{ ...imageFile, revision: 2 }]} onDownload={vi.fn()} onOpenAttachment={vi.fn()} onPreview={preview} />);
+
+    expect(await screen.findByRole("img")).toHaveAttribute("src", "blob:revision-2");
+    expect(preview).toHaveBeenCalledTimes(2);
+    expect(createObjectUrl).toHaveBeenCalledTimes(2);
+    expect(revokeObjectUrl).toHaveBeenCalledTimes(1);
+    expect(revokeObjectUrl).toHaveBeenCalledWith("blob:revision-1");
   });
 
   it("keeps the download card usable when an image preview cannot be loaded", async () => {

@@ -18,14 +18,14 @@
     "matterhornVersion": "^0.1.4",
     "hostPack": {
       "url": "workspace:matterhorn-mosh#hostPack",
-      "integrity": "sha256-65f7578be26dceb67fa6b3463e530920ee51cf7724832bcb16bd03afe3cd7f50"
+      "integrity": "sha256-58f3e4b26461987018f3324a424e050c3f04238a16080f873913284a69e73d3a"
     },
     "playerPacks": [
       {
         "id": "gg.matterhorn.mosh.player",
         "name": "Mosh Player",
         "url": "workspace:matterhorn-mosh#playerPack",
-        "integrity": "sha256-7e5bc1501a45603271c5d84d0fcb9a952828244e7b47b3b3aff6ca4a26bd90e3",
+        "integrity": "sha256-53af9b4ef929855c7c58252d5ad89c9193e4c78478a9d66b1dc10b4763ade376",
         "recommendedFor": {
           "devices": [
             "desktop",
@@ -42,7 +42,7 @@
       "operationSchemaHash": "sha256-4e9e2f9f023d0e07de0ff1d5152b154d22ce02fd8ab7da833bc89a5aa6414c6a",
       "stateSchemaHash": "sha256-5141a320d23d06f991ed3d6cc9663d79a99eb3ca088a6e1826161fb9fb5bc209",
       "pluginGraphHash": "sha256-6aa2a4f8eb44ee20d4328cdb3cb17136b2ea9eb6810eba0824614648c87317f9",
-      "compositionSchemaHash": "sha256-6cbcd8d4aa386d6899b86a7a1612578a7a7f926588720e10e4f82aff1cbfd799"
+      "compositionSchemaHash": "sha256-0d0186adc338a19b218462309bf56f6703e5da3a227c524ba2562d58abe4e086"
     },
     "composition": {
       "kind": "matterhorn.app-composition.schema",
@@ -5576,6 +5576,12 @@
           "requiredRole": "member"
         },
         {
+          "name": "messageForward",
+          "plugin": "core",
+          "type": "message.forward",
+          "requiredRole": "member"
+        },
+        {
           "name": "directMessageForward",
           "plugin": "core",
           "type": "dm.message.forward",
@@ -5819,7 +5825,7 @@
           }
         }
       },
-      "schemaHash": "sha256-6cbcd8d4aa386d6899b86a7a1612578a7a7f926588720e10e4f82aff1cbfd799"
+      "schemaHash": "sha256-0d0186adc338a19b218462309bf56f6703e5da3a227c524ba2562d58abe4e086"
     },
     "capabilities": {
       "optional": [
@@ -5942,7 +5948,7 @@
       ]
     },
     "composition": {
-      "schemaHash": "sha256-6cbcd8d4aa386d6899b86a7a1612578a7a7f926588720e10e4f82aff1cbfd799",
+      "schemaHash": "sha256-0d0186adc338a19b218462309bf56f6703e5da3a227c524ba2562d58abe4e086",
       "primaryPlugin": {
         "id": "gg.matterhorn.mosh.plugin",
         "version": "1.0.0",
@@ -11465,6 +11471,12 @@
           "name": "directMessageUnpin",
           "plugin": "core",
           "type": "dm.message.unpin",
+          "requiredRole": "member"
+        },
+        {
+          "name": "messageForward",
+          "plugin": "core",
+          "type": "message.forward",
           "requiredRole": "member"
         },
         {
@@ -17234,6 +17246,12 @@
             "requiredRole": "member"
           },
           {
+            "name": "messageForward",
+            "plugin": "core",
+            "type": "message.forward",
+            "requiredRole": "member"
+          },
+          {
             "name": "directMessageForward",
             "plugin": "core",
             "type": "dm.message.forward",
@@ -17477,7 +17495,7 @@
             }
           }
         },
-        "schemaHash": "sha256-6cbcd8d4aa386d6899b86a7a1612578a7a7f926588720e10e4f82aff1cbfd799"
+        "schemaHash": "sha256-0d0186adc338a19b218462309bf56f6703e5da3a227c524ba2562d58abe4e086"
       }
     },
     {
@@ -17628,7 +17646,7 @@
             "gg.matterhorn.examples.plugins.screen-share",
             "gg.matterhorn.mosh.plugin"
           ],
-          "compositionSchemaHash": "sha256-6cbcd8d4aa386d6899b86a7a1612578a7a7f926588720e10e4f82aff1cbfd799"
+          "compositionSchemaHash": "sha256-0d0186adc338a19b218462309bf56f6703e5da3a227c524ba2562d58abe4e086"
         }
       ],
       "recommendedFor": {
@@ -23251,6 +23269,12 @@
         "requiredRole": "member"
       },
       {
+        "name": "messageForward",
+        "plugin": "core",
+        "type": "message.forward",
+        "requiredRole": "member"
+      },
+      {
         "name": "directMessageForward",
         "plugin": "core",
         "type": "dm.message.forward",
@@ -23494,7 +23518,7 @@
         }
       }
     },
-    "schemaHash": "sha256-6cbcd8d4aa386d6899b86a7a1612578a7a7f926588720e10e4f82aff1cbfd799"
+    "schemaHash": "sha256-0d0186adc338a19b218462309bf56f6703e5da3a227c524ba2562d58abe4e086"
   },
   "artifacts": {
     "composition": {
@@ -29029,6 +29053,12 @@
           "requiredRole": "member"
         },
         {
+          "name": "messageForward",
+          "plugin": "core",
+          "type": "message.forward",
+          "requiredRole": "member"
+        },
+        {
           "name": "directMessageForward",
           "plugin": "core",
           "type": "dm.message.forward",
@@ -29272,7 +29302,7 @@
           }
         }
       },
-      "schemaHash": "sha256-6cbcd8d4aa386d6899b86a7a1612578a7a7f926588720e10e4f82aff1cbfd799"
+      "schemaHash": "sha256-0d0186adc338a19b218462309bf56f6703e5da3a227c524ba2562d58abe4e086"
     },
     "model": {
       "kind": "matterhorn.primary-model.schema",
@@ -32545,6 +32575,11 @@
       "directMessageUnpin": {
         "plugin": "core",
         "type": "dm.message.unpin",
+        "requiredRole": "member"
+      },
+      "messageForward": {
+        "plugin": "core",
+        "type": "message.forward",
         "requiredRole": "member"
       },
       "directMessageForward": {

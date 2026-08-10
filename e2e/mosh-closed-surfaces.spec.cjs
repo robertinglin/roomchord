@@ -128,6 +128,16 @@ test.describe("Mosh closed public surfaces", () => {
     const provenance = forwarded.locator('[data-forwarded-kind="channel"]');
     await expect(provenance).toHaveAttribute("data-forwarded-scope-id", "general");
     await expect(provenance).toHaveAttribute("data-forwarded-message-id", sourceId);
+
+    await sourceMessage.hover();
+    await sourceMessage.getByRole("button", { name: /Forward message from/ }).click({ force: true });
+    await sourceMessage.getByRole("button", { name: "Forward to # guest" }).click();
+    await expect(channel.getByText("Message forwarded with encrypted file provenance.", { exact: true })).toBeVisible();
+
+    const guest = await openChannel(mosh.pages.admin, "guest");
+    const channelForward = messageRow(guest, body);
+    await expect(channelForward.getByRole("complementary", { name: "Shared files" })).toBeVisible();
+    await expect(channelForward.locator('[data-forwarded-kind="channel"]')).toHaveAttribute("data-forwarded-message-id", sourceId);
   });
 
   test("fails closed when provider-only Drive sharing is denied or has no eligible account", async ({ mosh }) => {

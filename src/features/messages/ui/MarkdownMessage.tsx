@@ -19,6 +19,7 @@ import {
 import { mentionSegments, renderMentionNames } from "@entities/chat/model/mentions";
 import { CloseIcon, MaximizeIcon } from "@shared/ui/Icons";
 import { MemberContextMenu } from "@shared/ui/MemberContextMenu";
+import { BotBadge } from "@shared/ui/BotBadge";
 
 const SINGLE_EMOJI_RE = /^(?:[\d#*]\uFE0F?\u20E3|\p{Regional_Indicator}{2}|\p{Extended_Pictographic}\uFE0F?\p{Emoji_Modifier}?(?:\u200D\p{Extended_Pictographic}\uFE0F?\p{Emoji_Modifier}?)*)$/u;
 
@@ -39,11 +40,13 @@ function singleEmojiBody(body: string) {
 function InlineText({
   currentUserId,
   memberNamesById,
+  memberKindsById,
   onDirectMessage,
   value
 }: {
   currentUserId?: string;
   memberNamesById: Record<string, string>;
+  memberKindsById: Record<string, "bot" | undefined>;
   onDirectMessage?: (memberId: string) => void;
   value: string;
 }) {
@@ -59,7 +62,7 @@ function InlineText({
             onDirectMessage={onDirectMessage}
             key={index}
           >
-            <span className="message-mention mention" data-member-id={segment.memberId}>{segment.text}</span>
+            <span className="message-mention mention" data-member-id={segment.memberId}>{segment.text}{memberKindsById[segment.memberId] === "bot" ? <> <BotBadge /></> : null}</span>
           </MemberContextMenu>
         );
       })}
@@ -70,12 +73,14 @@ function InlineText({
 function Inline({
   currentUserId,
   memberNamesById,
+  memberKindsById,
   onDirectMessage,
   onFullscreen,
   tokens
 }: {
   currentUserId?: string;
   memberNamesById: Record<string, string>;
+  memberKindsById: Record<string, "bot" | undefined>;
   onDirectMessage?: (memberId: string) => void;
   onFullscreen?: (embed: MarkdownEmbed) => void;
   tokens?: MarkdownToken[];
@@ -90,6 +95,7 @@ function Inline({
               <InlineText
                 currentUserId={currentUserId}
                 memberNamesById={memberNamesById}
+                memberKindsById={memberKindsById}
                 onDirectMessage={onDirectMessage}
                 value={token.value}
               />
@@ -133,17 +139,19 @@ function Inline({
 function MarkdownNodes({
   currentUserId,
   memberNamesById,
+  memberKindsById,
   nodes,
   onDirectMessage,
   onFullscreen
 }: {
   currentUserId?: string;
   memberNamesById: Record<string, string>;
+  memberKindsById: Record<string, "bot" | undefined>;
   nodes: MarkdownNode[];
   onDirectMessage?: (memberId: string) => void;
   onFullscreen: (embed: MarkdownEmbed) => void;
 }) {
-  const inlineProps = { currentUserId, memberNamesById, onDirectMessage, onFullscreen };
+  const inlineProps = { currentUserId, memberNamesById, memberKindsById, onDirectMessage, onFullscreen };
   return (
     <>
       {nodes.map((node, index) => {
@@ -385,11 +393,13 @@ export function MarkdownMessage({
   body,
   currentUserId,
   memberNamesById = {},
+  memberKindsById = {},
   onDirectMessage
 }: {
   body: string;
   currentUserId?: string;
   memberNamesById?: Record<string, string>;
+  memberKindsById?: Record<string, "bot" | undefined>;
   onDirectMessage?: (memberId: string) => void;
 }) {
   const displayBody = useMemo(() => renderMentionNames(body, memberNamesById), [body, memberNamesById]);
@@ -416,6 +426,7 @@ export function MarkdownMessage({
         <MarkdownNodes
           currentUserId={currentUserId}
           memberNamesById={memberNamesById}
+          memberKindsById={memberKindsById}
           nodes={parsed.nodes}
           onDirectMessage={onDirectMessage}
           onFullscreen={openFullscreen}
