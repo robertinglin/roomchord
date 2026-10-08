@@ -43,26 +43,47 @@ function setup() {
 }
 
 describe("authoritative DM operations", () => {
-  it("sends typed custom-media refs for channel and direct messages", async () => {
+  it("sends channel and direct messages without custom media plumbing", async () => {
     const { actions, live } = setup();
-    const ref = { mediaId: "media-1", scopeType: "channel", scopeId: "general", mediaType: "emoji" as const };
     live.state.directMessages = {};
-    await actions.sendChannelMessage("", [], [ref]);
-    expect(live.dispatch).toHaveBeenCalledWith("messageSend", expect.objectContaining({ customMediaRefs: [ref] }));
+    await actions.sendChannelMessage("hello", []);
+    expect(live.dispatch).toHaveBeenCalledWith("messageSend", expect.not.objectContaining({ customMediaRefs: expect.anything() }));
     live.state.directMessages = { "dm-message-1": { id: "dm-message-1", threadId: "dm_alice__bob", userIds: ["alice", "bob"], authorId: "bob", body: "hello" } };
-    await actions.sendDirectMessage("", [], [{ ...ref, scopeType: "direct.thread", scopeId: "dm_alice__bob" }]);
-    expect(live.dispatch).toHaveBeenCalledWith("directMessageSend", expect.objectContaining({ customMediaRefs: [{ mediaId: "media-1", scopeType: "direct.thread", scopeId: "dm_alice__bob", mediaType: "emoji" }] }));
-    await actions.replyToMessage("channel-message", "", ["reply-file"], [ref]);
-    expect(live.dispatch).toHaveBeenCalledWith("messageReply", expect.objectContaining({ attachmentIds: ["reply-file"], customMediaRefs: [ref] }));
+    await actions.sendDirectMessage("hello", []);
+    expect(live.dispatch).toHaveBeenCalledWith("directMessageSend", expect.not.objectContaining({ customMediaRefs: expect.anything() }));
+    await actions.replyToMessage("channel-message", "reply", ["reply-file"]);
+    expect(live.dispatch).toHaveBeenCalledWith("messageReply", expect.objectContaining({ attachmentIds: ["reply-file"] }));
     live.state.directMessages = { "dm-message-1": { id: "dm-message-1", threadId: "dm_alice__bob", userIds: ["alice", "bob"], authorId: "bob", body: "hello" } };
-    await actions.replyToMessage("dm-message-1", "", [], [{ ...ref, scopeType: "direct.thread", scopeId: "dm_alice__bob" }]);
-    expect(live.dispatch).toHaveBeenCalledWith("directMessageReply", expect.objectContaining({ customMediaRefs: [{ mediaId: "media-1", scopeType: "direct.thread", scopeId: "dm_alice__bob", mediaType: "emoji" }] }));
+    await actions.replyToMessage("dm-message-1", "reply", []);
+    expect(live.dispatch).toHaveBeenCalledWith("directMessageReply", expect.not.objectContaining({ customMediaRefs: expect.anything() }));
+  });
+
+  it("allows attachment-only sends and rejects truly empty messages", async () => {
+    const { actions, live } = setup();
+    live.state.directMessages = {};
+
+    await actions.sendChannelMessage("", []);
+    await actions.sendChannelMessage("", ["channel-file"]);
+    expect(live.dispatch).toHaveBeenCalledWith("messageSend", expect.objectContaining({ body: "", attachmentIds: ["channel-file"] }));
+
+    live.state.directMessages = { "dm-message-1": { id: "dm-message-1", threadId: "dm_alice__bob", userIds: ["alice", "bob"], authorId: "bob", body: "hello" } };
+    await actions.sendDirectMessage("", []);
+    await actions.sendDirectMessage("", ["direct-file"]);
+    expect(live.dispatch).toHaveBeenCalledWith("directMessageSend", expect.objectContaining({ body: "", attachmentIds: ["direct-file"] }));
+
+    await actions.replyToMessage("channel-message", "", []);
+    await actions.replyToMessage("channel-message", "", ["reply-file"]);
+    expect(live.dispatch).toHaveBeenCalledWith("messageReply", expect.objectContaining({ body: "", attachmentIds: ["reply-file"] }));
+
+    await actions.replyToMessage("dm-message-1", "", []);
+    await actions.replyToMessage("dm-message-1", "", ["dm-reply-file"]);
+    expect(live.dispatch).toHaveBeenCalledWith("directMessageReply", expect.objectContaining({ body: "", attachmentIds: ["dm-reply-file"] }));
   });
 
   it("validates and carries forum tag ids through channel sends and replies", async () => {
     const { actions, live } = setup();
-    await actions.sendChannelMessage("tagged", [], [], [" release ", "release", "​"]);
-    await actions.replyToMessage("channel-message", "tagged reply", [], [], ["support"]);
+    await actions.sendChannelMessage("tagged", [], [" release ", "release", "​"]);
+    await actions.replyToMessage("channel-message", "tagged reply", [], ["support"]);
     expect(live.dispatch).toHaveBeenNthCalledWith(1, "messageSend", expect.objectContaining({ tagIds: ["release", "\u200b"] }));
     expect(live.dispatch).toHaveBeenNthCalledWith(2, "messageReply", expect.objectContaining({ tagIds: ["support"] }));
   });
@@ -279,6 +300,30 @@ describe("authoritative DM operations", () => {
       ["fileRemove", { fileId: "file-only" }],
       ["attachmentRemove", { attachmentId: "attachment-only" }]
     ]);
+  });
+
+  it("distinguishes an unconfirmed deletion from incomplete file cleanup", async () => {
+    vi.useFakeTimers();
+    try {
+      const unconfirmed = setup();
+      unconfirmed.live.state.directMessages = {};
+      unconfirmed.live.dispatch.mockImplementation((operation: string) => operation === "messageDelete" ? new Promise(() => undefined) : Promise.resolve());
+      const deletion = unconfirmed.actions.deleteMessage("channel-message");
+      await vi.advanceTimersByTimeAsync(15_000);
+      await expect(deletion).resolves.toContain("Deletion was not confirmed");
+      expect(unconfirmed.live.dispatch).toHaveBeenCalledTimes(1);
+
+      const incomplete = setup();
+      incomplete.live.state.directMessages = {};
+      incomplete.live.state.messages = { "channel-message": { id: "channel-message", channelId: "general", body: "", attachmentIds: ["file-only"] } };
+      incomplete.live.state.files = { "file-only": { fileId: "file-only" } };
+      incomplete.live.dispatch.mockImplementation((operation: string) => operation === "fileRemove" ? new Promise(() => undefined) : Promise.resolve());
+      const cleanup = incomplete.actions.deleteMessage("channel-message");
+      await vi.advanceTimersByTimeAsync(15_000);
+      await expect(cleanup).resolves.toContain("Message deletion was confirmed");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("handles committed and draft direct-thread navigation with canonical reservation", async () => {

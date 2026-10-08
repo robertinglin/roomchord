@@ -77,18 +77,6 @@ export function threadActions(input: ChatActionHandlersInput) {
     await live.dispatch("commentsThreadUnlock", { threadId: threadId as ThreadId });
   }
 
-  async function followCommentThread(threadId: string) {
-    await live.dispatch("commentsThreadFollow", { threadId: threadId as ThreadId });
-  }
-
-  async function unfollowCommentThread(threadId: string) {
-    await live.dispatch("commentsThreadUnfollow", { threadId: threadId as ThreadId });
-  }
-
-  async function setCommentThreadNotifications(threadId: string, enabled: boolean) {
-    await live.dispatch("commentsThreadNotifications", { threadId: threadId as ThreadId, enabled });
-  }
-
   async function addCommentThreadMember(threadId: string, memberId: string) {
     if (!memberId.trim()) return;
     await live.dispatch("commentsThreadMemberAdd", { threadId: threadId as ThreadId, memberId: memberId.trim() });
@@ -113,14 +101,11 @@ export function threadActions(input: ChatActionHandlersInput) {
     createCommentThread,
     deleteThreadComment,
     editThreadComment,
-    followCommentThread,
     lockCommentThread,
     reactToThreadComment,
     removeCommentThreadMember,
     reopenCommentThread,
     resolveCommentThread,
-    setCommentThreadNotifications,
-    unfollowCommentThread,
     unlockCommentThread
   };
 }

@@ -30,7 +30,7 @@ function props() {
       voiceTokens: [],
       voiceModeration: {
         available: false as const,
-        unavailableReason: "Voice moderation is unavailable until Matterhorn exposes browser SFU policy refresh.",
+        unavailableReason: "Voice moderation is unavailable until authoritative media policy is ready.",
         relayStatus: "connected" as const,
         pending: false,
         clearError: vi.fn(),
@@ -47,7 +47,7 @@ describe("VoiceRoomView authoritative stage controls", () => {
   it("renders an explicit unavailable status instead of implying browser SFU enforcement", () => {
     const { view } = props();
     render(<VoiceRoomView {...view} />);
-    expect(screen.getByRole("status")).toHaveTextContent("browser SFU policy refresh");
+    expect(screen.getByRole("status")).toHaveTextContent("authoritative media policy is ready");
     expect(screen.queryByRole("button", { name: "Close stage" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Request to speak" })).not.toBeInTheDocument();
   });

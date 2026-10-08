@@ -57,6 +57,11 @@ describe("chat UI store", () => {
     actions.leaveEmptyDmView(false);
     actions.closeManageDialog();
     actions.openManageDialog("members", "bob");
+    expect(current.getState().manageDialog).toEqual({ tab: "members", memberId: "bob", channelId: undefined, roomId: undefined });
+    actions.openManageDialog("channels", "general");
+    expect(current.getState().manageDialog).toEqual({ tab: "channels", memberId: undefined, channelId: "general", roomId: undefined });
+    actions.openManageDialog("voice", "voice-1");
+    expect(current.getState().manageDialog).toEqual({ tab: "voice", memberId: undefined, channelId: undefined, roomId: "voice-1" });
     actions.openMemberProfileDialog("carol");
     actions.setSidebarOpen(false);
     actions.setSelectedMediaRoomId(undefined);

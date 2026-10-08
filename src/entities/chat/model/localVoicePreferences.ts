@@ -138,7 +138,6 @@ export function voiceProcessingSettingsFromPreferences(preferences: VoicePrefere
     voice.vad = {
       enabled: true,
       engine: "silero",
-      model: "v5",
       threshold: preferences.vadThreshold,
       hangoverMs: 500,
       baseAssetPath: sileroAssetPath()

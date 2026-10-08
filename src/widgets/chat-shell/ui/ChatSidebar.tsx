@@ -4,6 +4,7 @@ import { directCallMatchesThread, directCallPresenceLabel, type DirectCallThread
 import { useChatRuntime } from "@entities/chat/model/chatRuntime";
 import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
 import { ChannelSidebar } from "@features/channel-navigation/ui/ChannelSidebar";
+import { canViewChannelCategory } from "@entities/chat/model/channelGroups";
 import { DirectMessages } from "@features/direct-messages/ui/DirectMessages";
 import { UserControls } from "@features/user-controls/ui/UserControls";
 import { MtnHome } from "matterhorn-sdk/react";
@@ -16,6 +17,8 @@ import { SearchResults } from "@features/search/ui/SearchResults";
 import type { SearchFilters, SearchScope } from "@features/search/model/search";
 import { useRoomSearch } from "@features/search/model/useRoomSearch";
 import { PersonalProductivityPanel } from "@features/personal-productivity/ui/PersonalProductivityPanel";
+import type { MediaRoom } from "@entities/chat/model/types";
+import { markChannelRead as markChannelReadCursor } from "@entities/chat/model/channelRead";
 
 /** Map the live connection status to the design kit's dot tone. */
 function statusTone(status: string): "on" | "warn" | "off" {
@@ -49,7 +52,7 @@ export function ChatSidebar({
   onNavigate?: () => void;
   onOpenLaunchHomeRoom?: ChatProps["onOpenLaunchHomeRoom"];
 }) {
-  const { actions, directCalls, live, media, mediaDevices, productivity, view } = useChatRuntime();
+  const { actions, directCalls, live, media, mediaDevices, notificationPreferences, productivity, roomName, view } = useChatRuntime();
   const ui = useChatUiActions();
   const activeView = useChatUiStore((value) => value.activeView);
   const heldDirectCallRoomId = useChatUiStore((value) => value.heldDirectCallRoomId);
@@ -67,12 +70,32 @@ export function ChatSidebar({
     Boolean(directCalls.state.directRoomId && heldDirectCallRoomId === directCalls.state.directRoomId),
     directCalls.state.status
   );
+  const allCategories = live.state.categories || [];
+  const sidebarCategories = allCategories.filter((category) =>
+    !category.archivedAt && canViewChannelCategory(category, live.actor.memberId, view.actorRoleIds)
+  );
+  const knownCategoryIds = new Set(allCategories.map((category) => category.id));
+  const visibleCategoryIds = new Set(sidebarCategories.map((category) => category.id));
+  const sidebarChannels = view.channels.filter((channel) =>
+    !channel.categoryId || !knownCategoryIds.has(channel.categoryId) || visibleCategoryIds.has(channel.categoryId)
+  );
   function closeSidebar() {
     onClose?.();
   }
 
   function handleNavigate() {
     onNavigate?.();
+  }
+
+  function markChannelRead(channelId: string) {
+    void markChannelReadCursor(live, Object.values(live.state.messages || {}), channelId);
+  }
+
+  async function openVoiceChat(room: MediaRoom, categoryId?: string) {
+    if (!view.actorCanCreateChannels || !live.can("channelVoiceTextBind")) return;
+    const channelId = await actions.createVoiceTextChannel({ roomId: room.id, name: `${room.name} Chat`, categoryId });
+    ui.selectChannel(channelId);
+    handleNavigate();
   }
 
 
@@ -133,11 +156,17 @@ export function ChatSidebar({
           />
           <PersonalProductivityPanel productivity={productivity} />
           <ChannelSidebar
-            channels={view.channels}
-            categories={(live.state.categories || []).filter((category) => !category.archivedAt)}
+            channels={sidebarChannels}
+            categories={sidebarCategories}
             activeChannelId={activeView === "channel" ? view.currentChannelId : undefined}
             canCreateChannels={view.actorCanCreateChannels}
-            canManageCategories={view.actorCanManageRoles}
+            canManageChannels={live.can("channelRename") && live.can("channelArchive")}
+            canManageCategories={view.actorCanCreateCategories}
+            roleDefinitions={Object.values(live.state.roleDefinitions || {})}
+            memberOptions={authoritativeMemberOptions(live.state, view.memberNamesById)}
+            canManagePins={live.can("channelPin") && live.can("channelUnpin")}
+            notificationPreferences={notificationPreferences}
+            roomId={roomName}
             unreadCounts={view.topicUnreadCounts}
             voice={{
               state: live.state,
@@ -148,7 +177,8 @@ export function ChatSidebar({
               currentUserId: live.actor.memberId,
               currentRoleIds: view.actorRoleIds,
               mutedVoiceParticipantIds,
-              onCreate: (input) => actions.createMediaRoom({ name: input.name, group: input.group, allowsVideo: true }),
+              onCreate: (input) => actions.createMediaRoom({ name: input.name, categoryId: input.categoryId, position: input.position, allowsVideo: true }),
+              onArchive: actions.archiveMediaRoom,
               onDirectMessage: view.actorCanDirectMessage ? (memberId) => {
                 actions.openDirectThreadForMember(memberId);
                 handleNavigate();
@@ -157,10 +187,19 @@ export function ChatSidebar({
                 await actions.selectMediaRoom(room, media);
                 handleNavigate();
               },
+              onOpenSettings: (roomId) => ui.openManageDialog("voice", roomId),
+              onReorder: actions.reorderMediaRoom,
               onToggleVoiceParticipantMute: ui.toggleVoiceParticipantMute
             }}
             onCreateCategory={actions.createCategory}
-            onCreateChannel={actions.createTextChannel}
+            onCreateChannel={async (input) => { await actions.createTextChannel(input); }}
+            onArchiveChannel={actions.archiveTextChannel}
+            onOpenChannelSettings={(channelId) => ui.openManageDialog("channels", channelId)}
+            onMarkRead={markChannelRead}
+            onTogglePin={(kind, channelId, pinned) => actions.setChannelPinned(kind, channelId, pinned)}
+            onOpenVoiceChat={live.can("channelVoiceTextBind") && view.actorCanCreateChannels ? (room, categoryId) => { void openVoiceChat(room, categoryId).catch(() => undefined); } : undefined}
+            onReorderCategory={actions.reorderCategory}
+            onReorderChannel={actions.reorderTextChannel}
             onSelect={(channelId) => {
               ui.selectChannel(channelId);
               handleNavigate();

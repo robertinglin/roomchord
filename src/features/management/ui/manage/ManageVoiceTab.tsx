@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { MatterhornManagementAction, MatterhornManagementScope, MatterhornRoleRule } from "matterhorn-sdk/browser";
-import { optionalChannelGroup } from "@entities/chat/model/channelGroups";
 import { scopedRoomAccessSummary } from "@entities/chat/model/roles";
-import type { MediaRoom, RoleDefinition, RoomRoleAccess } from "@entities/chat/model/types";
+import type { ChannelCategory, MediaRoom, RoleDefinition, RoomRoleAccess, VoiceRoomPlacement } from "@entities/chat/model/types";
 import { RoleAccessEditor } from "@features/management/ui/manage/RoleFields";
 import type { RoomSettings } from "@entities/chat/model/managementTypes";
 import { Glyph } from "@shared/ui/design";
@@ -14,7 +13,10 @@ import * as stylex from "@stylexjs/stylex";
 type VoiceModalMode = "create" | "edit";
 
 export function ManageVoiceTab({
+  initialRoomId,
   canManageRooms,
+  categories,
+  placements,
   roles,
   rooms,
   permissionActions = [],
@@ -22,27 +24,33 @@ export function ManageVoiceTab({
   scopedRulesByRoom = {},
   onArchiveRoom,
   onCreateRoom,
+  onReorderRoom,
   onScopedRulesChange,
   onUpdateRoom
 }: {
+  initialRoomId?: string;
   canManageRooms: boolean;
+  categories: ChannelCategory[];
+  placements: VoiceRoomPlacement[];
   roles: RoleDefinition[];
   rooms: MediaRoom[];
   permissionActions?: MatterhornManagementAction[];
   permissionScopes?: MatterhornManagementScope[];
   scopedRulesByRoom?: Record<string, Record<string, MatterhornRoleRule[]>>;
   onArchiveRoom: (roomId: string) => void;
-  onCreateRoom: (input: { name: string; group?: string; allowsVideo: boolean; roleAccess?: RoomRoleAccess }) => void;
+  onCreateRoom: (input: { name: string; categoryId: string; position: number; allowsVideo: boolean; roleAccess?: RoomRoleAccess }) => void;
+  onReorderRoom: (roomId: string, categoryId: string, position: number) => void;
   onScopedRulesChange?: (roomId: string, roleId: string, rules: MatterhornRoleRule[]) => void;
   onUpdateRoom: (roomId: string, settings: RoomSettings) => void;
 }) {
+  const defaultCategoryId = categories.find((category) => category.id === "voice-rooms")?.id || categories[0]?.id || "";
   const [roomName, setRoomName] = useState("");
-  const [roomGroup, setRoomGroup] = useState("");
+  const [roomCategoryId, setRoomCategoryId] = useState(defaultCategoryId);
   const [roomAllowsVideo, setRoomAllowsVideo] = useState(true);
   const [roomRoleAccess, setRoomRoleAccess] = useState<RoomRoleAccess>({});
   const [editingRoomId, setEditingRoomId] = useState<string | undefined>();
   const [editRoomName, setEditRoomName] = useState("");
-  const [editRoomGroup, setEditRoomGroup] = useState("");
+  const [editRoomCategoryId, setEditRoomCategoryId] = useState("");
   const [editRoomAllowsVideo, setEditRoomAllowsVideo] = useState(true);
   const [editRoomLocked, setEditRoomLocked] = useState(false);
   const [editRoomRoleAccess, setEditRoomRoleAccess] = useState<RoomRoleAccess>({});
@@ -55,9 +63,10 @@ export function ManageVoiceTab({
   function createRoom(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!roomName.trim()) return;
-    onCreateRoom({ name: roomName.trim(), group: optionalChannelGroup(roomGroup), allowsVideo: roomAllowsVideo, roleAccess: roomRoleAccess });
+    if (!roomCategoryId) return;
+    const position = placements.filter((placement) => placement.categoryId === roomCategoryId).length;
+    onCreateRoom({ name: roomName.trim(), categoryId: roomCategoryId, position, allowsVideo: roomAllowsVideo, roleAccess: roomRoleAccess });
     setRoomName("");
-    setRoomGroup("");
     setRoomAllowsVideo(true);
     setRoomRoleAccess({});
     closeRoomModal();
@@ -65,19 +74,26 @@ export function ManageVoiceTab({
 
   function openCreateModal() {
     setEditingRoomId(undefined);
+    setRoomCategoryId(defaultCategoryId);
     setModalMode("create");
   }
 
   function openRoomEditor(room: MediaRoom) {
     setEditingRoomId(room.id);
     setEditRoomName(room.name);
-    setEditRoomGroup(room.group || "");
+    setEditRoomCategoryId(placements.find((placement) => placement.roomId === room.id)?.categoryId || defaultCategoryId);
     setEditRoomAllowsVideo(room.allowsVideo !== false);
     setEditRoomLocked(Boolean(room.locked));
     setEditRoomRoleAccess({ ...(room.roleAccess || {}) });
     setEditScopedRulesByRole(scopedRulesByRoom[room.id] || {});
     setModalMode("edit");
   }
+
+  useEffect(() => {
+    if (!initialRoomId) return;
+    const room = rooms.find((candidate) => candidate.id === initialRoomId);
+    if (room) openRoomEditor(room);
+  }, [initialRoomId]);
 
   function closeRoomModal() {
     setModalMode(undefined);
@@ -87,7 +103,12 @@ export function ManageVoiceTab({
   function saveRoom(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingRoomId || !editRoomName.trim()) return;
-    onUpdateRoom(editingRoomId, { name: editRoomName.trim(), group: optionalChannelGroup(editRoomGroup) || null, allowsVideo: editRoomAllowsVideo, locked: editRoomLocked, roleAccess: editRoomRoleAccess });
+    onUpdateRoom(editingRoomId, { name: editRoomName.trim(), allowsVideo: editRoomAllowsVideo, locked: editRoomLocked, roleAccess: editRoomRoleAccess });
+    const currentCategoryId = placements.find((placement) => placement.roomId === editingRoomId)?.categoryId;
+    if (editRoomCategoryId && editRoomCategoryId !== currentCategoryId) {
+      const position = placements.filter((placement) => placement.categoryId === editRoomCategoryId).length;
+      onReorderRoom(editingRoomId, editRoomCategoryId, position);
+    }
     closeRoomModal();
   }
 
@@ -111,7 +132,10 @@ export function ManageVoiceTab({
                 <div {...stylex.props(row.row)} key={room.id}>
                   <span {...stylex.props(row.rowMain)}>
                     <span {...stylex.props(row.rowTitle)}>{room.name}</span>
-                    <span {...stylex.props(row.rowSub)}>{[room.group || "General", scopedRoomAccessSummary(room, roles, scopedRulesByRoom[room.id])].join(" · ")}</span>
+                    <span {...stylex.props(row.rowSub)}>{[
+                      categories.find((category) => category.id === placements.find((placement) => placement.roomId === room.id)?.categoryId)?.name,
+                      scopedRoomAccessSummary(room, roles, scopedRulesByRoom[room.id])
+                    ].filter(Boolean).join(" · ")}</span>
                   </span>
                   <span {...stylex.props(row.rowEnd)}>
                     <button type="button" onClick={() => openRoomEditor(room)} {...stylex.props(button.btn, button.ghost, button.sm)}>Manage</button>
@@ -134,7 +158,7 @@ export function ManageVoiceTab({
         footer={(
           <>
             <button type="button" onClick={closeRoomModal} {...stylex.props(button.btn, button.ghost)}>Cancel</button>
-            <button type="submit" form="create-voice-form" disabled={!roomName.trim()} {...stylex.props(button.btn, button.primary)}>
+            <button type="submit" form="create-voice-form" disabled={!roomName.trim() || !roomCategoryId} {...stylex.props(button.btn, button.primary)}>
               <Glyph size={15}><><path d="M12 5v14M5 12h14" /></></Glyph>
               Create voice channel
             </button>
@@ -147,8 +171,10 @@ export function ManageVoiceTab({
             <input aria-label="Voice channel name" value={roomName} onChange={(event) => setRoomName(event.target.value)} placeholder="Design review" {...stylex.props(field.input)} />
           </label>
           <label {...stylex.props(field.field)}>
-            <span {...stylex.props(field.label)}>Group</span>
-            <input aria-label="Voice channel group" value={roomGroup} onChange={(event) => setRoomGroup(event.target.value)} placeholder="General" {...stylex.props(field.input)} />
+            <span {...stylex.props(field.label)}>Category</span>
+            <select aria-label="Voice channel category" value={roomCategoryId} onChange={(event) => setRoomCategoryId(event.target.value)} {...stylex.props(field.input)}>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
           </label>
           <div {...stylex.props(option.opt, option.optFirst)}>
             <span {...stylex.props(option.optMain)}>
@@ -190,8 +216,10 @@ export function ManageVoiceTab({
             <input aria-label="Manage voice channel name" value={editRoomName} onChange={(event) => setEditRoomName(event.target.value)} {...stylex.props(field.input)} />
           </label>
           <label {...stylex.props(field.field)}>
-            <span {...stylex.props(field.label)}>Group</span>
-            <input aria-label="Manage voice channel group" value={editRoomGroup} onChange={(event) => setEditRoomGroup(event.target.value)} {...stylex.props(field.input)} />
+            <span {...stylex.props(field.label)}>Category</span>
+            <select aria-label="Manage voice channel category" value={editRoomCategoryId} onChange={(event) => setEditRoomCategoryId(event.target.value)} {...stylex.props(field.input)}>
+              {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
           </label>
           <div {...stylex.props(option.opt, option.optFirst)}>
             <span {...stylex.props(option.optMain)}>

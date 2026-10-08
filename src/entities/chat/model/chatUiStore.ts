@@ -12,7 +12,7 @@ import type { LinkedMessageLocation } from "@entities/chat/model/chatViewModel";
 import type { ManagementTab } from "@entities/chat/model/managementTypes";
 
 export type ActiveView = "channel" | "dm" | "media";
-export type ManageDialogState = { profileOnly?: boolean; tab?: ManagementTab; memberId?: string };
+export type ManageDialogState = { profileOnly?: boolean; tab?: ManagementTab; memberId?: string; channelId?: string; roomId?: string };
 export type PendingComposerText = { id: number; text: string };
 
 export type ChatStorageKeys = {
@@ -67,7 +67,7 @@ export type ChatUiActions = {
   markDirectThreadRead(threadId: string, readAt: number): void;
   openDraftDirectThread(thread: DirectThread): void;
   openLinkedMessage(location: LinkedMessageLocation, hash: string): void;
-  openManageDialog(tab?: ManagementTab, memberId?: string): void;
+  openManageDialog(tab?: ManagementTab, targetId?: string): void;
   openMemberProfileDialog(memberId: string): void;
   queueComposerText(text: string): void;
   rememberVoiceJoin(roomId: string, media: CallMediaSettings, joinedAt?: number): void;
@@ -254,8 +254,13 @@ export function createChatUiStore(input: ChatUiStoreInput): ChatUiStore {
           return next;
         });
       },
-      openManageDialog(tab = "overview", memberId) {
-        set({ manageDialog: { tab, memberId } });
+      openManageDialog(tab = "overview", targetId) {
+        set({ manageDialog: {
+          tab,
+          memberId: tab === "members" ? targetId : undefined,
+          channelId: tab === "channels" ? targetId : undefined,
+          roomId: tab === "voice" ? targetId : undefined
+        } });
       },
       openMemberProfileDialog(memberId) {
         set({ manageDialog: { profileOnly: true, tab: "members", memberId } });

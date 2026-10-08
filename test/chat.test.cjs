@@ -111,6 +111,7 @@ test("Chat app behavior runs through Matterhorn testing helpers", async () => {
   const member = room.as(testActor("mina", { role: "member", displayName: "Mina" }));
 
   await admin.actions.channelCreate({ channelId: "launch", name: "launch", topic: "Planning", group: "Team", requiredRole: "member" });
+  await admin.actions.channelPin({ pinId: "channel:launch", channelId: "launch", channelKind: "channel" });
   await member.actions.messageSend({ channelId: "general", body: "Ready", embeds: [] });
 
   const channel = room.state.channels.find((item) => item.id === "launch");
@@ -119,15 +120,22 @@ test("Chat app behavior runs through Matterhorn testing helpers", async () => {
   assert.equal(channel.requiredRole, "member");
   assert.equal(channel.scopeType, "channel");
   assert.equal(channel.scopeId, "launch");
-  assert.equal(room.state.messages.message_op_2_messageSend.body, "Ready");
-  assert.equal(room.state.messages.message_op_2_messageSend.authorId, "mina");
+  assert.deepEqual(room.state.pinnedChannels, [{ id: "channel:launch", channelId: "launch", channelKind: "channel", pinnedAt: 1002, pinnedBy: "admin", archivedAt: null }]);
+  await assert.rejects(
+    () => member.actions.channelPin({ pinId: "channel:general", channelId: "general", channelKind: "channel" }),
+    /requires admin|not authorized|unauthorized/i
+  );
+  await admin.actions.channelUnpin({ pinId: "channel:launch", channelId: "launch", channelKind: "channel" });
+  assert.equal(room.state.pinnedChannels[0].archivedAt, 1004);
+  assert.equal(room.state.messages.message_op_3_messageSend.body, "Ready");
+  assert.equal(room.state.messages.message_op_3_messageSend.authorId, "mina");
   assert.equal(expectOperation(room.operations, "messageSend").actor.memberId, "mina");
 
   const replay = createTestRoom({ toJSON: () => app.compositionSchema }, {
     operationId: (operation) => `op_${operation.seq}_${operation.action}`
   });
   await replayOperations(replay, room.operations);
-  assert.equal(replay.state.messages.message_op_2_messageSend.body, "Ready");
+  assert.equal(replay.state.messages.message_op_3_messageSend.body, "Ready");
   await assert.rejects(() => room.dispatch("messageSend", { channelId: "general" }), /body is required/);
 });
 
@@ -298,10 +306,19 @@ test("Chat runtime room applies primary message operations through Matterhorn", 
 
   await admin.actions.channelCreate({ channelId: "launch", name: "launch", topic: "Planning", group: "Team", requiredRole: "member" });
   await member.actions.messageSend({ channelId: "general", body: "Ready", embeds: [] });
+  await member.actions.messageSend({ channelId: "general", body: "", attachmentIds: ["asset-file"] });
+  const attachmentMessage = Object.values((await room.state()).messages).find((item) => item.attachmentIds?.includes("asset-file"));
+  await member.actions.messageReply({ channelId: "general", replyToId: attachmentMessage.id, body: "", attachmentIds: ["voice-recording"] });
+  await assert.rejects(
+    () => member.actions.messageSend({ channelId: "general", body: "", attachmentIds: [] }),
+    /needs text or an attachment/
+  );
+
   const state = await room.state();
   const operations = room.operations;
   const channel = state.channels.find((item) => item.name === "launch");
   const message = Object.values(state.messages).find((item) => item.body === "Ready");
+  const voiceReply = Object.values(state.messages).find((item) => item.attachmentIds?.includes("voice-recording"));
 
   assert.equal(channel.topic, "Planning");
   assert.equal(channel.createdBy, "admin");
@@ -309,7 +326,10 @@ test("Chat runtime room applies primary message operations through Matterhorn", 
   assert.equal(channel.scopeType, "channel");
   assert.equal(channel.scopeId, channel.id);
   assert.equal(message.authorId, "mina");
-  assert.equal(operations.length, 2);
+  assert.equal(attachmentMessage.body, "");
+  assert.equal(voiceReply.body, "");
+  assert.equal(voiceReply.replyToId, attachmentMessage.id);
+  assert.equal(operations.length, 4);
   assert.equal(operations[1].schemaAction, "messageSend");
   assert.equal(operations[1].pluginId, app.hostPlugin.id);
   assert.equal(message.createdAt, operations[1].createdAt);

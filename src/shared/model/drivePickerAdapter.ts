@@ -6,7 +6,7 @@ import type { AttachmentPickerDriveEntry } from "@shared/model/attachmentPicker"
 
 export type DrivePickerEntry = AttachmentPickerDriveEntry;
 
-/** Drive operations shared by attachment and custom-media surfaces. */
+/** Drive operations used by attachment surfaces. */
 export type DrivePickerAdapter = {
   listConnections(): Promise<MatterhornThirdPartyConnection[]>;
   listFiles(connectionId: string, parentId?: string): Promise<DrivePickerEntry[]>;
@@ -19,6 +19,6 @@ export type DrivePickerAdapter = {
     scopeType: string;
     scopeId: string;
   }>;
-  uploadLocalFile(input: { connectionId: string; roomName: string; file: File; mimeType?: string }): Promise<MatterhornDriveRoomUploadResult>;
+  uploadLocalFile(input: { connectionId: string; roomId: string; file: File; mimeType?: string }): Promise<MatterhornDriveRoomUploadResult>;
   remove(connectionId: string, fileId: string): Promise<{ removed: boolean }>;
 };

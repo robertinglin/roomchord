@@ -16,7 +16,7 @@ describe("VoiceParticipantGrid authoritative moderation menu", () => {
   it("does not expose operations while browser SFU enforcement is unavailable", () => {
     const voiceModeration = {
       available: false as const,
-      unavailableReason: "Voice moderation is unavailable until Matterhorn exposes browser SFU policy refresh.",
+      unavailableReason: "Voice moderation is unavailable until authoritative media policy is ready.",
       relayStatus: "connected" as const,
       pending: false,
       clearError: vi.fn(),

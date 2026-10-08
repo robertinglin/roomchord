@@ -20,7 +20,12 @@ import { directCallCanRenderRoom, directCallMatchesThread, directCallPresenceLab
 import type { ChatState } from "@entities/chat/model/types";
 
 const state: ChatState = {
-  channels: [{ id: "general", name: "general", topic: "Room coordination" }],
+  categories: [
+    { id: "general", name: "General", position: 0 },
+    { id: "voice-rooms", name: "Voice Rooms", position: 1 }
+  ],
+  channels: [{ id: "general", name: "general", topic: "Room coordination", categoryId: "general", position: 0 }],
+  voiceRoomPlacements: [{ id: "media1", roomId: "media1", categoryId: "voice-rooms", position: 0 }],
   callRoutes: {},
   messages: { m1: { id: "m1", channelId: "general", authorName: "Mina", authorId: "mina", body: "Welcome to the live chat app", reactions: {}, pinnedAt: null, deletedAt: null, createdAt: 1 } },
   guests: {},
@@ -130,7 +135,7 @@ const testAppMetadata = {
 let callSignalSequence = 0;
 
 function boundCallSignal(sourceClientId: string, targetClientId: string, signal: any) {
-  const identity = loadCallIdentityForProfile({ roomName: "chat", profile: { id: sourceClientId } });
+  const identity = loadCallIdentityForProfile({ roomId: "chat", profile: { id: sourceClientId } });
   const createdAt = Date.now();
   const sourceClaim = {
     kind: "matterhorn.member-key-claim",
@@ -139,7 +144,6 @@ function boundCallSignal(sourceClientId: string, targetClientId: string, signal:
     scheme: "matterhorn.device-signing.v1",
     alg: "nostr-secp256k1",
     roomId: "chat",
-    roomName: "chat",
     memberId: sourceClientId,
     deviceId: `device-${sourceClientId}`,
     keyId: `key-${sourceClientId}`,
@@ -165,14 +169,14 @@ function boundCallSignal(sourceClientId: string, targetClientId: string, signal:
   return {
     type: "client/peer-signal",
     protocol: 1,
-    roomName: "chat",
+    roomId: "chat",
     sourceClientId,
     ...envelope,
     signal,
     sourceClaim,
     auth: signBoundCallSignal({
       ...envelope,
-      roomName: "chat",
+      roomId: "chat",
       sourceClientId,
       sourceClaim,
       signal,
@@ -188,6 +192,12 @@ function installTestMatterhornScope(
   hostOverrides: Record<string, unknown> = {}
 ) {
   resetMatterhornForTests();
+  const sendRoomOperation = vi.fn(async (operation) => {
+    if (operation.type === "read.tag.set" || operation.schemaAction === "read.tag.set") {
+      return { ok: true, operation };
+    }
+    return sendOperation(operation);
+  });
   installMatterhornAppScope({
     appId: "gg.matterhorn.mosh",
     appName: "Mosh",
@@ -197,7 +207,8 @@ function installTestMatterhornScope(
       appMetadata: testAppMetadata,
       getAppMetadata: () => testAppMetadata,
       getState: vi.fn(async () => initialState),
-      sendOperation,
+      sendOperation: sendRoomOperation,
+      getCallPublicKey: () => loadCallIdentityForProfile({ roomId: "chat", profile: { id: actor.memberId } }).pubkey,
       reserveDirectThread: vi.fn(async ({ userIds, topicKey }: { userIds: string[]; topicKey?: string }) => ({
         threadId: `reserved-${userIds.join("-")}${topicKey ? `-${topicKey}` : ""}`,
         userIds,
@@ -209,7 +220,7 @@ function installTestMatterhornScope(
     actor,
     envelope: { room: { id: "chat", name: "Chat" }, actor }
   });
-  return sendOperation;
+  return sendRoomOperation;
 }
 
 const fakeMediaRecorders: FakeMediaRecorder[] = [];
@@ -557,28 +568,29 @@ describe("ChatApp", () => {
     await user.type(await screen.findByLabelText("Voice channel name"), "Standup");
     await user.click(screen.getByRole("button", { name: "Create voice channel" }));
 
-    await waitFor(() => expect(sent).toHaveLength(3));
+    await waitFor(() => expect(sent).toHaveLength(4));
     expect(sent[0]).toMatchObject({ type: "channelCreate", schemaAction: "channelCreate", payload: { name: "launch", group: undefined } });
-    expect(sent[1]).toMatchObject({ schemaAction: "scopeParentSet", payload: { scopeType: "media-room", parentScopeType: "channel", parentScopeId: "general" } });
-    expect(sent[2]).toMatchObject({ type: "mediaRoomCreateScoped", schemaAction: "mediaRoomCreateScoped", payload: { name: "Standup", group: undefined, allowsVideo: true, parentScopeType: "channel", parentScopeId: "general" } });
+    expect(sent[1]).toMatchObject({ schemaAction: "scopeParentSet", payload: { scopeType: "media-room", parentScopeType: "category", parentScopeId: "voice-rooms" } });
+    expect(sent[2]).toMatchObject({ type: "mediaRoomCreateScoped", schemaAction: "mediaRoomCreateScoped", payload: { name: "Standup", allowsVideo: true, parentScopeType: "category", parentScopeId: "voice-rooms" } });
+    expect(sent[3]).toMatchObject({ schemaAction: "voiceRoomPlacementCreate", payload: { categoryId: "voice-rooms", position: 1 } });
   });
 
   it("collapses text and voice channel groups", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     const groupedState: ChatState = {
       ...state,
-      channels: [{ id: "general", name: "general", topic: "Room coordination", group: "Ops" }],
-      rooms: [{ id: "media1", name: "Launch Room", group: "Launch", allowsVideo: true, participants: {} }]
+      channels: [{ id: "general", name: "general", topic: "Room coordination", categoryId: "general", position: 0 }],
+      rooms: [{ id: "media1", name: "Launch Room", allowsVideo: true, participants: {} }]
     };
     renderChat(undefined, groupedState);
 
     expect(await screen.findByRole("button", { name: "#general" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Join Launch Room" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Ops" }));
+    await user.click(screen.getByRole("button", { name: "General" }));
     expect(screen.queryByRole("button", { name: "#general" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Launch" }));
+    await user.click(screen.getByRole("button", { name: "Voice Rooms" }));
     expect(screen.queryByRole("button", { name: "Join Launch Room" })).not.toBeInTheDocument();
   });
 
@@ -685,8 +697,15 @@ describe("ChatApp", () => {
   });
 
   it("does not restart state loading when default launch metadata is used", async () => {
-    const getState = vi.fn(async () => state);
-    installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), { getState });
+    const currentReadState: ChatState = {
+      ...state,
+      members: {
+        ...state.members,
+        alice: { ...state.members.alice, readTags: { "channel:general": { messageId: "m1", operationId: "m1" } } }
+      }
+    };
+    const getState = vi.fn(async () => currentReadState);
+    installTestMatterhornScope(currentReadState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: currentReadState, operation })), { getState });
 
     render(<ChatApp />);
 
@@ -699,7 +718,13 @@ describe("ChatApp", () => {
   });
 
   it("keeps the subscription snapshot when initial getState resolves later", async () => {
-    const subscribedState = stateWithMessage("Subscription snapshot");
+    const subscribedState: ChatState = {
+      ...stateWithMessage("Subscription snapshot"),
+      members: {
+        ...state.members,
+        alice: { ...state.members.alice, readTags: { "channel:general": { messageId: "m1", operationId: "m1" } } }
+      }
+    };
     const staleState = stateWithMessage("Stale getState snapshot");
     let resolveGetState: ((value: ChatState) => void) | undefined;
     const getState = vi.fn(() => new Promise<ChatState>((resolve) => {
@@ -727,10 +752,12 @@ describe("ChatApp", () => {
   });
 
   it("updates direct-message unread counts from room subscription pushes", async () => {
-    let subscriptionListener: ((next: ChatState) => void) | undefined;
+    const dmListeners: Array<(groups: any[]) => void> = [];
+    const firstGroup = { thread: state.directThreads.dm_alice__lee, messages: [state.directMessages.dm_msg_1], unreadCount: 1, firstUnreadMessageId: "dm_msg_1" };
     installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
-      subscribe(listener: (next: ChatState) => void) {
-        subscriptionListener = listener;
+      getDMs: () => [firstGroup],
+      subscribeDMs(listener: (groups: any[]) => void) {
+        dmListeners.push(listener);
         return vi.fn();
       }
     });
@@ -740,16 +767,56 @@ describe("ChatApp", () => {
     expect(await screen.findByRole("button", { name: "Lee, 1 unread DM" })).toBeInTheDocument();
 
     await act(async () => {
-      subscriptionListener?.({
-        ...state,
-        directMessages: {
-          ...state.directMessages,
-          dm_msg_2: { id: "dm_msg_2", threadId: "dm_alice__lee", body: "Second private hello", authorName: "Lee", authorId: "lee", reactions: {}, createdAt: 3 }
-        }
-      });
+      const secondMessage = { id: "dm_msg_2", threadId: "dm_alice__lee", body: "Second private hello", authorName: "Lee", authorId: "lee", reactions: {}, createdAt: 3 };
+      for (const listener of dmListeners) listener([{ ...firstGroup, messages: [...firstGroup.messages, secondMessage], unreadCount: 2 }]);
     });
 
     expect(await screen.findByRole("button", { name: "Lee, 2 unread DMs" })).toBeInTheDocument();
+  });
+
+  it("reorders channels when a live pin state subscription pushes without remounting", async () => {
+    const subscriptionListeners: Array<(next: ChatState) => void> = [];
+    const initialState: ChatState = {
+      ...state,
+      categories: [...state.categories],
+      channels: [
+        ...state.channels,
+        { id: "random", name: "random", topic: "Loose notes", categoryId: "general", position: 1 }
+      ],
+      pinnedChannels: [],
+      members: {
+        ...state.members,
+        alice: { ...state.members.alice, readTags: { "channel:general": { messageId: "m1", operationId: "m1" } } }
+      }
+    };
+    let latestState = initialState;
+    installTestMatterhornScope(initialState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: latestState, operation })), {
+      getState: () => latestState,
+      subscribe(listener: (next: ChatState) => void) {
+        subscriptionListeners.push(listener);
+        return vi.fn();
+      }
+    });
+
+    render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
+
+    const channelButtons = () => within(screen.getByRole("complementary", { name: "Room navigation" }))
+      .getAllByRole("button")
+      .filter((button) => button.getAttribute("aria-label")?.startsWith("#"));
+    await waitFor(() => expect(channelButtons().map((button) => button.getAttribute("aria-label"))).toEqual(["#general", "#random"]));
+    const generalButton = channelButtons()[0];
+
+    await act(async () => {
+      const nextState = {
+        ...initialState,
+        pinnedChannels: [{ id: "channel:random", channelId: "random", channelKind: "channel", pinnedAt: 4, pinnedBy: "alice", archivedAt: null }]
+      };
+      latestState = nextState;
+      for (const listener of subscriptionListeners) listener(nextState);
+    });
+
+    await waitFor(() => expect(channelButtons().map((button) => button.getAttribute("aria-label"))).toEqual(["#random", "#general"]));
+    expect(channelButtons()[1]).toBe(generalButton);
   });
 
   it("uses launcher direct groups for persisted direct-message read cursors", async () => {
@@ -757,36 +824,37 @@ describe("ChatApp", () => {
     const thread = state.directThreads.dm_alice__lee;
     const message = state.directMessages.dm_msg_1;
     const getDMs = vi.fn(() => [{ thread, messages: [message], unreadCount: 1, firstUnreadMessageId: message.id }]);
-    window.localStorage.setItem("matterhorn:notification-read-state", JSON.stringify({
-      version: 1,
-      kind: "personal-state",
+    let journal = {
+      revision: 1,
       value: {
-        kind: "matterhorn.notification-read-state.v1",
+        kind: "matterhorn.notification-journal.v1",
         version: 1,
-        userId: "alice",
+        roomId: "chat",
+        ownerId: "alice",
         updatedAt: 2,
-        rooms: {
-          chat: {
-            kind: "matterhorn.notification-read-cursors.v1",
-            version: 1,
-            roomName: "chat",
-            updatedAt: 2,
-            cursors: {
-              "direct.thread:dm_alice__lee": {
-                topic: "direct.thread:dm_alice__lee",
-                roomName: "chat",
-                scopeKey: "direct.thread:dm_alice__lee",
-                cursor: { createdAt: 2, operationId: "dm_msg_1" },
-                readAt: 2,
-                source: "manual"
-              }
-            }
+        deliveries: [],
+        receipts: [],
+        inbox: [],
+        read: {
+          "direct.thread:dm_alice__lee": {
+            cursor: { createdAt: 2, operationId: "dm_msg_1" },
+            readAt: 2,
+            source: "manual"
           }
-        }
+        },
+        productions: []
       }
-    }));
+    };
+    const getNotificationJournal = vi.fn(() => journal);
+    const compareAndSwapNotificationJournal = vi.fn(async (revision: number, next: typeof journal.value) => {
+      if (revision !== journal.revision) return { ok: false, revision: journal.revision };
+      journal = { revision: revision + 1, value: next };
+      return { ok: true, revision: journal.revision };
+    });
     installTestMatterhornScope(rawState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: rawState, operation })), {
-      getDMs
+      getDMs,
+      getNotificationJournal,
+      compareAndSwapNotificationJournal
     });
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
@@ -1539,6 +1607,10 @@ describe("ChatApp", () => {
       rooms: [
         state.rooms[0],
         { id: "media2", name: "Standup", allowsVideo: false, participants: {} }
+      ],
+      voiceRoomPlacements: [
+        ...state.voiceRoomPlacements,
+        { id: "media2", roomId: "media2", categoryId: "voice-rooms", position: 1 }
       ]
     };
     installTestMatterhornScope(twoRoomState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: twoRoomState, operation })), {
@@ -1622,7 +1694,7 @@ describe("ChatApp", () => {
     const sentToBob: unknown[] = [];
     const sentFromBob: unknown[] = [];
     const alice = new MeshRoomCallController({
-      roomName: "chat",
+      roomId: "chat",
       profile: { id: "alice", name: "Alice", avatar: "A" },
       getPeer: () => alicePeer as any,
       getPeerAddress: () => "peerjs:peer-alice",
@@ -1634,7 +1706,7 @@ describe("ChatApp", () => {
     });
     const bobStates: string[] = [];
     const bob = new MeshRoomCallController({
-      roomName: "chat",
+      roomId: "chat",
       profile: { id: "bob", name: "Bob", avatar: "B" },
       getPeer: () => bobPeer as any,
       getPeerAddress: () => "peerjs:peer-bob",
@@ -1753,7 +1825,7 @@ describe("ChatApp", () => {
     const sentFromBob: unknown[] = [];
     const bobStates: string[] = [];
     const alice = new MeshRoomCallController({
-      roomName: "chat",
+      roomId: "chat",
       profile: { id: "alice", name: "Alice", avatar: "A" },
       getPeer: () => alicePeer as any,
       getPeerAddress: () => "peerjs:peer-alice",
@@ -1764,7 +1836,7 @@ describe("ChatApp", () => {
       onError: vi.fn()
     });
     const bob = new MeshRoomCallController({
-      roomName: "chat",
+      roomId: "chat",
       profile: { id: "bob", name: "Bob", avatar: "B" },
       getPeer: () => bobPeer as any,
       getPeerAddress: () => "peerjs:peer-bob",
@@ -1813,7 +1885,7 @@ describe("ChatApp", () => {
     const sentToBob: unknown[] = [];
     const sentFromBob: unknown[] = [];
     const alice = new MeshRoomCallController({
-      roomName: "chat",
+      roomId: "chat",
       profile: { id: "alice", name: "Alice", avatar: "A" },
       getPeer: () => alicePeer as any,
       getPeerAddress: () => "peerjs:peer-alice",
@@ -1824,7 +1896,7 @@ describe("ChatApp", () => {
       onError: vi.fn()
     });
     const bob = new MeshRoomCallController({
-      roomName: "chat",
+      roomId: "chat",
       profile: { id: "bob", name: "Bob", avatar: "B" },
       getPeer: () => bobPeer as any,
       getPeerAddress: () => "peerjs:peer-bob",
@@ -1869,7 +1941,7 @@ describe("ChatApp", () => {
     await waitFor(() => expect(alicePeer.call).toHaveBeenCalledTimes(2));
     const screenCall = alicePeer.call.mock.calls[1] as unknown as [string, MediaStream, { metadata: { MatterhornMeshScreen: unknown } }];
     expect(screenCall[2].metadata.MatterhornMeshScreen).toMatchObject({
-      roomName: "chat",
+      roomId: "chat",
       mediaRoomId: "media1",
       sourceClientId: "alice",
       targetClientId: "bob"
@@ -2209,16 +2281,15 @@ describe("ChatApp", () => {
     await user.click(manageTab(manageDialog, "Voice"));
     await user.click(within(manageDialog).getByRole("button", { name: "New voice channel" }));
     await user.type(within(manageDialog).getByLabelText("Voice channel name"), "Design review");
-    await user.type(within(manageDialog).getByLabelText("Voice channel group"), "Crits");
     expect(within(manageDialog).getByLabelText("Allow camera")).toBeChecked();
     await user.click(within(manageDialog).getByRole("button", { name: "Create voice channel" }));
     await user.click(within(manageDialog).getByRole("button", { name: "Manage" }));
     await user.click(within(manageDialog).getByRole("button", { name: "Archive voice channel" }));
 
-    await waitFor(() => expect(sent.map((op) => op.schemaAction)).toEqual(["scopeParentSet", "mediaRoomCreateScoped", "mediaRoomArchive"]));
-    expect(sent[1]).toMatchObject({ type: "mediaRoomCreateScoped", schemaAction: "mediaRoomCreateScoped", payload: { name: "Design review", group: "Crits", allowsVideo: true, parentScopeType: "channel", parentScopeId: "general" } });
+    await waitFor(() => expect(sent.map((op) => op.schemaAction)).toEqual(["scopeParentSet", "mediaRoomCreateScoped", "voiceRoomPlacementCreate", "mediaRoomArchive"]));
+    expect(sent[1]).toMatchObject({ type: "mediaRoomCreateScoped", schemaAction: "mediaRoomCreateScoped", payload: { name: "Design review", allowsVideo: true, parentScopeType: "category", parentScopeId: "voice-rooms" } });
     expect(sent[1].payload).not.toHaveProperty("mode");
-    expect(sent[2]).toMatchObject({ type: "mediaRoomArchive", schemaAction: "mediaRoomArchive", payload: { roomId: "media1" } });
+    expect(sent[3]).toMatchObject({ type: "mediaRoomArchive", schemaAction: "mediaRoomArchive", payload: { roomId: "media1" } });
   });
 
   it("filters role-gated rooms and marks read-only rooms as unavailable to join", async () => {
@@ -2228,6 +2299,11 @@ describe("ChatApp", () => {
         { id: "open", name: "Open Room", allowsVideo: true, participants: {} },
         { id: "readonly", name: "Readonly Room", allowsVideo: true, participants: {}, roleAccess: { member: "readonly" } },
         { id: "staff", name: "Staff Room", allowsVideo: true, participants: {}, roleAccess: { moderator: "editor" } }
+      ],
+      voiceRoomPlacements: [
+        { id: "open", roomId: "open", categoryId: "voice-rooms", position: 0 },
+        { id: "readonly", roomId: "readonly", categoryId: "voice-rooms", position: 1 },
+        { id: "staff", roomId: "staff", categoryId: "voice-rooms", position: 2 }
       ]
     }, { memberId: "lee", deviceId: "dev_lee", role: "member", displayName: "Lee" });
 
@@ -2339,7 +2415,7 @@ describe("ChatApp", () => {
       pushToTalk: true,
       pttKey: "F24"
     }));
-    expect(updateMedia.mock.calls.some(([, media]) => media.voice?.vad?.engine === "silero" && media.voice.vad.model === "v5")).toBe(true);
+    expect(updateMedia.mock.calls.some(([, media]) => media.voice?.vad?.engine === "silero")).toBe(true);
     expect(updateMedia).toHaveBeenLastCalledWith(state.rooms[0], expect.objectContaining({
       audio: false,
       video: false,

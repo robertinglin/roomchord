@@ -9,7 +9,8 @@ const styles = stylex.create({
     display: "flex",
     alignItems: "center",
     gap: "6px",
-    padding: "0 8px 6px",
+    minHeight: "18px",
+    padding: "3px 8px",
     fontSize: "11px",
     fontWeight: 700,
     letterSpacing: "0.08em",
@@ -49,6 +50,12 @@ const styles = stylex.create({
     display: "inline-flex",
   },
   chevOpen: { transform: "rotate(90deg)" },
+  dragging: { opacity: 0.42 },
+  dropInside: {
+    color: tokens.accent,
+    backgroundColor: tokens.accentSoft,
+    borderRadius: tokens.radiusItem,
+  },
 });
 
 export function GroupHeading({
@@ -57,12 +64,18 @@ export function GroupHeading({
   open = true,
   onAdd,
   onToggle,
+  dragProps,
+  dragging,
+  dropPosition,
 }: {
   addLabel?: string;
   label: string;
   open?: boolean;
   onAdd?: () => void;
   onToggle?: () => void;
+  dragProps?: React.HTMLAttributes<HTMLDivElement> & Record<string, unknown>;
+  dragging?: boolean;
+  dropPosition?: "before" | "after" | "inside";
 }) {
   const chev = (
     <span {...stylex.props(styles.chev, open && styles.chevOpen)}>
@@ -72,7 +85,14 @@ export function GroupHeading({
   const labelEl = <span {...stylex.props(styles.label)}>{label}</span>;
 
   return (
-    <div {...stylex.props(styles.head)}>
+    <div
+      {...stylex.props(
+        styles.head,
+        dragging && styles.dragging,
+        dropPosition === "inside" && styles.dropInside
+      )}
+      {...dragProps}
+    >
       {onToggle ? (
         <button
           {...stylex.props(styles.toggle)}

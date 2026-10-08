@@ -18,11 +18,11 @@ function fixture() {
   return { live: { personal }, personal };
 }
 
-const input = { roomName: "room", scopeType: "channel", scopeId: "general", messageId: "message-1" };
+const input = { roomId: "room", scopeType: "channel", scopeId: "general", messageId: "message-1" };
 
 describe("personal productivity", () => {
   it("builds stable room-scoped bookmark and reminder inputs", () => {
-    expect(bookmarkInput(input)).toMatchObject({ id: "bookmark:message-1", roomName: "room", scopeId: "general" });
+    expect(bookmarkInput(input)).toMatchObject({ id: "bookmark:message-1", roomId: "room", scopeId: "general" });
     expect(reminderInput(input, 200)).toMatchObject({ id: "reminder:message-1", dueAt: 200, scopeType: "channel" });
   });
 

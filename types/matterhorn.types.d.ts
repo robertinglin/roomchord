@@ -38,7 +38,7 @@ export namespace Mosh {
   export interface PresenceMember { memberId: MemberId; name?: string; status: PresenceStatus; activity: string | null; location: string | null; updatedAt?: number; lastPingAt?: number; visible?: boolean; avatarUrl?: string; }
 
   /** From the comments plugin. */
-  export interface CommentThread { id: ThreadId; scopeType: ScopeType; scopeId: string; title: string | null; visibility: "members" | "moderators" | "private" | (string & {}); source?: { kind: "channel" | "direct.thread" | (string & {}); scopeId: string; messageId: MessageId } | null; privateMemberIds: MemberId[]; followers: MemberId[]; notificationPreferences: Record<MemberId, boolean>; lifecycle: "open" | "archived" | "locked" | (string & {}); resolved: boolean; createdBy?: MemberId; createdByName?: string; createdAt: number; lastCommentAt?: number; resolvedAt?: number; resolvedBy?: MemberId; archivedAt?: number; lockedAt?: number; }
+  export interface CommentThread { id: ThreadId; scopeType: ScopeType; scopeId: string; title: string | null; visibility: "members" | "moderators" | "private" | (string & {}); source?: { kind: "channel" | "direct.thread" | (string & {}); scopeId: string; messageId: MessageId } | null; privateMemberIds: MemberId[]; lifecycle: "open" | "archived" | "locked" | (string & {}); resolved: boolean; createdBy?: MemberId; createdByName?: string; createdAt: number; lastCommentAt?: number; resolvedAt?: number; resolvedBy?: MemberId; archivedAt?: number; lockedAt?: number; }
   /** From the comments plugin. */
   export interface Comment { id: CommentId; threadId: ThreadId; scopeType?: ScopeType; scopeId?: string; parentId?: CommentId | null; body: string; authorId: MemberId; authorName?: string; createdAt: number; updatedAt?: number; editedAt?: number; deletedAt?: number | null; deleteReason?: string; reactions: Reactions; }
   /** Comments and threads visible in one scope. */
@@ -114,6 +114,8 @@ export namespace Mosh {
    * From primary model collection `categories`.
    */
   export interface Category {
+    allowedMemberIds: string[];
+    allowedRoleIds: string[];
     archivedAt: null | number;
     createdAt: number;
     createdBy: MemberId;
@@ -123,6 +125,7 @@ export namespace Mosh {
     scopeId: string;
     scopeType: string;
     updatedAt?: number;
+    visibility: "public" | "private";
   }
   /**
    * From primary model collection `channels`.
@@ -207,6 +210,19 @@ export namespace Mosh {
     tagIds: string[];
   }
   /**
+   * From primary model collection `pinnedChannels`.
+   */
+  export interface PinnedChannel {
+    /**
+     * omit to leave unchanged; null to clear.
+     */
+    archivedAt?: null | number;
+    channelId?: ChannelId;
+    channelKind?: "channel" | "voice";
+    pinnedAt?: number;
+    pinnedBy?: MemberId;
+  }
+  /**
    * From primary model collection `publicInvites`.
    */
   export interface PublicInvite {
@@ -228,6 +244,15 @@ export namespace Mosh {
     rank: number;
     systemRole: boolean;
   }
+  /**
+   * From primary model collection `voiceRoomPlacements`.
+   */
+  export interface VoiceRoomPlacement {
+    categoryId: string;
+    id: string;
+    position: number;
+    roomId: RoomId;
+  }
   export interface State {
     access: CoreAccessState;
     activity: Activity[];
@@ -240,9 +265,11 @@ export namespace Mosh {
     joinRequests: Record<string, JoinRequest>;
     members: Record<string, Member>;
     messages: Record<MessageId, Message>;
+    pinnedChannels: PinnedChannel[];
     presence: Record<string, RoomPresence>;
     publicInvites: PublicInvite[];
     roleDefinitions: Record<RoleId, RoleDefinition>;
+    voiceRoomPlacements: VoiceRoomPlacement[];
   }
   export interface DirectMessageThread { thread: DirectThread; messages: DirectMessage[]; readTag?: ReadTagRecord; unreadCount?: number; firstUnreadMessageId?: MessageId; }
   export interface Actions {
@@ -256,8 +283,11 @@ export namespace Mosh {
      * categoryId: string, <= 200
      * name: string, <= 80
      * position: number, >= 0
+     * visibility: enum
+     * allowedRoleIds: array, <= 64
+     * allowedMemberIds: array, <= 128
      */
-    categoryCreate: { categoryId: string; name: string; position?: number };
+    categoryCreate: { categoryId: string; name: string; position?: number; visibility?: "public" | "private"; allowedRoleIds?: string[]; allowedMemberIds?: string[] };
     /**
      * Requires `admin` role.
      * categoryId: string, <= 200
@@ -291,6 +321,13 @@ export namespace Mosh {
      */
     channelCreate: { channelId: ChannelId; name: string; requiredRole: string; topic?: null | string; group?: null | string; categoryId?: null | string; position?: number; visibility?: "public" | "private"; allowedRoleIds?: string[]; allowedMemberIds?: string[] };
     /**
+     * Requires `admin` role.
+     * pinId: string, <= 420
+     * channelId: string, <= 200
+     * channelKind: enum
+     */
+    channelPin: { pinId: string; channelId: ChannelId; channelKind: "channel" | "voice" };
+    /**
      * Requires `moderator` role.
      * channelId: string, <= 200
      * name: string, <= 80, nullable, omit to leave unchanged; null to clear
@@ -304,6 +341,20 @@ export namespace Mosh {
      * allowedMemberIds: array, <= 128
      */
     channelRename: { channelId: ChannelId; name?: null | string; topic?: null | string; group?: null | string; categoryId?: null | string; position?: number; visibility?: "public" | "private"; requiredRole?: string; allowedRoleIds?: string[]; allowedMemberIds?: string[] };
+    /**
+     * Requires `moderator` role.
+     * channelId: string, <= 200
+     * categoryId: string, <= 200
+     * position: number, >= 0
+     */
+    channelReorder: { channelId: ChannelId; categoryId: string; position: number };
+    /**
+     * Requires `admin` role.
+     * pinId: string, <= 420
+     * channelId: string, <= 200
+     * channelKind: enum
+     */
+    channelUnpin: { pinId: string; channelId: ChannelId; channelKind: "channel" | "voice" };
     /**
      * Requires `admin` role.
      * inviteId: string, <= 200
@@ -403,6 +454,20 @@ export namespace Mosh {
      */
     messageUnpin: { messageId: MessageId };
     /**
+     * Requires `moderator` role.
+     * roomId: string, <= 200
+     * categoryId: string, <= 200
+     * position: number, >= 0
+     */
+    "voice-roomPlacementCreate": { roomId: RoomId; categoryId: string; position: number };
+    /**
+     * Requires `moderator` role.
+     * roomId: string, <= 200
+     * categoryId: string, <= 200
+     * position: number, >= 0
+     */
+    "voice-roomPlacementUpdate": { roomId: RoomId; categoryId: string; position: number };
+    /**
      * body: string
      * threadId: string
      * scopeType: string
@@ -446,10 +511,6 @@ export namespace Mosh {
      */
     commentsThreadCreate: { title?: string; visibility?: string; source?: string; sourceMessage?: string; memberIds?: string; privateMemberIds?: string } & ScopeRef;
     /**
-     * Requires `member` role.
-     */
-    commentsThreadFollow: { [key: string]: unknown };
-    /**
      * Requires `moderator` role.
      */
     commentsThreadLock: { [key: string]: unknown };
@@ -462,17 +523,9 @@ export namespace Mosh {
      */
     commentsThreadMemberRemove: { [key: string]: unknown };
     /**
-     * Requires `member` role.
-     */
-    commentsThreadNotifications: { [key: string]: unknown };
-    /**
      * Requires `moderator` role.
      */
     commentsThreadReopen: { [key: string]: unknown };
-    /**
-     * Requires `member` role.
-     */
-    commentsThreadUnfollow: { [key: string]: unknown };
     /**
      * Requires `moderator` role.
      */
@@ -775,6 +828,20 @@ export namespace Mosh {
     "channelVoice-textBind": { channelId: ChannelId; mediaRoomId: string };
     /**
      * Requires `moderator` role.
+     * roomId: string, <= 200
+     * categoryId: string, <= 200
+     * position: number, >= 0
+     */
+    voiceRoomPlacementCreate: { roomId: RoomId; categoryId: string; position: number };
+    /**
+     * Requires `moderator` role.
+     * roomId: string, <= 200
+     * categoryId: string, <= 200
+     * position: number, >= 0
+     */
+    voiceRoomPlacementUpdate: { roomId: RoomId; categoryId: string; position: number };
+    /**
+     * Requires `moderator` role.
      */
     mediaRoomCreateScoped: { [key: string]: unknown };
     /**
@@ -1016,7 +1083,10 @@ export namespace Mosh {
     categoryUpdate: "category.update";
     channelArchive: "channel.archive";
     channelCreate: "channel.create";
+    channelPin: "channel.pin";
     channelRename: "channel.rename";
+    channelReorder: "channel.reorder";
+    channelUnpin: "channel.unpin";
     inviteDisable: "invite.disable";
     inviteRemove: "invite.remove";
     joinApprove: "join.approve";
@@ -1032,6 +1102,8 @@ export namespace Mosh {
     messageReply: "message.reply";
     messageSend: "message.send";
     messageUnpin: "message.unpin";
+    "voice-roomPlacementCreate": "voice-room.placement.create";
+    "voice-roomPlacementUpdate": "voice-room.placement.update";
     commentsAdd: "comments.add";
     commentsDelete: "comments.delete";
     commentsEdit: "comments.edit";
@@ -1039,13 +1111,10 @@ export namespace Mosh {
     commentsResolve: "comments.resolve";
     commentsThreadArchive: "comments.thread.archive";
     commentsThreadCreate: "comments.thread.create";
-    commentsThreadFollow: "comments.thread.follow";
     commentsThreadLock: "comments.thread.lock";
     commentsThreadMemberAdd: "comments.thread.member.add";
     commentsThreadMemberRemove: "comments.thread.member.remove";
-    commentsThreadNotifications: "comments.thread.notifications";
     commentsThreadReopen: "comments.thread.reopen";
-    commentsThreadUnfollow: "comments.thread.unfollow";
     commentsThreadUnlock: "comments.thread.unlock";
     presenceClear: "presence.clear";
     presencePing: "presence.ping";
@@ -1097,6 +1166,8 @@ export namespace Mosh {
     channelSpeakerPolicy: "channel.speaker.policy";
     channelThreadPolicy: "channel.thread.policy";
     "channelVoice-textBind": "channel.voice-text.bind";
+    voiceRoomPlacementCreate: "voice-room.placement.create";
+    voiceRoomPlacementUpdate: "voice-room.placement.update";
     mediaRoomCreateScoped: "media.room.create.v2";
     roleCreate: "access.role.define";
     roleUpdate: "access.role.update";
@@ -1143,7 +1214,10 @@ export namespace Mosh {
     categoryUpdate: { operationType: "category.update"; authorize: { roles: ["admin"] } };
     channelArchive: { operationType: "channel.archive"; authorize: { roles: ["moderator"]; scoped: { scopeType: "channel"; record: { collection: "channels"; idField: "channelId"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
     channelCreate: { operationType: "channel.create"; authorize: { roles: ["admin"] } };
+    channelPin: { operationType: "channel.pin"; authorize: { roles: ["admin"] } };
     channelRename: { operationType: "channel.rename"; authorize: { roles: ["moderator"]; scoped: { scopeType: "channel"; record: { collection: "channels"; idField: "channelId"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    channelReorder: { operationType: "channel.reorder"; authorize: { roles: ["moderator"]; scoped: { scopeType: "channel"; record: { collection: "channels"; idField: "channelId"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
+    channelUnpin: { operationType: "channel.unpin"; authorize: { roles: ["admin"] } };
     inviteDisable: { operationType: "invite.disable"; authorize: { roles: ["admin"] } };
     inviteRemove: { operationType: "invite.remove"; authorize: { roles: ["admin"] } };
     joinApprove: { operationType: "join.approve"; authorize: { roles: ["admin"] } };
@@ -1159,6 +1233,8 @@ export namespace Mosh {
     messageReply: { operationType: "message.reply"; authorize: { roles: ["guest", "member"]; scoped: { scopeType: "channel"; payloadScopeIdField: "channelId"; minimumLevel: "editor" } } };
     messageSend: { operationType: "message.send"; authorize: { roles: ["guest", "member"]; scoped: { scopeType: "channel"; payloadScopeIdField: "channelId"; minimumLevel: "editor" } } };
     messageUnpin: { operationType: "message.unpin"; authorize: { roles: ["moderator"]; scoped: { scopeType: "channel"; record: { collection: "messages"; idField: "messageId"; scopeIdField: "channelId" }; minimumLevel: "moderator" } } };
+    "voice-roomPlacementCreate": { operationType: "voice-room.placement.create"; authorize: { roles: ["moderator"] } };
+    "voice-roomPlacementUpdate": { operationType: "voice-room.placement.update"; authorize: { roles: ["moderator"] } };
     commentsAdd: { operationType: "comments.add"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; record: { collection: "threads"; idField: "threadId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "editor" } } };
     commentsDelete: { operationType: "comments.delete"; authorize: { scoped: { record: { collection: "comments"; idField: "commentId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId"; ownerField: "authorId" }; minimumLevel: "moderator"; ownerAllowed: true } } };
     commentsEdit: { operationType: "comments.edit"; authorize: { scoped: { record: { collection: "comments"; idField: "commentId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId"; ownerField: "authorId" }; minimumLevel: "moderator"; ownerAllowed: true } } };
@@ -1166,13 +1242,10 @@ export namespace Mosh {
     commentsResolve: { operationType: "comments.resolve"; authorize: { scoped: { record: { collection: "threads"; idField: "threadId"; scopeTypeField: "scopeType"; scopeIdField: "scopeId" }; minimumLevel: "moderator" } } };
     commentsThreadArchive: { operationType: "comments.thread.archive" };
     commentsThreadCreate: { operationType: "comments.thread.create"; authorize: { scoped: { payloadScopeTypeField: "scopeType"; payloadScopeIdField: "scopeId"; minimumLevel: "editor" } } };
-    commentsThreadFollow: { operationType: "comments.thread.follow" };
     commentsThreadLock: { operationType: "comments.thread.lock" };
     commentsThreadMemberAdd: { operationType: "comments.thread.member.add" };
     commentsThreadMemberRemove: { operationType: "comments.thread.member.remove" };
-    commentsThreadNotifications: { operationType: "comments.thread.notifications" };
     commentsThreadReopen: { operationType: "comments.thread.reopen" };
-    commentsThreadUnfollow: { operationType: "comments.thread.unfollow" };
     commentsThreadUnlock: { operationType: "comments.thread.unlock" };
     presenceClear: { operationType: "presence.clear"; authorize: { roles: ["member"] } };
     presencePing: { operationType: "presence.ping"; authorize: { roles: ["member"] } };
@@ -1224,6 +1297,8 @@ export namespace Mosh {
     channelSpeakerPolicy: { operationType: "channel.speaker.policy" };
     channelThreadPolicy: { operationType: "channel.thread.policy" };
     "channelVoice-textBind": { operationType: "channel.voice-text.bind"; authorize: { roles: ["moderator"] } };
+    voiceRoomPlacementCreate: { operationType: "voice-room.placement.create"; authorize: { roles: ["moderator"] } };
+    voiceRoomPlacementUpdate: { operationType: "voice-room.placement.update"; authorize: { roles: ["moderator"] } };
     mediaRoomCreateScoped: { operationType: "media.room.create.v2" };
     roleCreate: { operationType: "access.role.define"; authorize: { roles: ["admin"] } };
     roleUpdate: { operationType: "access.role.update"; authorize: { roles: ["admin"] } };

@@ -43,6 +43,7 @@ export function VoiceMember({
   deafened,
   muted,
   name,
+  hideName,
   speaking,
   onClick,
   wrap,
@@ -51,6 +52,7 @@ export function VoiceMember({
   deafened?: boolean;
   muted?: boolean;
   name: string;
+  hideName?: boolean;
   speaking?: boolean;
   onClick?: () => void;
   /** Wrap the rendered row (e.g. in a <MemberContextMenu> trigger). */
@@ -58,8 +60,8 @@ export function VoiceMember({
 }) {
   const row = (
     <div {...stylex.props(styles.row)} onClick={onClick}>
-      <Avatar avatar={avatar} name={name} size="sm" ring alt={name} />
-      <span {...stylex.props(styles.name, speaking && styles.speaking)}>{name}</span>
+      <Avatar avatar={hideName ? undefined : avatar} name={hideName ? "Voice participant" : name} size="sm" ring alt={hideName ? "Voice participant" : name} />
+      <span {...stylex.props(styles.name, speaking && styles.speaking)}>{hideName ? "••••••" : name}</span>
       {muted ? (
         <span {...stylex.props(styles.stateIcon)} aria-label="Muted">
           <MicOffGlyph size={14} />

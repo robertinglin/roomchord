@@ -21,14 +21,15 @@ import type { AttachmentPickerConfig } from "@shared/model/attachmentPicker";
 import { ThreadPanel } from "@shared/ui/ThreadPanel";
 import type { RoomHistoryState } from "@features/messages/model/useRoomHistory";
 import type { PersonalUnreadMarker } from "matterhorn-sdk/client";
-import type { MatterhornBookmark, MatterhornCustomMediaMessageReference, MatterhornReminder } from "matterhorn-sdk/browser";
-import type { CustomMediaMessageItem } from "@shared/model/customMediaMessage";
+import type { MatterhornBookmark, MatterhornReminder } from "matterhorn-sdk/browser";
+import type { NotificationPreferencesController } from "@entities/chat/model/useNotificationPreferences";
+import type { NotificationScope } from "matterhorn-sdk/browser";
 import { filterForumPosts, normalizeForumTagIds, type ForumLayout, type ForumTag } from "@entities/community/model/forum";
 import { ForumPostFilter } from "@entities/community/ui/ForumPostFilter";
 import { messageAnchorId } from "@entities/chat/model/messageLinks";
 
 export type { MessageForwardTarget };
-export type MessageForwardStatus = { kind: "success" | "error"; message: string };
+export type MessageForwardStatus = { kind: "success" | "error"; message: string; actionLabel?: string; onAction?: () => void };
 
 export type MessageFeedProps = {
   title: string;
@@ -51,8 +52,8 @@ export type MessageFeedProps = {
   onArchiveForumTag?: (tagId: string) => void;
   disabled?: boolean;
   feedKey?: string;
-  onSend: (body: string, customMediaRefs?: MatterhornCustomMediaMessageReference[], forumTagIds?: string[]) => void;
-  onReply?: (messageId: string, body: string, customMediaRefs?: MatterhornCustomMediaMessageReference[], forumTagIds?: string[]) => void;
+  onSend: (body: string, forumTagIds?: string[]) => void;
+  onReply?: (messageId: string, body: string, forumTagIds?: string[]) => void;
   onReact?: (messageId: string, emoji: string) => void;
   onForward?: (message: Message, target: MessageForwardTarget) => void;
   forwardStatus?: MessageForwardStatus;
@@ -70,9 +71,9 @@ export type MessageFeedProps = {
   onReopenThread?: (threadId: string) => void;
   onLockThread?: (threadId: string) => void;
   onUnlockThread?: (threadId: string) => void;
-  onFollowThread?: (threadId: string) => void;
-  onUnfollowThread?: (threadId: string) => void;
-  onSetThreadNotifications?: (threadId: string, enabled: boolean) => void;
+  notificationCategoryId?: string;
+  notificationPreferences?: NotificationPreferencesController;
+  notificationRoomId?: string;
   onAddThreadMember?: (threadId: string, memberId: string) => void;
   onRemoveThreadMember?: (threadId: string, memberId: string) => void;
   canDeleteMessage?: (message: Message) => boolean;
@@ -100,9 +101,6 @@ export type MessageFeedProps = {
   canSendWithoutText?: boolean;
   pendingAttachments?: PendingAttachmentPreview[];
   onRemovePendingAttachment?: (id: string) => void;
-  customMedia?: React.ReactNode;
-  customMediaRefs?: MatterhornCustomMediaMessageReference[];
-  customMediaRecords?: CustomMediaMessageItem[];
 };
 
 function historyRecordLabel(record: Record<string, unknown>, fallback: string) {
@@ -152,9 +150,9 @@ export function MessageFeed({
   onReopenThread,
   onLockThread,
   onUnlockThread,
-  onFollowThread,
-  onUnfollowThread,
-  onSetThreadNotifications,
+  notificationCategoryId,
+  notificationPreferences,
+  notificationRoomId,
   onAddThreadMember,
   onRemoveThreadMember,
   canDeleteMessage,
@@ -182,9 +180,6 @@ export function MessageFeed({
   onRemoveBookmark,
   onAddReminder,
   onRemoveReminder,
-  customMedia,
-  customMediaRefs = [],
-  customMediaRecords = []
 }: MessageFeedProps) {
   const [replyTo, setReplyTo] = useState<Message | undefined>();
   const [activeCommentThreadId, setActiveCommentThreadId] = useState<string | undefined>();
@@ -248,19 +243,17 @@ export function MessageFeed({
     lastMessageIdRef.current = lastMessageId;
   }, [activeFeedKey, lastMessageId, messages.length]);
 
-  function submitMessage(body: string, customMediaRefs?: MatterhornCustomMediaMessageReference[], forumTagIds?: string[]) {
+  function submitMessage(body: string, forumTagIds?: string[]) {
     forceNextBottomRef.current = true;
     scrollToBottom();
     const normalizedForumTagIds = forumMode ? normalizeForumTagIds(forumTagIds || composerForumTagIds, forumTags) : [];
     if (replyTo && onReply) {
-      if (normalizedForumTagIds.length) onReply(replyTo.id, body, customMediaRefs, normalizedForumTagIds);
-      else if (customMediaRefs?.length) onReply(replyTo.id, body, customMediaRefs);
+      if (normalizedForumTagIds.length) onReply(replyTo.id, body, normalizedForumTagIds);
       else onReply(replyTo.id, body);
       setReplyTo(undefined);
       return;
     }
-    if (normalizedForumTagIds.length) onSend(body, customMediaRefs, normalizedForumTagIds);
-    else if (customMediaRefs?.length) onSend(body, customMediaRefs);
+    if (normalizedForumTagIds.length) onSend(body, normalizedForumTagIds);
     else onSend(body);
     if (forumMode) setComposerForumTagIds([]);
   }
@@ -315,18 +308,17 @@ export function MessageFeed({
       ) : null}
 
       <div className="message-history" role="group" aria-label="Message history controls">
-        <button type="button" aria-label="Load older messages" disabled={!history || history.loading} onClick={() => history?.loadOlder()} title={history ? "Load older encrypted messages" : "Matterhorn history transport is unavailable"}>Load older</button>
+        <button type="button" aria-label="Load older messages" disabled={!history || history.loading} onClick={() => history?.loadOlder()} title="Load older encrypted messages">Load older</button>
         <button type="button" aria-expanded={historyOpen} onClick={() => setHistoryOpen((open) => !open)} disabled={!history}>History options</button>
         {historyOpen && history ? <div className="message-history-options">
           <label>Open a saved position<input aria-label="History cursor" value={historyCursor} placeholder="Paste a message position" onChange={(event) => setHistoryCursor(event.currentTarget.value)} /></label>
           <button type="button" disabled={history.loading || !historyCursor.trim()} title="Jump to encrypted history position" onClick={() => history.jumpToCursor(historyCursor.trim())}>Open position</button>
           <p>Use a position shared by this room. This does not search or expose other rooms.</p>
         </div> : null}
-        {!history ? <span role="status">History navigation is unavailable until Matterhorn exposes its authorized history transport.</span> : null}
         {history?.loading ? <span role="status">Loading encrypted history…</span> : null}
         {history?.error ? <span role="alert">{history.error}</span> : null}
         {history?.records.length ? <span role="status">Loaded {history.records.length} archived message records.</span> : null}
-        {forwardStatus ? <span role={forwardStatus.kind === "error" ? "alert" : "status"}>{forwardStatus.message}</span> : null}
+        {forwardStatus ? <span role={forwardStatus.kind === "error" ? "alert" : "status"}>{forwardStatus.message}{forwardStatus.actionLabel && forwardStatus.onAction ? <button type="button" onClick={forwardStatus.onAction}>{forwardStatus.actionLabel}</button> : null}</span> : null}
       </div>
       {history?.records.length ? (
         <ol aria-label="Archived message records" className="message-history-records">
@@ -388,8 +380,6 @@ export function MessageFeed({
             onRemoveBookmark={onRemoveBookmark}
             onAddReminder={onAddReminder}
             onRemoveReminder={onRemoveReminder}
-            customMediaRecords={customMediaRecords}
-            customMediaScope={{ scopeType: mode === "dm" ? "direct.thread" : "channel", scopeId: mode === "dm" ? (message.threadId || "") : ("channelId" in message ? message.channelId : "") }}
           />
         ))}
       </MessageList>
@@ -397,21 +387,36 @@ export function MessageFeed({
       {activeCommentThreadId ? (() => {
         const thread = commentThreads.find((item) => item.id === activeCommentThreadId);
         if (!thread) return null;
+        const notificationScope: NotificationScope | undefined = notificationRoomId && thread.scopeType === "channel"
+          ? { type: "channel.thread", roomId: notificationRoomId, channelId: thread.scopeId, threadId: thread.id }
+          : undefined;
+        const preference = notificationScope ? notificationPreferences?.preference(notificationScope) : undefined;
+        const resolution = notificationScope ? notificationPreferences?.resolve(notificationScope, notificationCategoryId) : undefined;
+        const notificationSummary = resolution?.muted
+          ? "Muted"
+          : resolution?.mode === "mentions"
+            ? "Only @mentions"
+            : resolution?.mode === "none" ? "Nothing" : "All Messages";
         return (
           <ThreadPanel
             thread={thread}
             comments={comments.filter((comment) => comment.threadId === thread.id)}
             memberNamesById={memberNamesById}
             currentUserId={currentUserId}
+            followed={notificationPreferences?.followed(thread.id)}
+            muted={preference?.mute?.kind === "indefinite" || preference?.mute?.kind === "until" && preference.mute.expiresAt > Date.now()}
+            notificationMode={preference?.mode || "inherit"}
+            notificationSummary={notificationSummary}
             onAddComment={(body) => onAddThreadComment?.(thread.id, body)}
             onResolve={(resolved) => onResolveThread?.(thread.id, resolved)}
             onArchive={onArchiveThread ? () => onArchiveThread(thread.id) : undefined}
             onReopen={onReopenThread ? () => onReopenThread(thread.id) : undefined}
             onLock={onLockThread ? () => onLockThread(thread.id) : undefined}
             onUnlock={onUnlockThread ? () => onUnlockThread(thread.id) : undefined}
-            onFollow={onFollowThread ? () => onFollowThread(thread.id) : undefined}
-            onUnfollow={onUnfollowThread ? () => onUnfollowThread(thread.id) : undefined}
-            onSetNotifications={onSetThreadNotifications ? (enabled) => onSetThreadNotifications(thread.id, enabled) : undefined}
+            onFollow={notificationPreferences ? () => { void notificationPreferences.setFollowed(thread.id, true); } : undefined}
+            onUnfollow={notificationPreferences ? () => { void notificationPreferences.setFollowed(thread.id, false); } : undefined}
+            onMuteChange={notificationScope && notificationPreferences ? (mute) => notificationPreferences.setMute(notificationScope, mute) : undefined}
+            onNotificationModeChange={notificationScope && notificationPreferences ? (notificationMode) => notificationPreferences.setMode(notificationScope, notificationMode) : undefined}
             onAddMember={onAddThreadMember ? (memberId) => onAddThreadMember(thread.id, memberId) : undefined}
             onRemoveMember={onRemoveThreadMember ? (memberId) => onRemoveThreadMember(thread.id, memberId) : undefined}
             onOpenSource={thread.source?.messageId ? () => {
@@ -437,10 +442,9 @@ export function MessageFeed({
         onUploadFile={onUploadFile}
         advancedPicker={advancedPicker}
         attachmentUnavailableReason={attachmentUnavailableReason}
-        canSendWithoutText={attachmentOnlySendEnabled && !replyTo}
+        canSendWithoutText={attachmentOnlySendEnabled}
         pendingAttachments={pendingAttachments}
         onRemovePendingAttachment={onRemovePendingAttachment}
-        customMediaRefs={customMediaRefs}
         forumTags={forumMode ? forumTags : []}
         forumTagIds={composerForumTagIds}
         onForumTagIdsChange={(tagIds) => setComposerForumTagIds(normalizeForumTagIds(tagIds, forumTags))}
@@ -449,7 +453,6 @@ export function MessageFeed({
         replyTo={replyTo}
         title={title}
         transfer={attachmentTransfer}
-        customMedia={customMedia}
       />
     </section>
   );

@@ -51,7 +51,15 @@ const chat = defineModel({
       categories: [
         { id: "general", name: "General", position: 0, scopeType: "category", scopeId: "general", createdAt: 0, createdBy: "system", archivedAt: null },
         { id: "guest", name: "Guest", position: 1, scopeType: "category", scopeId: "guest", createdAt: 0, createdBy: "system", archivedAt: null },
+        { id: "voice-rooms", name: "Voice Rooms", position: 2, scopeType: "category", scopeId: "voice-rooms", createdAt: 0, createdBy: "system", archivedAt: null },
       ],
+      voiceRoomPlacements: [
+        { id: "voice", roomId: "voice", categoryId: "voice-rooms", position: 0 },
+        { id: "guest_voice", roomId: "guest_voice", categoryId: "voice-rooms", position: 1 },
+      ],
+      // Channel pins are shared room policy, not a client-local preference.
+      // Each record is tombstoned on unpin so repeated writes remain safe.
+      pinnedChannels: [],
       messages: {},
       guests: {},
       callRoutes: {},
@@ -95,6 +103,8 @@ const chat = defineModel({
     activity: { readClass: "window", integrityClass: "seq" },
     channels: { readClass: "head", integrityClass: "signature" },
     categories: { readClass: "head", integrityClass: "signature" },
+    voiceRoomPlacements: { readClass: "head", integrityClass: "signature" },
+    pinnedChannels: { readClass: "head", integrityClass: "signature" },
     roleDefinitions: { readClass: "head", integrityClass: "signature" },
   },
 });
@@ -102,6 +112,8 @@ const chat = defineModel({
 const {
   channels,
   categories,
+  voiceRoomPlacements,
+  pinnedChannels,
   callRoutes,
   messages,
   guests,
@@ -126,6 +138,9 @@ const operations = {
         categoryId: p.string({ max: 200 }),
         name: p.string({ max: 80 }),
         position: p.number({ min: 0 }).optional(),
+        visibility: p.enum(["public", "private"]).optional(),
+        allowedRoleIds: p.array(p.string({ max: 120 }), { max: 64 }).optional(),
+        allowedMemberIds: p.array(p.string({ max: 240 }), { max: 128 }).optional(),
       },
     },
     ({ ref, fx }) => ({
@@ -135,6 +150,9 @@ const operations = {
           fields: {
             name: ref.payload("name"),
             position: ref.payload("position"),
+            visibility: ref.payload("visibility"),
+            allowedRoleIds: ref.payload("allowedRoleIds"),
+            allowedMemberIds: ref.payload("allowedMemberIds"),
             scopeType: "category",
             scopeId: ref.payload("categoryId"),
             createdAt: ref.now(),
@@ -293,6 +311,116 @@ const operations = {
     }),
   ),
 
+  "channel.reorder": action(
+    {
+      authorize: {
+        roles: ["moderator"],
+        scoped: {
+          scopeType: "channel",
+          record: { collection: "channels", idField: "channelId", scopeIdField: "scopeId" },
+          minimumLevel: "moderator",
+        },
+      },
+      payload: {
+        channelId: p.string({ max: 200 }),
+        categoryId: p.string({ max: 200 }),
+        position: p.number({ min: 0 }),
+      },
+    },
+    ({ ref, fx }) => ({
+      effects: [
+        fx.update(channels, {
+          id: ref.payload("channelId"),
+          set: {
+            categoryId: ref.payload("categoryId"),
+            position: ref.payload("position"),
+            group: null,
+            updatedAt: ref.now(),
+          },
+          activity: "reordered channel",
+        }),
+      ],
+    }),
+  ),
+
+  "channel.pin": action(
+    {
+      authorize: { roles: ["admin"] },
+      payload: {
+        pinId: p.string({ max: 420 }),
+        channelId: p.string({ max: 200 }),
+        channelKind: p.enum(["channel", "voice"]),
+      },
+    },
+    ({ ref, fx }) => ({
+      effects: [fx.upsert(pinnedChannels, {
+        id: ref.payload("pinId"),
+        set: {
+          channelId: ref.payload("channelId"),
+          channelKind: ref.payload("channelKind"),
+          pinnedAt: ref.now(),
+          pinnedBy: ref.actor("memberId"),
+          archivedAt: null,
+        },
+        activity: "pinned channel",
+      })],
+    }),
+  ),
+
+  "channel.unpin": action(
+    {
+      authorize: { roles: ["admin"] },
+      payload: {
+        pinId: p.string({ max: 420 }),
+        channelId: p.string({ max: 200 }),
+        channelKind: p.enum(["channel", "voice"]),
+      },
+    },
+    ({ ref, fx }) => ({
+      effects: [fx.upsert(pinnedChannels, {
+        id: ref.payload("pinId"),
+        set: {
+          channelId: ref.payload("channelId"),
+          channelKind: ref.payload("channelKind"),
+          archivedAt: ref.now(),
+        },
+        activity: "unpinned channel",
+      })],
+    }),
+  ),
+
+  "voice-room.placement.create": action(
+    {
+      authorize: { roles: ["moderator"] },
+      payload: {
+        roomId: p.string({ max: 200 }),
+        categoryId: p.string({ max: 200 }),
+        position: p.number({ min: 0 }),
+      },
+    },
+    ({ ref, fx }) => ({ effects: [fx.create(voiceRoomPlacements, {
+      id: ref.payload("roomId"),
+      fields: { roomId: ref.payload("roomId"), categoryId: ref.payload("categoryId"), position: ref.payload("position") },
+      activity: "placed voice room",
+    })] }),
+  ),
+
+  "voice-room.placement.update": action(
+    {
+      authorize: { roles: ["moderator"] },
+      payload: {
+        roomId: p.string({ max: 200 }),
+        categoryId: p.string({ max: 200 }),
+        position: p.number({ min: 0 }),
+      },
+    },
+    ({ ref, fx }) => ({ effects: [fx.update(voiceRoomPlacements, {
+      id: ref.payload("roomId"),
+      set: { categoryId: ref.payload("categoryId"), position: ref.payload("position") },
+      activity: "moved voice room",
+    })] }),
+  ),
+
   "channel.archive": action(
     {
       authorize: {
@@ -324,7 +452,7 @@ const operations = {
       },
       payload: {
         channelId: p.string({ max: 200 }),
-        body: p.string({ max: 4000 }),
+        body: p.string({ max: 4000, nonEmpty: false }),
         embeds: p.array().optional(),
         mentionIds: p.array(p.string({ max: 120 })).optional(),
         attachmentIds: p.array(p.string({ max: 200 })).optional(),
@@ -333,7 +461,16 @@ const operations = {
       },
     },
     ({ ref, fx, guard }) => ({
-      guards: [guard.or(guard.eq("$payload.channelId", "guest"), guard.ne("$actor.role", "guest"))],
+      guards: [
+        {
+          ...guard.or(
+            guard.gt(guard.length("$payload.body"), 0),
+            guard.gt(guard.length("$payload.attachmentIds"), 0),
+          ),
+          message: "A message needs text or an attachment.",
+        },
+        guard.or(guard.eq("$payload.channelId", "guest"), guard.ne("$actor.role", "guest")),
+      ],
       effects: [
         fx.create(messages, {
           id: ref.newId("message"),
@@ -371,7 +508,7 @@ const operations = {
       payload: {
         channelId: p.string({ max: 200 }),
         replyToId: p.string({ max: 200 }),
-        body: p.string({ max: 4000 }),
+        body: p.string({ max: 4000, nonEmpty: false }),
         mentionIds: p.array(p.string({ max: 120 })).optional(),
         attachmentIds: p.array(p.string({ max: 200 })).optional(),
         tagIds: p.array(p.string({ max: 120 }), { max: 32 }).optional(),
@@ -379,7 +516,16 @@ const operations = {
       },
     },
     ({ ref, fx, guard }) => ({
-      guards: [guard.or(guard.eq("$payload.channelId", "guest"), guard.ne("$actor.role", "guest"))],
+      guards: [
+        {
+          ...guard.or(
+            guard.gt(guard.length("$payload.body"), 0),
+            guard.gt(guard.length("$payload.attachmentIds"), 0),
+          ),
+          message: "A message needs text or an attachment.",
+        },
+        guard.or(guard.eq("$payload.channelId", "guest"), guard.ne("$actor.role", "guest")),
+      ],
       effects: [
         fx.create(messages, {
           id: ref.newId("message"),
@@ -968,6 +1114,32 @@ const app = defineApp({
       type: "channel.rename",
       requiredRole: "moderator",
     },
+    channelReorder: {
+      plugin: "primary",
+      type: "channel.reorder",
+      requiredRole: "moderator",
+      authorize: { scoped: { scopeType: "channel", record: { collection: "channels", idField: "channelId", scopeIdField: "scopeId" }, minimumLevel: "moderator" } },
+    },
+    channelPin: {
+      plugin: "primary",
+      type: "channel.pin",
+      requiredRole: "admin",
+    },
+    channelUnpin: {
+      plugin: "primary",
+      type: "channel.unpin",
+      requiredRole: "admin",
+    },
+    voiceRoomPlacementCreate: {
+      plugin: "primary",
+      type: "voice-room.placement.create",
+      requiredRole: "moderator",
+    },
+    voiceRoomPlacementUpdate: {
+      plugin: "primary",
+      type: "voice-room.placement.update",
+      requiredRole: "moderator",
+    },
     channelArchive: {
       plugin: "primary",
       type: "channel.archive",
@@ -1171,11 +1343,8 @@ const app = defineApp({
     commentsThreadReopen: { plugin: "comments", type: "comments.thread.reopen", requiredRole: "moderator" },
     commentsThreadLock: { plugin: "comments", type: "comments.thread.lock", requiredRole: "moderator" },
     commentsThreadUnlock: { plugin: "comments", type: "comments.thread.unlock", requiredRole: "moderator" },
-    commentsThreadFollow: { plugin: "comments", type: "comments.thread.follow", requiredRole: "member" },
-    commentsThreadUnfollow: { plugin: "comments", type: "comments.thread.unfollow", requiredRole: "member" },
     commentsThreadMemberAdd: { plugin: "comments", type: "comments.thread.member.add", requiredRole: "moderator" },
     commentsThreadMemberRemove: { plugin: "comments", type: "comments.thread.member.remove", requiredRole: "moderator" },
-    commentsThreadNotifications: { plugin: "comments", type: "comments.thread.notifications", requiredRole: "member" },
     // These operations are intentionally delegated to Matterhorn's reusable
     // storage/attachment plugins. The app only exposes typed operation names;
     // encryption, resumable transfer, provider validation, and OAuth remain

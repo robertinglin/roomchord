@@ -53,11 +53,16 @@ export function useChatViewData(input: ChatViewDataInput) {
       return;
     }
     let cancelled = false;
-    void live.getDMs().then((groups) => {
-      if (!cancelled) setDirectGroups(groups);
-    });
     const unsubscribe = live.subscribeDMs((groups) => {
       if (!cancelled) setDirectGroups(groups);
+    });
+    void (async () => {
+      // Direct-message groups include the local read cursor, which may finish
+      // loading after the host's first subscription snapshot.
+      try { await live.notifications?.ready?.(); } catch { /* Keep the host projection available if local read storage is offline. */ }
+      if (!cancelled) setDirectGroups(await live.getDMs());
+    })().catch(() => {
+      if (!cancelled) console.warn("[mosh] direct-message refresh failed");
     });
     return () => {
       cancelled = true;
@@ -105,7 +110,7 @@ export function useChatViewData(input: ChatViewDataInput) {
         actorId: message.authorId
       })),
     ];
-    return unreadCountsByTopic(items, (topic) => live.notifications?.getReadCursor(topic) || readTags[topic], { currentUserId: live.actor.memberId });
+    return unreadCountsByTopic(items, (topic) => readTags[topic] || live.notifications?.getReadCursor(topic), { currentUserId: live.actor.memberId });
   }, [live.actor.memberId, live.notifications, state.members, state.messages]);
   const unreadCounts = useMemo(() => Object.fromEntries(directGroups.map((group) => {
     const ignored = (group.thread.userIds || []).some((memberId) => memberId !== live.actor.memberId && input.memberPreferences[memberId]?.ignored);
@@ -120,14 +125,15 @@ export function useChatViewData(input: ChatViewDataInput) {
   })), [directGroups, input.memberPreferences, input.readAtByThread, live.actor.memberId]);
   const actorRoleIds = useMemo(() => assignedRoleIds(live.actor.memberId, live.actor.role, state), [live.actor.memberId, live.actor.role, state]);
   const actorRoleRank = Math.max(...actorRoleIds.map((roleId) => roleRank(roleId, state)), 0);
+  const actorIsRoleAdministrator = live.actor.role === "admin" || live.actor.role === "owner";
   const actorCanManageRooms = live.can("mediaRoomCreateScoped") || actorRoleRank >= 2;
   const actorCanCreateChannels = live.can("channelCreate") || actorRoleRank >= 2;
+  const actorCanCreateCategories = live.can("categoryCreate") || actorIsRoleAdministrator;
   // Role lifecycle and assignment are global authority operations. Scoped
   // custom roles must never make a member appear to be an administrator.
-  const actorIsRoleAdministrator = live.actor.role === "admin" || live.actor.role === "owner";
   const actorCanManageRoles = actorIsRoleAdministrator && (live.can("roleCreate") || live.can("memberRoleAssign") || live.can("scopeMemberOverrideSet"));
   const actorCanManageMembers = live.can("banMember") || live.can("moderateMember") || live.can("disableInvite") || live.can("approveJoinRequest") || actorRoleRank >= 3;
-  const actorCanManageAnything = actorCanManageRooms || actorCanCreateChannels || actorCanManageRoles || actorCanManageMembers;
+  const actorCanManageAnything = actorCanManageRooms || actorCanCreateChannels || actorCanCreateCategories || actorCanManageRoles || actorCanManageMembers;
   const actorCanSendMessages = live.can("messageSend");
   const actorChatDisabled = memberChatDisabled(state, live.actor.memberId);
   const effectiveVoicePreferences = useMemo(
@@ -190,6 +196,7 @@ export function useChatViewData(input: ChatViewDataInput) {
     activeScreenShares,
     activeThread,
     actorCanCreateChannels,
+    actorCanCreateCategories,
     actorCanDirectMessage,
     actorCanReceiveDirectMessages,
     actorCanManageAnything,

@@ -38,6 +38,8 @@ type Props = {
   managementSnapshot?: MatterhornManagementSnapshot;
   initialTab?: ManagementTab;
   initialMemberId?: string;
+  initialChannelId?: string;
+  initialRoomId?: string;
   memberPreferences: Record<string, MemberPreference>;
   profileOnly?: boolean;
   voicePreferences: VoicePreferences;
@@ -50,7 +52,8 @@ type Props = {
   onCreateChannel: (input: { name: string; topic?: string; group?: string; categoryId?: string; position?: number; visibility?: ChannelVisibility; allowedRoleIds?: string[]; allowedMemberIds?: string[] }) => void;
   onUpdateChannel: (id: string, input: { name?: string; topic?: string | null; group?: string | null; categoryId?: string | null; position?: number; visibility?: ChannelVisibility; allowedRoleIds?: string[]; allowedMemberIds?: string[] }) => void;
   onArchiveChannel: (id: string) => void;
-  onCreateRoom: (input: { name: string; group?: string; allowsVideo: boolean; roleAccess?: RoomSettings["roleAccess"] }) => void;
+  onCreateRoom: (input: { name: string; categoryId: string; position: number; allowsVideo: boolean; roleAccess?: RoomSettings["roleAccess"] }) => void;
+  onReorderRoom: (roomId: string, categoryId: string, position: number) => void;
   onUpdateRoom: (roomId: string, settings: RoomSettings) => void;
   onArchiveRoom: (roomId: string) => void;
   onCreateRole: (input: RoleInput) => void;
@@ -190,6 +193,8 @@ export function ManageOverviewDialog({
   managementSnapshot,
   initialTab,
   initialMemberId,
+  initialChannelId,
+  initialRoomId,
   memberPreferences,
   profileOnly,
   voicePreferences,
@@ -203,6 +208,7 @@ export function ManageOverviewDialog({
   onUpdateChannel,
   onArchiveChannel,
   onCreateRoom,
+  onReorderRoom,
   onUpdateRoom,
   onArchiveRoom,
   onCreateRole,
@@ -487,6 +493,7 @@ export function ManageOverviewDialog({
             ) : null}
             {tab === "channels" ? (
               <ManageChannelsTab
+                initialChannelId={initialChannelId}
                 canCreateChannels={canCreateChannels}
                 canManageCategories={canManageRoles}
                 accessScopes={state.access?.scopes}
@@ -503,8 +510,11 @@ export function ManageOverviewDialog({
             ) : null}
             {tab === "voice" ? (
               <ManageVoiceTab
+                initialRoomId={initialRoomId}
                 canManageRooms={canManageRooms}
                 roles={roles}
+                categories={(state.categories || []).filter((category) => !category.archivedAt)}
+                placements={state.voiceRoomPlacements || []}
                 rooms={rooms}
                 permissionActions={managementSnapshot?.actions}
                 permissionScopes={managementSnapshot?.scopes}
@@ -525,6 +535,7 @@ export function ManageOverviewDialog({
                 }}
                 onArchiveRoom={onArchiveRoom}
                 onCreateRoom={onCreateRoom}
+                onReorderRoom={onReorderRoom}
                 onUpdateRoom={onUpdateRoom}
               />
             ) : null}

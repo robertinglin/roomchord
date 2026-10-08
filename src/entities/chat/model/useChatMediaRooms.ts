@@ -148,77 +148,91 @@ export function useChatMediaRooms(input: Input) {
     if (!bridge) {
       return undefined;
     }
-    const profile = { id: clientId, name: actorName, avatar: actorProfileAvatar };
-    const sfu = new SfuCallController({
-      roomName: input.roomName,
-      profile,
-      getPeer: () => bridge.getMediaPeer?.(),
-      getPeerAddress: () => bridge.getMediaPeerAddress?.(),
-      createPeer: bridge.createMediaPeer,
-      mediaDeviceController: input.mediaDeviceController,
-      encryptRoomPayload: bridge.encryptRoomPayload,
-      decryptRoomPayload: bridge.decryptRoomPayload,
-      encryptRelayPayload: bridge.encryptRelayPayload,
-      sendSignal: (targetClientId, targetPeerId, signal, auth) => {
-        return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
-      },
-      onState: (state) => {
-        logVoiceState("sfu", state);
-        setSfuState(state);
-        notifyVoiceConnected(state);
-      },
-      onError: logVoiceError
-    });
-    const mesh = new MeshRoomCallController({
-      roomName: input.roomName,
-      profile,
-      getPeer: () => bridge.getMediaPeer?.(),
-      getPeerAddress: () => bridge.getMediaPeerAddress?.(),
-      createPeer: bridge.createMediaPeer,
-      mediaDeviceController: input.mediaDeviceController,
-      sendSignal: (targetClientId, targetPeerId, signal, auth) => {
-        return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
-      },
-      onState: (state) => {
-        logVoiceState("p2p", state);
-        setMeshState(state);
-        notifyVoiceConnected(state);
-      },
-      onError: logVoiceError
-    });
-    sfuRef.current = sfu;
-    meshRef.current = mesh;
-    sfu.setRelaySfu(bridge.getRelaySfuInfo?.());
+    let disposed = false;
+    let disposeControllers = () => {};
+    void Promise.resolve(bridge.getCallPublicKey?.()).then((callPubkey) => {
+      if (disposed) return;
+      const profile = {
+        id: clientId,
+        name: actorName,
+        avatar: actorProfileAvatar,
+        ...(callPubkey ? { callPubkey } : {})
+      };
+      const sfu = new SfuCallController({
+        roomId: input.roomName,
+        profile,
+        skipLegacySignalSigning: true,
+        getPeer: () => bridge.getMediaPeer?.(),
+        getPeerAddress: () => bridge.getMediaPeerAddress?.(),
+        createPeer: bridge.createMediaPeer,
+        mediaDeviceController: input.mediaDeviceController,
+        sendSignal: (targetClientId, targetPeerId, signal, auth) => {
+          return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
+        },
+        onState: (state) => {
+          logVoiceState("sfu", state);
+          setSfuState(state);
+          notifyVoiceConnected(state);
+        },
+        onError: logVoiceError
+      });
+      const mesh = new MeshRoomCallController({
+        roomId: input.roomName,
+        profile,
+        skipLegacySignalSigning: true,
+        getPeer: () => bridge.getMediaPeer?.(),
+        getPeerAddress: () => bridge.getMediaPeerAddress?.(),
+        createPeer: bridge.createMediaPeer,
+        mediaDeviceController: input.mediaDeviceController,
+        sendSignal: (targetClientId, targetPeerId, signal, auth) => {
+          return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
+        },
+        onState: (state) => {
+          logVoiceState("p2p", state);
+          setMeshState(state);
+          notifyVoiceConnected(state);
+        },
+        onError: logVoiceError
+      });
+      sfuRef.current = sfu;
+      meshRef.current = mesh;
+      sfu.setRelaySfu(bridge.getRelaySfuInfo?.());
 
-    const onCall = (call: PeerJsMediaConnection) => {
-      if (mesh.handleMediaCall(call)) {
-        return;
-      }
-      const handledBySfu = sfu.handleMediaCall(call);
-    };
-    let peer = bridge.getMediaPeer?.();
-    peer?.on("call", onCall);
-    const removeMediaPeerListener = bridge.subscribeMediaPeer?.(() => {
-      const nextPeer = bridge.getMediaPeer?.();
-      if (!nextPeer || nextPeer === peer) return;
-      removePeerCallListener(peer, onCall);
-      peer = nextPeer;
-      peer.on("call", onCall);
-    });
-    const unsubscribe = bridge.subscribeRelayMessage?.((message) => {
-      const signal = typeof message === "object" && message ? (message as { signal?: { type?: string; sessionId?: string }; type?: string; sourceClientId?: string; targetClientId?: string }).signal : undefined;
-      const handledByMesh = mesh.handlePeerSignal(message);
-      const handledBySfu = sfu.handleRelayMessage(message);
+      const onCall = (call: PeerJsMediaConnection) => {
+        if (mesh.handleMediaCall(call)) {
+          return;
+        }
+        sfu.handleMediaCall(call);
+      };
+      let peer = bridge.getMediaPeer?.();
+      peer?.on("call", onCall);
+      const removeMediaPeerListener = bridge.subscribeMediaPeer?.(() => {
+        const nextPeer = bridge.getMediaPeer?.();
+        if (!nextPeer || nextPeer === peer) return;
+        removePeerCallListener(peer, onCall);
+        peer = nextPeer;
+        peer.on("call", onCall);
+      });
+      const unsubscribe = bridge.subscribeRelayMessage?.((message) => {
+        mesh.handlePeerSignal(message);
+        sfu.handleRelayMessage(message);
+      });
+      disposeControllers = () => {
+        unsubscribe?.();
+        removeMediaPeerListener?.();
+        removePeerCallListener(peer, onCall);
+        voiceTokenRef.current?.release();
+        voiceTokenRef.current = undefined;
+        mesh.destroy();
+        sfu.destroy();
+      };
+    }).catch((error: unknown) => {
+      if (!disposed) logVoiceError(error instanceof Error ? error.message : "Could not load the call identity.");
     });
 
     return () => {
-      unsubscribe?.();
-      removeMediaPeerListener?.();
-      removePeerCallListener(peer, onCall);
-      voiceTokenRef.current?.release();
-      voiceTokenRef.current = undefined;
-      mesh.destroy();
-      sfu.destroy();
+      disposed = true;
+      disposeControllers();
       meshRef.current = undefined;
       sfuRef.current = undefined;
       setMeshState({ status: "idle", remoteStreams: [] });

@@ -18,8 +18,8 @@ test("community composes Matterhorn calendar, polls, and channel primitives", ()
   for (const operation of [
     "channel.forum.layout", "channel.forum.tag.create", "channel.forum.tag.update", "channel.forum.tag.archive",
     "comments.thread.archive", "comments.thread.reopen", "comments.thread.lock", "comments.thread.unlock",
-    "comments.thread.follow", "comments.thread.unfollow", "comments.thread.member.add", "comments.thread.member.remove",
-    "comments.thread.notifications", "media.room.create.v2", "scope.parent.set", "scope.parent.remove"
+    "comments.thread.member.add", "comments.thread.member.remove", "media.room.create.v2",
+    "scope.parent.set", "scope.parent.remove"
   ]) {
     assert.ok(composition.actions.some((action) => action.type === operation), `${operation} must be exposed for its Mosh UI`);
   }

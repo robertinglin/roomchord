@@ -103,4 +103,15 @@ describe("ManageChannelsTab management flows", () => {
 
     expect(screen.getByText(/Access inherited from Alpha/)).toBeInTheDocument();
   });
+
+  it("opens a requested channel directly in its editor", () => {
+    renderChannels({
+      initialChannelId: "planning",
+      channels: [{ id: "planning", name: "planning", topic: "Plans", categoryId: "alpha" } as never]
+    });
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Manage channel name" })).toHaveValue("planning");
+    expect(screen.getByRole("textbox", { name: "Manage channel topic" })).toHaveValue("Plans");
+  });
 });

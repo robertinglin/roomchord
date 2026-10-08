@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import type { CommentThread, ThreadComment } from "@shared/model/commentThreads";
+import { NotificationControlsMenu } from "./NotificationControlsMenu";
+import type { NotificationMode, NotificationMute } from "matterhorn-sdk/browser";
 
 /** Generic comments-thread surface; feature orchestration supplies the data and actions. */
 export function ThreadPanel({
@@ -7,6 +9,10 @@ export function ThreadPanel({
   comments,
   memberNamesById,
   currentUserId,
+  followed = false,
+  muted = false,
+  notificationMode = "inherit",
+  notificationSummary,
   onAddComment,
   onResolve,
   onClose,
@@ -16,7 +22,8 @@ export function ThreadPanel({
   onUnlock,
   onFollow,
   onUnfollow,
-  onSetNotifications,
+  onMuteChange,
+  onNotificationModeChange,
   onAddMember,
   onRemoveMember,
   onOpenSource
@@ -25,6 +32,10 @@ export function ThreadPanel({
   comments: ThreadComment[];
   memberNamesById: Record<string, string>;
   currentUserId?: string;
+  followed?: boolean;
+  muted?: boolean;
+  notificationMode?: NotificationMode;
+  notificationSummary?: string;
   onAddComment: (body: string) => void;
   onResolve: (resolved: boolean) => void;
   onClose: () => void;
@@ -34,7 +45,8 @@ export function ThreadPanel({
   onUnlock?: () => void;
   onFollow?: () => void;
   onUnfollow?: () => void;
-  onSetNotifications?: (enabled: boolean) => void;
+  onMuteChange?: (mute: NotificationMute) => void | Promise<void>;
+  onNotificationModeChange?: (mode: NotificationMode) => void | Promise<void>;
   onAddMember?: (memberId: string) => void;
   onRemoveMember?: (memberId: string) => void;
   onOpenSource?: () => void;
@@ -45,10 +57,6 @@ export function ThreadPanel({
   const locked = thread.lifecycle === "locked";
   const privateMemberIds = thread.privateMemberIds || [];
   const privateMemberIdSet = new Set(privateMemberIds.map(String));
-  const followed = Boolean(currentUserId && thread.followers?.some((memberId) => String(memberId) === currentUserId));
-  const notificationsEnabled = currentUserId
-    ? Object.entries(thread.notificationPreferences || {}).find(([memberId]) => memberId === currentUserId)?.[1] !== false
-    : false;
   const memberOptions = Object.entries(memberNamesById).filter(([id]) => !privateMemberIdSet.has(id));
   const status = archived ? "Archived" : locked ? "Locked" : thread.resolved ? "Resolved" : "Open";
   function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -59,22 +67,32 @@ export function ThreadPanel({
   }
   return (
     <aside className="thread-panel" aria-label={`${thread.title || "Thread"} discussion`}>
-      <header className="thread-panel-head">
-        <div>
-          <strong>{thread.title || "Thread"}</strong>
-          <small>{status}</small>
-          {thread.source ? <small>Source message: {thread.source.messageId}</small> : null}
-        </div>
-        <div className="thread-panel-actions">
-          {thread.source && onOpenSource ? <button type="button" onClick={onOpenSource}>Open source message</button> : null}
-          {!archived && !locked ? <button type="button" onClick={() => onResolve(!thread.resolved)}>{thread.resolved ? "Reopen" : "Resolve"}</button> : null}
-          {archived ? (onReopen ? <button type="button" onClick={onReopen}>Reopen thread</button> : null) : (onArchive ? <button type="button" onClick={onArchive}>Archive thread</button> : null)}
-          {locked ? (onUnlock ? <button type="button" onClick={onUnlock}>Unlock thread</button> : null) : (!archived && onLock ? <button type="button" onClick={onLock}>Lock thread</button> : null)}
-          {currentUserId && (followed ? (onUnfollow ? <button type="button" onClick={onUnfollow}>Unfollow</button> : null) : (onFollow ? <button type="button" onClick={onFollow}>Follow</button> : null))}
-          {currentUserId && onSetNotifications ? <button type="button" onClick={() => onSetNotifications(!notificationsEnabled)}>{notificationsEnabled ? "Mute notifications" : "Enable notifications"}</button> : null}
-          <button type="button" onClick={onClose} aria-label="Close thread">×</button>
-        </div>
-      </header>
+      <NotificationControlsMenu
+        label="Thread"
+        inheritLabel="Use Parent Default"
+        muted={muted}
+        notificationMode={notificationMode}
+        notificationSummary={notificationSummary}
+        onMuteChange={onMuteChange}
+        onNotificationModeChange={onNotificationModeChange}
+        preferenceUnavailableMessage="Notification preferences are still loading."
+      >
+        <header className="thread-panel-head">
+          <div>
+            <strong>{thread.title || "Thread"}</strong>
+            <small>{status}</small>
+            {thread.source ? <small>Source message: {thread.source.messageId}</small> : null}
+          </div>
+          <div className="thread-panel-actions">
+            {thread.source && onOpenSource ? <button type="button" onClick={onOpenSource}>Open source message</button> : null}
+            {!archived && !locked ? <button type="button" onClick={() => onResolve(!thread.resolved)}>{thread.resolved ? "Reopen" : "Resolve"}</button> : null}
+            {archived ? (onReopen ? <button type="button" onClick={onReopen}>Reopen thread</button> : null) : (onArchive ? <button type="button" onClick={onArchive}>Archive thread</button> : null)}
+            {locked ? (onUnlock ? <button type="button" onClick={onUnlock}>Unlock thread</button> : null) : (!archived && onLock ? <button type="button" onClick={onLock}>Lock thread</button> : null)}
+            {currentUserId && (followed ? (onUnfollow ? <button type="button" onClick={onUnfollow}>Unfollow</button> : null) : (onFollow ? <button type="button" onClick={onFollow}>Follow</button> : null))}
+            <button type="button" onClick={onClose} aria-label="Close thread">×</button>
+          </div>
+        </header>
+      </NotificationControlsMenu>
       {thread.visibility === "private" && (onAddMember || onRemoveMember) ? (
         <section aria-label="Private thread members" className="thread-panel-members">
           <strong>Private members</strong>

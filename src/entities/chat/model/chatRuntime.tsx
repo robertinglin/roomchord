@@ -11,6 +11,7 @@ import { useChatViewData, type ChatViewData } from "@entities/chat/model/useChat
 import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
 import { useVoiceModerationState } from "@entities/chat/model/voiceModeration";
 import { usePersonalProductivity, type PersonalProductivityController } from "@entities/chat/model/personalProductivity";
+import { useNotificationPreferences, type NotificationPreferencesController } from "@entities/chat/model/useNotificationPreferences";
 import type { MatterhornRoom } from "matterhorn-sdk/client";
 import type { Mosh} from "../../../../types";
 import { CallSwitchDialog } from "@shared/ui/CallSwitchDialog";
@@ -22,6 +23,7 @@ type ChatRuntime = {
   media: ChatMediaRooms;
   mediaDevices: MatterhornMediaDeviceController;
   mediaDeviceState: MatterhornMediaDeviceState;
+  notificationPreferences: NotificationPreferencesController;
   productivity: PersonalProductivityController;
   roomName: string;
   view: ChatViewData;
@@ -72,6 +74,7 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   });
   const voiceModerationState = useVoiceModerationState(live.media);
   const productivity = usePersonalProductivity(live);
+  const notificationPreferences = useNotificationPreferences(live);
   const activeListedRoom = useCallback(() => {
     const roomId = media.sfu.mediaRoomId || joinedMediaRoomId;
     const room = state.rooms.find((item) => item.id === roomId);
@@ -205,7 +208,7 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   });
 
   return (
-    <ChatRuntimeContext.Provider value={{ actions, directCalls, live, media, mediaDevices, mediaDeviceState, productivity, roomName, view }}>
+    <ChatRuntimeContext.Provider value={{ actions, directCalls, live, media, mediaDevices, mediaDeviceState, notificationPreferences, productivity, roomName, view }}>
       {children}
       {callSwitchPrompt ? (
         <CallSwitchDialog

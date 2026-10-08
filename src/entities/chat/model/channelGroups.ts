@@ -15,8 +15,21 @@ function groupKey(label: string) {
   return label.toLowerCase();
 }
 
+function orderedItems<T>(items: T[]) {
+  return items
+    .map((item, index) => ({ item, index, position: (item as T & { position?: number }).position }))
+    .sort((left, right) => (left.position ?? left.index) - (right.position ?? right.index) || left.index - right.index)
+    .map(({ item }) => item);
+}
+
 export function optionalChannelGroup(value?: string | null) {
   return cleanGroup(value) || undefined;
+}
+
+export function canViewChannelCategory(category: ChannelCategory, memberId: string, roleIds: string[]) {
+  if (category.visibility !== "private") return true;
+  return (category.allowedMemberIds || []).includes(memberId)
+    || roleIds.some((roleId) => (category.allowedRoleIds || []).includes(roleId));
 }
 
 export function orderedChannelCategories(categories: ChannelCategory[] = []) {
@@ -44,6 +57,7 @@ export function groupedChannelItems<T extends { group?: string | null; categoryI
     byKey.set(key, group);
   }
   const knownCategoryIds = new Set(orderedChannelCategories(categories).map((category) => category.id));
+  if (knownCategoryIds.size > 0) return groups.map((group) => ({ ...group, items: orderedItems(group.items) }));
   for (const item of items) {
     if (item.categoryId && knownCategoryIds.has(item.categoryId)) continue;
     const label = cleanGroup(item.group) || fallbackLabel;
@@ -56,5 +70,5 @@ export function groupedChannelItems<T extends { group?: string | null; categoryI
     }
     group.items.push(item);
   }
-  return groups;
+  return groups.map((group) => ({ ...group, items: orderedItems(group.items) }));
 }

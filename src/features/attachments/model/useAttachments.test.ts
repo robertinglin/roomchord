@@ -84,6 +84,48 @@ describe("useAttachments", () => {
     expect(result.current.pendingAttachmentCount).toBe(1);
   });
 
+  it("abandons an unresponsive upload and leaves the draft retryable", async () => {
+    vi.useFakeTimers();
+    const upload = vi.fn(() => new Promise(() => undefined));
+    const { live } = liveFixture({ files: { upload, download: vi.fn() } });
+    const { result } = renderHook(() => useAttachments(live, { showingDm: false, channelId: "general" }));
+
+    try {
+      await act(async () => result.current.uploadFile(file()));
+      let publishing!: Promise<string[]>;
+      act(() => { publishing = result.current.publishPendingAttachments(); });
+      expect(result.current.transfer).toEqual({ phase: "uploading", name: "hello.txt", progress: 0 });
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(20_000); });
+      await act(async () => { await publishing; });
+
+      expect(result.current.transfer).toEqual({ phase: "idle", error: "Upload stopped because the connection is no longer responding. Try again." });
+      expect(result.current.pendingAttachments).toEqual([expect.objectContaining({ name: "hello.txt" })]);
+      expect(result.current.consumePendingAttachmentIds()).toEqual([]);
+      expect(upload.mock.calls[0][0].signal).toBeInstanceOf(AbortSignal);
+      expect(upload.mock.calls[0][0].signal.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("cancels an active upload when its draft is removed", async () => {
+    const upload = vi.fn(() => new Promise(() => undefined));
+    const { live } = liveFixture({ files: { upload, download: vi.fn() } });
+    const { result } = renderHook(() => useAttachments(live, { showingDm: false, channelId: "general" }));
+
+    await act(async () => result.current.uploadFile(file()));
+    const draftId = result.current.pendingAttachments[0].id;
+    let publishing!: Promise<string[]>;
+    act(() => { publishing = result.current.publishPendingAttachments(); });
+    act(() => result.current.removePendingAttachment(draftId));
+    await act(async () => { await publishing; });
+
+    expect(result.current.transfer).toEqual({ phase: "idle" });
+    expect(result.current.pendingAttachments).toEqual([]);
+    expect(upload.mock.calls[0][0].signal.aborted).toBe(true);
+  });
+
   it("shares through an existing Google Drive connection", async () => {
     const request = vi.fn(async ({ operation }: { operation: string }) => operation === "files.list" ? { files: [{ id: "folder" }] } : {});
     const upload = vi.fn(async () => ({ id: "uploaded", name: "hello.txt", mimeType: "text/plain" }));

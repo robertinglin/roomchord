@@ -8,7 +8,6 @@ import { mediaWithVoicePreferences, type VoicePreferences } from "@entities/chat
 import { ManageOverviewDialog } from "@features/management/ui/ManageOverviewDialog";
 import type { CommunityEvent } from "@features/community/model/communityCapabilities";
 import type { CommunityChannel, CommunityChannelKind, CommunityNotification, CommunityPoll } from "@features/community/ui/CommunityCapabilityPanel";
-import { MATTERHORN_INTEGRATIONS_READY } from "@shared/model/matterhornFeatureGates";
 import { botChannelAccessOverrides } from "@features/management/model/botChannelAccess";
 
 type CommunityProjection = {
@@ -102,7 +101,7 @@ export function ChatManageDialog() {
   const activeMedia = media.sfu.mediaRoomId === activeVoiceRoom?.id && (media.sfu.status === "connected" || media.sfu.status === "connecting")
     ? media.sfu.media
     : localMediaSettings;
-  const integrations = MATTERHORN_INTEGRATIONS_READY ? live.integrations : undefined;
+  const integrations = live.integrations;
 
   const loadCommunityProjection = React.useCallback(async () => {
     const requestId = ++communityProjectionRequest.current;
@@ -203,6 +202,8 @@ export function ChatManageDialog() {
       canManageRoles={view.actorCanManageRoles}
       initialTab={manageDialog.tab}
       initialMemberId={manageDialog.memberId}
+      initialChannelId={manageDialog.channelId}
+      initialRoomId={manageDialog.roomId}
       memberPreferences={memberPreferences}
       profileOnly={manageDialog.profileOnly}
       voicePreferences={voicePreferences}
@@ -216,6 +217,7 @@ export function ChatManageDialog() {
       onUpdateChannel={actions.updateTextChannel}
       onArchiveChannel={actions.archiveTextChannel}
       onCreateRoom={actions.createMediaRoom}
+      onReorderRoom={actions.reorderMediaRoom}
       onUpdateRoom={actions.updateMediaRoomSettings}
       onArchiveRoom={actions.archiveMediaRoom}
       onCreateRole={actions.createRole}

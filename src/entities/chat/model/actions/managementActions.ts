@@ -57,9 +57,15 @@ export function managementActions(input: ChatActionHandlersInput) {
     return assignedRoleIds(memberId, undefined, input.live.state);
   }
 
-  async function createCategory(category: { name: string; position?: number }) {
+  async function createCategory(category: { name: string; position?: number; visibility?: ChannelVisibility; allowedRoleIds?: string[]; allowedMemberIds?: string[] }) {
     requireRoleAdministrator();
-    await dispatch("categoryCreate", { categoryId: resourceId("category"), ...category });
+    const isPrivate = category.visibility === "private";
+    await dispatch("categoryCreate", {
+      categoryId: resourceId("category"),
+      ...category,
+      allowedRoleIds: isPrivate ? [...new Set(["admin", "owner", ...(category.allowedRoleIds || [])])] : [],
+      allowedMemberIds: isPrivate ? category.allowedMemberIds || [] : []
+    });
   }
 
   async function updateCategory(categoryId: string, category: { name?: string; position?: number }) {
@@ -93,22 +99,34 @@ export function managementActions(input: ChatActionHandlersInput) {
       if (channel.categoryId) await dispatch("scopeParentRemove", { scopeType: "channel", scopeId: channelId }).catch(() => undefined);
       throw error;
     }
+    return channelId;
   }
 
   async function updateTextChannel(channelId: string, channel: { name?: string; topic?: string | null; group?: string | null; categoryId?: string | null; position?: number; visibility?: ChannelVisibility; allowedRoleIds?: string[]; allowedMemberIds?: string[] }) {
-    const currentCategoryId = input.live.state.channels.find((item) => item.id === channelId)?.categoryId || null;
-    const isPrivate = channel.visibility === "private";
-    const requiredRole = isPrivate ? "__private__" : channel.visibility === "public" ? "member" : undefined;
-    const access = channel.visibility
-      ? { allowedRoleIds: isPrivate ? [...new Set(["admin", "owner", ...(channel.allowedRoleIds || [])])] : [], allowedMemberIds: isPrivate ? channel.allowedMemberIds || [] : [] }
-      : {};
+    const current = input.live.state.channels.find((item) => item.id === channelId);
+    const currentCategoryId = current?.categoryId || null;
+    const visibility = channel.visibility ?? current?.visibility ?? "public";
+    const isPrivate = visibility === "private";
+    const allowedRoleIds = channel.allowedRoleIds ?? current?.allowedRoleIds ?? [];
+    const allowedMemberIds = channel.allowedMemberIds ?? current?.allowedMemberIds ?? [];
     const changesParent = channel.categoryId !== undefined && channel.categoryId !== currentCategoryId;
     if (changesParent) {
       if (channel.categoryId) await dispatch("scopeParentSet", { scopeType: "channel", scopeId: channelId, parentScopeType: "category", parentScopeId: channel.categoryId });
       else await dispatch("scopeParentRemove", { scopeType: "channel", scopeId: channelId });
     }
     try {
-      await dispatch("channelRename", { channelId: channelId as ChannelId, ...channel, ...access, ...(requiredRole ? { requiredRole } : {}) });
+      await dispatch("channelRename", {
+        channelId: channelId as ChannelId,
+        name: channel.name ?? current?.name,
+        topic: channel.topic !== undefined ? channel.topic : current?.topic ?? null,
+        group: channel.group !== undefined ? channel.group : current?.group ?? null,
+        categoryId: channel.categoryId !== undefined ? channel.categoryId : currentCategoryId,
+        position: channel.position ?? current?.position ?? 0,
+        visibility,
+        requiredRole: isPrivate ? "__private__" : "member",
+        allowedRoleIds: isPrivate ? [...new Set(["admin", "owner", ...allowedRoleIds])] : [],
+        allowedMemberIds: isPrivate ? allowedMemberIds : []
+      });
     } catch (error) {
       if (changesParent) {
         if (currentCategoryId) await dispatch("scopeParentSet", { scopeType: "channel", scopeId: channelId, parentScopeType: "category", parentScopeId: currentCategoryId }).catch(() => undefined);
@@ -122,15 +140,78 @@ export function managementActions(input: ChatActionHandlersInput) {
     await dispatch("channelArchive", { channelId: channelId as ChannelId });
   }
 
-  async function createMediaRoom(room: { name: string; allowsVideo: boolean; group?: string; roleAccess?: RoomRoleAccess }) {
+  async function createVoiceTextChannel(input: { roomId: string; name: string; categoryId?: string }) {
+    const channelId = await createTextChannel({
+      name: input.name,
+      topic: `Text chat for ${input.name.replace(/ Chat$/, "")}`,
+      categoryId: input.categoryId
+    });
+    try {
+      await dispatch("channelVoiceTextBind", { channelId, mediaRoomId: input.roomId });
+    } catch (error) {
+      await archiveTextChannel(channelId).catch(() => undefined);
+      if (input.categoryId) await dispatch("scopeParentRemove", { scopeType: "channel", scopeId: channelId }).catch(() => undefined);
+      throw error;
+    }
+    return channelId;
+  }
+
+  async function reorderTextChannel(channelId: string, categoryId: string, position: number) {
+    const currentCategoryId = input.live.state.channels.find((item) => item.id === channelId)?.categoryId || null;
+    const changesParent = categoryId !== currentCategoryId;
+    if (changesParent) {
+      await dispatch("scopeParentSet", { scopeType: "channel", scopeId: channelId, parentScopeType: "category", parentScopeId: categoryId });
+    }
+    try {
+      await dispatch("channelReorder", { channelId: channelId as ChannelId, categoryId, position });
+    } catch (error) {
+      if (changesParent) {
+        if (currentCategoryId) await dispatch("scopeParentSet", { scopeType: "channel", scopeId: channelId, parentScopeType: "category", parentScopeId: currentCategoryId }).catch(() => undefined);
+        else await dispatch("scopeParentRemove", { scopeType: "channel", scopeId: channelId }).catch(() => undefined);
+      }
+      throw error;
+    }
+  }
+
+  async function setChannelPinned(kind: "channel" | "voice", channelId: string, pinned: boolean) {
+    requireRoleAdministrator();
+    const pinId = `${kind}:${channelId}`;
+    await dispatch(pinned ? "channelPin" : "channelUnpin", {
+      pinId,
+      channelId,
+      channelKind: kind
+    });
+  }
+
+  async function createMediaRoom(room: { name: string; allowsVideo: boolean; categoryId?: string; position?: number; roleAccess?: RoomRoleAccess }) {
     const roomId = resourceId("media-room");
-    const parentScopeType = "channel";
-    const parentScopeId = input.view.currentChannelId || "general";
+    const parentScopeType = "category";
+    const parentScopeId = room.categoryId || "voice-rooms";
+    const position = room.position ?? (input.live.state.voiceRoomPlacements || []).filter((item) => item.categoryId === parentScopeId).length;
     await dispatch("scopeParentSet", { scopeType: "media-room", scopeId: roomId, parentScopeType, parentScopeId });
     try {
-      await dispatch("mediaRoomCreateScoped", { roomId, name: room.name, allowsVideo: room.allowsVideo, group: room.group, kind: "voice", parentScopeType, parentScopeId });
+      await dispatch("mediaRoomCreateScoped", { roomId, name: room.name, allowsVideo: room.allowsVideo, kind: "voice", parentScopeType, parentScopeId });
+      await dispatch("voiceRoomPlacementCreate", { roomId, categoryId: parentScopeId, position });
     } catch (error) {
+      await dispatch("mediaRoomArchive", { roomId: roomId as RoomId }).catch(() => undefined);
       await dispatch("scopeParentRemove", { scopeType: "media-room", scopeId: roomId }).catch(() => undefined);
+      throw error;
+    }
+  }
+
+  async function reorderMediaRoom(roomId: string, categoryId: string, position: number) {
+    const placement = (input.live.state.voiceRoomPlacements || []).find((item) => item.roomId === roomId);
+    const currentCategoryId = placement?.categoryId;
+    const changesParent = categoryId !== currentCategoryId;
+    if (changesParent) {
+      await dispatch("scopeParentSet", { scopeType: "media-room", scopeId: roomId, parentScopeType: "category", parentScopeId: categoryId });
+    }
+    try {
+      await dispatch("voiceRoomPlacementUpdate", { roomId, categoryId, position });
+    } catch (error) {
+      if (changesParent && currentCategoryId) {
+        await dispatch("scopeParentSet", { scopeType: "media-room", scopeId: roomId, parentScopeType: "category", parentScopeId: currentCategoryId }).catch(() => undefined);
+      }
       throw error;
     }
   }
@@ -215,7 +296,7 @@ export function managementActions(input: ChatActionHandlersInput) {
     return input.live.management.invites.create({
       name: invite.name?.trim() || undefined,
       roleId: invite.roleId,
-      maxUses: invite.maxUses ?? null,
+      maxUses: invite.maxUses ?? undefined,
       expiresAt: invite.expiresAt ?? null
     });
   }
@@ -292,6 +373,7 @@ export function managementActions(input: ChatActionHandlersInput) {
     assignMemberRoles,
     createCategory,
     createMediaRoom,
+    createVoiceTextChannel,
     createInvite,
     createRole,
     createTextChannel,
@@ -300,6 +382,9 @@ export function managementActions(input: ChatActionHandlersInput) {
     moderateMember,
     openManageDialog,
     reorderCategory,
+    reorderMediaRoom,
+    reorderTextChannel,
+    setChannelPinned,
     removeInvite,
     unbanMember,
     updateCategory,

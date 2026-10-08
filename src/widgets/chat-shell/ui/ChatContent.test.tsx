@@ -6,7 +6,7 @@ import { ChatContent } from "@widgets/chat-shell/ui/ChatContent";
 const uiStore = { composerFocusKey: 1, heldDirectCallRoomId: undefined, heldMediaRoomIds: {}, localMediaSettings: { audio: true, video: false, screen: false }, mutedVoiceParticipantIds: [], pendingComposerText: undefined, sidebarOpen: false };
 const ui = { clearDirectCallHold: vi.fn(), clearMediaRoomHold: vi.fn(), selectChannel: vi.fn(), setSidebarOpen: vi.fn(), toggleVoiceParticipantMute: vi.fn() };
 const actions: any = {
-  addThreadComment: vi.fn(), createCommentThread: vi.fn(async () => "thread-1"), deleteMessage: vi.fn(), editMessage: vi.fn(),
+  addThreadComment: vi.fn(), createCommentThread: vi.fn(async () => "thread-1"), deleteMessage: vi.fn(async () => true), editMessage: vi.fn(),
   forwardMessage: vi.fn(async () => true), leaveMediaRoom: vi.fn(), openDirectThreadForMember: vi.fn(), pinMessage: vi.fn(),
   reactToMessage: vi.fn(), replyToMessage: vi.fn(), resolveCommentThread: vi.fn(), resumeDirectCallThread: vi.fn(),
   sendChannelMessage: vi.fn(), sendDirectMessage: vi.fn(), stopScreenShare: vi.fn(), unpinMessage: vi.fn(), updateMediaRoom: vi.fn(),
@@ -14,8 +14,7 @@ const actions: any = {
 };
 const directCalls: any = { clientId: "client-1", endCall: vi.fn(), error: undefined, memberIds: ["alice", "bob"], state: { directRoomId: undefined, remoteName: "Bob", status: "idle", room: undefined }, stopWatchingScreenShare: vi.fn(), updateMedia: vi.fn(), watchScreenShare: vi.fn() };
 const media: any = { canSwapCamera: true, error: undefined, sfu: { mediaRoomId: undefined, status: "idle", media: { audio: true, video: false, screen: false } }, stopWatchingScreenShare: vi.fn(), toggleCameraFacing: vi.fn(), updateRoomMedia: vi.fn(), voiceTokens: [] };
-const customMedia: any = { forScope: vi.fn(async () => []), safeRenderMetadata: vi.fn((value: unknown) => value), capabilities: vi.fn(() => ({ encryptedFiles: true, driveAssets: false, providerSearch: false, providerUpload: false })) };
-const live: any = { actor: { memberId: "alice", role: "member" }, can: vi.fn(() => true), customMedia, driveManagement: {}, state: { comments: {}, directThreads: {}, files: {}, rooms: {} } };
+const live: any = { actor: { memberId: "alice", role: "member" }, can: vi.fn(() => true), driveManagement: {}, state: { comments: {}, directThreads: {}, files: {}, rooms: {} } };
 const history = { loading: false, error: undefined, records: [], loadOlder: vi.fn(), jumpToCursor: vi.fn() };
 const personalUnread = { marker: undefined as any, clear: vi.fn(), mark: vi.fn() };
 const productivity = { bookmarks: [], reminders: [], addBookmark: vi.fn(), removeBookmark: vi.fn(), scheduleReminder: vi.fn(), removeReminder: vi.fn() };
@@ -36,8 +35,9 @@ vi.mock("@features/personal-productivity/model/usePersonalProductivity", () => (
 vi.mock("@entities/chat/model/chatViewModel", () => ({ canDeleteMessage: vi.fn(() => true), isMessageAuthor: vi.fn(() => true), avatarForActor: vi.fn(() => "avatar") }));
 vi.mock("@features/messages/ui/MessageFeed", () => ({
   MessageFeed: (props: any) => <section aria-label="mock message feed">
-    <button onClick={() => props.onSend("body", [{ mediaId: "media-1", scopeType: "channel", scopeId: "general", mediaType: "emoji" }])}>send</button>
-    <button onClick={() => props.onReply?.("message-1", "reply", [])}>reply</button>
+    <button onClick={() => props.onSend("body")}>send</button>
+    <button onClick={() => props.onSend("")}>send attachment-only</button>
+    <button onClick={() => props.onReply?.("message-1", "reply")}>reply</button>
     <button onClick={() => props.onMarkUnread?.(props.messages[0])}>mark unread</button>
     <button onClick={() => props.onClearUnread?.()}>clear unread</button>
     <button onClick={() => props.onAddBookmark?.(props.messages[0])}>bookmark</button>
@@ -56,11 +56,9 @@ vi.mock("@features/messages/ui/MessageFeed", () => ({
     <button onClick={() => props.history?.loadOlder?.()}>load older</button><button onClick={() => props.history?.jumpToCursor?.("cursor-1")}>jump history</button>
     <span data-can-delete={String(props.canDeleteMessage?.(props.messages[0]))} data-can-edit={String(props.canEditMessage?.(props.messages[0]))} />
     <span role={props.forwardStatus?.kind === "error" ? "alert" : "status"}>{props.forwardStatus?.message || ""}</span>
-    {props.customMedia ? props.customMedia : <span role="note">Custom media is unavailable for this conversation.</span>}
+    {props.forwardStatus?.actionLabel ? <button onClick={props.forwardStatus.onAction}>{props.forwardStatus.actionLabel}</button> : null}
+    <span role="status" />
   </section>
-}));
-vi.mock("@features/custom-media/ui/CustomMediaCatalog", () => ({
-  CustomMediaCatalog: (props: any) => <div aria-label="mock custom media"><button onClick={() => props.onSelectReference?.({ mediaId: "media-2", scopeType: props.scopeType, scopeId: props.scopeId, mediaType: "voice" })}>select custom media</button><button onClick={() => props.onRecordsChanged?.([{ id: "media-2", scopeType: props.scopeType, scopeId: props.scopeId, mediaType: "voice", name: "Voice", reference: { kind: "files-v2", id: "file-2" }, render: { mode: "audio", durationMs: 1000 } }])}>refresh custom media</button></div>
 }));
 vi.mock("@features/voice-room/ui/VoiceRoomView", () => ({
   VoiceRoomView: (props: any) => <section aria-label="mock voice room">
@@ -79,7 +77,6 @@ function reset() {
   personalUnread.marker = undefined;
   live.actor.role = "member";
   live.can.mockImplementation(() => true);
-  customMedia.forScope.mockResolvedValue([]); customMedia.safeRenderMetadata.mockImplementation((value: unknown) => value);
   Object.values(actions).forEach((value) => { if (typeof value?.mockClear === "function") value.mockClear(); });
   ui.clearDirectCallHold.mockClear(); ui.clearMediaRoomHold.mockClear(); history.loadOlder.mockClear(); history.jumpToCursor.mockClear(); personalUnread.clear.mockClear(); personalUnread.mark.mockClear();
   Object.values(productivity).forEach((value) => { if (typeof value?.mockClear === "function") value.mockClear(); });
@@ -90,10 +87,9 @@ function reset() {
 describe("ChatContent composition", () => {
   beforeEach(reset);
 
-  it("wires channel history, unread, custom media, productivity, sends, replies, and forwarding", async () => {
+  it("wires channel history, unread, productivity, sends, replies, and forwarding", async () => {
     const { container } = render(<ChatContent />);
     expect(container.children).toHaveLength(1);
-    await waitFor(() => expect(customMedia.forScope).toHaveBeenCalledWith({ scopeType: "channel", scopeId: "general" }));
     fireEvent.click(screen.getByRole("button", { name: "send" }));
     fireEvent.click(screen.getByRole("button", { name: "reply" }));
     fireEvent.click(screen.getByRole("button", { name: "mark unread" }));
@@ -108,10 +104,8 @@ describe("ChatContent composition", () => {
     fireEvent.click(screen.getByRole("button", { name: "open attachment" }));
     fireEvent.click(screen.getByRole("button", { name: "load older" }));
     fireEvent.click(screen.getByRole("button", { name: "jump history" }));
-    fireEvent.click(screen.getByRole("button", { name: "select custom media" }));
-    fireEvent.click(screen.getByRole("button", { name: "refresh custom media" }));
-    await waitFor(() => expect(actions.sendChannelMessage).toHaveBeenCalledWith("body", [], expect.any(Array)));
-    await waitFor(() => expect(actions.replyToMessage).toHaveBeenCalledWith("message-1", "reply", [], []));
+    await waitFor(() => expect(actions.sendChannelMessage).toHaveBeenCalledWith("body", []));
+    await waitFor(() => expect(actions.replyToMessage).toHaveBeenCalledWith("message-1", "reply", []));
     expect(personalUnread.mark).toHaveBeenCalled();
     expect(productivity.addBookmark).toHaveBeenCalled();
     expect(productivity.removeBookmark).toHaveBeenCalledWith("bookmark-1");
@@ -139,8 +133,20 @@ describe("ChatContent composition", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "send" }));
 
-    await waitFor(() => expect(actions.sendChannelMessage).toHaveBeenCalledWith("body", ["file-1"], expect.any(Array)));
+    await waitFor(() => expect(actions.sendChannelMessage).toHaveBeenCalledWith("body", ["file-1"]));
     expect(attachments.publishPendingAttachments).toHaveBeenCalled();
+    expect(attachments.clearPendingAttachments).toHaveBeenCalled();
+  });
+
+  it("publishes and consumes queued attachments for an attachment-only message", async () => {
+    attachments.pendingAttachmentCount = 1;
+    render(<ChatContent />);
+
+    fireEvent.click(screen.getByRole("button", { name: "send attachment-only" }));
+
+    await waitFor(() => expect(actions.sendChannelMessage).toHaveBeenCalledWith("", ["file-1"]));
+    expect(attachments.publishPendingAttachments).toHaveBeenCalled();
+    expect(attachments.consumePendingAttachmentIds).toHaveBeenCalled();
     expect(attachments.clearPendingAttachments).toHaveBeenCalled();
   });
 
@@ -169,8 +175,8 @@ describe("ChatContent composition", () => {
     render(<ChatContent />);
     fireEvent.click(screen.getByRole("button", { name: "send" }));
     fireEvent.click(screen.getByRole("button", { name: "reply" }));
-    await waitFor(() => expect(actions.sendDirectMessage).toHaveBeenCalledWith("body", [], expect.any(Array)));
-    await waitFor(() => expect(actions.replyToMessage).toHaveBeenCalledWith("message-1", "reply", [], []));
+    await waitFor(() => expect(actions.sendDirectMessage).toHaveBeenCalledWith("body", []));
+    await waitFor(() => expect(actions.replyToMessage).toHaveBeenCalledWith("message-1", "reply", []));
 
     directCalls.state = { directRoomId: "call-1", remoteName: "Bob", status: "connected", room: { remoteStreams: [] } };
     const { rerender } = render(<ChatContent />);
@@ -218,22 +224,16 @@ describe("ChatContent composition", () => {
     expect(media.updateRoomMedia.mock.calls.length).toBe(updateCount);
   });
 
-  it("fails closed for draft DM attachment/custom-media scopes", () => {
+  it("fails closed for draft DM attachment scopes", () => {
     view.showingDm = true; view.activeThread = undefined; attachments.scope = undefined;
     render(<ChatContent />);
-    expect(screen.getByRole("note")).toHaveTextContent("Custom media is unavailable");
+    expect(screen.queryByText("Custom media")).not.toBeInTheDocument();
   });
 
   it("clears a personal unread marker when a newer visible feed is read", async () => {
     personalUnread.marker = { messageId: "old-message", createdAt: 1, label: "# general" };
     render(<ChatContent />);
     await waitFor(() => expect(personalUnread.clear).toHaveBeenCalled());
-  });
-
-  it("clears custom-media records when the authoritative listing fails", async () => {
-    customMedia.forScope.mockRejectedValueOnce(new Error("listing unavailable"));
-    render(<ChatContent />);
-    await waitFor(() => expect(customMedia.forScope).toHaveBeenCalled());
   });
 
   it("wires message management actions and fail-closed forwarding", async () => {
@@ -263,6 +263,18 @@ describe("ChatContent composition", () => {
     expect(actions.addThreadComment).toHaveBeenCalledWith("thread-1", "comment");
     expect(actions.resolveCommentThread).toHaveBeenCalledWith("thread-1", true);
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Rejected by policy"));
+  });
+
+  it("explains unconfirmed deletion and offers an explicit retry", async () => {
+    actions.deleteMessage.mockResolvedValueOnce("Deletion was not confirmed. The message and its attached files may still exist.").mockResolvedValueOnce(true);
+    render(<ChatContent />);
+
+    fireEvent.click(screen.getByRole("button", { name: "delete" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Deletion was not confirmed");
+    fireEvent.click(screen.getByRole("button", { name: "Retry deletion and cleanup" }));
+
+    await waitFor(() => expect(actions.deleteMessage).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("Message and exclusively attached files deleted.")).toBeInTheDocument();
   });
 
   it("does not create personal productivity items without a message scope", () => {

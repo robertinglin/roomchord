@@ -6,6 +6,7 @@ import { EncryptedRoomPayload } from "matterhorn-sdk/browser/crypto";
 export type ChatMediaBridge = {
   available?: boolean;
   clientId?: string;
+  getCallPublicKey?: () => string | undefined | Promise<string | undefined>;
   getMediaPeer?: () => PeerJsPeer | undefined;
   getMediaPeerAddress?: () => string | undefined;
   subscribeMediaPeer?: (listener: () => void) => () => void;
@@ -14,7 +15,7 @@ export type ChatMediaBridge = {
   encryptRoomPayload?: <T>(kind: string, value: T) => Promise<EncryptedRoomPayload>;
   decryptRoomPayload?: <T>(kind: string, payload: EncryptedRoomPayload) => Promise<T>;
   encryptRelayPayload?: <T>(kind: string, value: T, relayPublicKey?: string) => Promise<unknown | undefined>;
-  sendPeerSignal?: (targetClientId: string, targetPeerId: string | undefined, signal: CallSignal, auth: CallSignalAuth) => boolean | Promise<boolean>;
+  sendPeerSignal?: (targetClientId: string, targetPeerId: string | undefined, signal: CallSignal, auth: CallSignalAuth | undefined) => boolean | Promise<boolean>;
   claimEphemeralToken?: (claim: { id?: string; kind: string; scope: string; payload?: Record<string, unknown>; ttlMs?: number }) => MatterhornEphemeralTokenHandle;
   getEphemeralTokens?: () => MatterhornEphemeralToken[];
   subscribeEphemeralTokens?: (listener: (tokens: MatterhornEphemeralToken[]) => void) => () => void;

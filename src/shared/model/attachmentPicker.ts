@@ -21,7 +21,7 @@ export type AttachmentPickerDriveAdapter = {
     scopeType: string;
     scopeId: string;
   }>;
-  uploadLocalFile(input: { connectionId: string; roomName: string; file: File; mimeType?: string }): Promise<{ file: { id: string; name: string; mimeType: string; size?: number }; url: string }>;
+  uploadLocalFile(input: { connectionId: string; roomId: string; file: File; mimeType?: string }): Promise<{ file: { id: string; name: string; mimeType: string; size?: number }; url: string }>;
   remove(connectionId: string, fileId: string): Promise<{ removed: boolean }>;
 };
 

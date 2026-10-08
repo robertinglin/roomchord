@@ -134,62 +134,80 @@ export function useChatDirectCalls(input: Input) {
     if (!bridge) {
       return undefined;
     }
-    const profile = { id: clientId, name: actorDisplayName, avatar: actorProfileAvatar };
-    const direct = new DirectCallOrchestrator({
-      roomName: input.roomName,
-      profile,
-      getPeer: () => bridge.getMediaPeer?.(),
-      getPeerAddress: () => bridge.getMediaPeerAddress?.(),
-      sendSignal: (targetClientId, targetPeerId, signal, auth) => {
-        return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
-      },
-      subscribeRelayMessage: bridge.subscribeRelayMessage,
-      getParticipant: (id) => getParticipantRef.current(id),
-      renderDefaultCallDock: {
-        theme: "dark",
-        shouldRender: (call) => call.status === "incoming",
-        incomingActions: (call) => incomingActionsRef.current?.(call),
-        onBeforeAccept: (call) => onBeforeAcceptRef.current?.(call)
-      },
-      createMeshController: ({ onState, onError }) => new MeshRoomCallController({
-        roomName: input.roomName,
+    let disposed = false;
+    let disposeDirect = () => {};
+    void Promise.resolve(bridge.getCallPublicKey?.()).then((callPubkey) => {
+      if (disposed) return;
+      const profile = {
+        id: clientId,
+        name: actorDisplayName,
+        avatar: actorProfileAvatar,
+        ...(callPubkey ? { callPubkey } : {})
+      };
+      const direct = new DirectCallOrchestrator({
+        roomId: input.roomName,
         profile,
+        skipLegacySignalSigning: true,
         getPeer: () => bridge.getMediaPeer?.(),
         getPeerAddress: () => bridge.getMediaPeerAddress?.(),
-        createPeer: bridge.createMediaPeer,
-        mediaDeviceController: input.mediaDeviceController,
         sendSignal: (targetClientId, targetPeerId, signal, auth) => {
           return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
         },
-        onState,
+        subscribeRelayMessage: bridge.subscribeRelayMessage,
+        getParticipant: (id) => getParticipantRef.current(id),
+        renderDefaultCallDock: {
+          theme: "dark",
+          shouldRender: (call) => call.status === "incoming",
+          incomingActions: (call) => incomingActionsRef.current?.(call),
+          onBeforeAccept: (call) => onBeforeAcceptRef.current?.(call)
+        },
+        createMeshController: ({ onState, onError }) => new MeshRoomCallController({
+          roomId: input.roomName,
+          profile,
+          skipLegacySignalSigning: true,
+          getPeer: () => bridge.getMediaPeer?.(),
+          getPeerAddress: () => bridge.getMediaPeerAddress?.(),
+          createPeer: bridge.createMediaPeer,
+          mediaDeviceController: input.mediaDeviceController,
+          sendSignal: (targetClientId, targetPeerId, signal, auth) => {
+            return bridge.sendPeerSignal?.(targetClientId, targetPeerId, signal, auth) ?? false;
+          },
+          onState,
+          onError: (message, code) => {
+            onError(message, code);
+          }
+        }),
+        onCallState: (nextState) => {
+          setState(nextState);
+        },
         onError: (message, code) => {
-          onError(message, code);
+          setError(message);
         }
-      }),
-      onCallState: (nextState) => {
-        setState(nextState);
-      },
-      onError: (message, code) => {
-        setError(message);
-      }
-    });
-    directRef.current = direct;
-    const onCall = (call: PeerJsMediaConnection) => {
-      direct.handleMediaCall(call);
-    };
-    let peer = bridge.getMediaPeer?.();
-    peer?.on("call", onCall);
-    const removeMediaPeerListener = bridge.subscribeMediaPeer?.(() => {
-      const nextPeer = bridge.getMediaPeer?.();
-      if (!nextPeer || nextPeer === peer) return;
-      removePeerCallListener(peer, onCall);
-      peer = nextPeer;
-      peer.on("call", onCall);
+      });
+      directRef.current = direct;
+      const onCall = (call: PeerJsMediaConnection) => {
+        direct.handleMediaCall(call);
+      };
+      let peer = bridge.getMediaPeer?.();
+      peer?.on("call", onCall);
+      const removeMediaPeerListener = bridge.subscribeMediaPeer?.(() => {
+        const nextPeer = bridge.getMediaPeer?.();
+        if (!nextPeer || nextPeer === peer) return;
+        removePeerCallListener(peer, onCall);
+        peer = nextPeer;
+        peer.on("call", onCall);
+      });
+      disposeDirect = () => {
+        removeMediaPeerListener?.();
+        removePeerCallListener(peer, onCall);
+        direct.destroy();
+      };
+    }).catch((error: unknown) => {
+      if (!disposed) setError(error instanceof Error ? error.message : "Could not load the call identity.");
     });
     return () => {
-      removeMediaPeerListener?.();
-      removePeerCallListener(peer, onCall);
-      direct.destroy();
+      disposed = true;
+      disposeDirect();
       directRef.current = undefined;
       setState({ status: "idle" });
     };

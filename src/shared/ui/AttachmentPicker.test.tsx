@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { AttachmentPicker } from "@shared/ui/AttachmentPicker";
@@ -44,6 +44,7 @@ describe("AttachmentPicker", () => {
     expect(screen.getByText("Downloading one.txt…")).toBeInTheDocument();
     rerender(<AttachmentPicker onUpload={upload} unavailableReason="DM attachments are unavailable" transfer={transfer} />);
     expect(screen.getByRole("status")).toHaveTextContent("DM attachments are unavailable");
+    expect(screen.getByRole("button", { name: "Record voice message" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Add file" }));
     expect(screen.getByRole("menuitem", { name: /Upload file/ })).toBeDisabled();
     expect(container.querySelectorAll("input[type=file]")).toHaveLength(2);
@@ -100,5 +101,123 @@ describe("AttachmentPicker", () => {
     const file = new File(["text"], "notes.txt", { type: "text/plain" });
     fireEvent.change(pickerInputs[1], { target: { files: [file] } });
     expect(share).toHaveBeenCalledWith(file);
+  });
+
+  it("records a voice message and only offers local destinations", async () => {
+    const user = userEvent.setup();
+    const upload = vi.fn();
+    const share = vi.fn();
+    const track = { stop: vi.fn() };
+    const stream = { getTracks: () => [track] } as unknown as MediaStream;
+    const getUserMedia = vi.fn(async () => stream);
+    const OriginalMediaRecorder = globalThis.MediaRecorder;
+    class FakeMediaRecorder extends EventTarget {
+      static isTypeSupported() { return true; }
+      state: RecordingState = "inactive";
+      start() { this.state = "recording"; }
+      stop() {
+        this.state = "inactive";
+        this.dispatchEvent(new MessageEvent("dataavailable", { data: new Blob(["voice"], { type: "audio/webm" }) }));
+        this.dispatchEvent(new Event("stop"));
+      }
+    }
+    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia } });
+    Object.defineProperty(globalThis, "MediaRecorder", { configurable: true, value: FakeMediaRecorder });
+    try {
+      render(<AttachmentPicker onUpload={upload} onShareDrive={share} transfer={transfer} />);
+      await user.click(screen.getByRole("button", { name: "Record voice message" }));
+      await user.click(screen.getByRole("button", { name: "Stop voice recording" }));
+      expect(screen.getByText("Voice message preview")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Add recording to message" }));
+      expect(upload).toHaveBeenCalledWith(expect.any(File));
+      expect(share).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(globalThis, "MediaRecorder", { configurable: true, value: OriginalMediaRecorder });
+    }
+  });
+
+  it("waits for microphone permission before recording and provides an audio preview", async () => {
+    const user = userEvent.setup();
+    const upload = vi.fn();
+    const track = { stop: vi.fn() };
+    const stream = { getTracks: () => [track] } as unknown as MediaStream;
+    let resolvePermission!: (value: MediaStream) => void;
+    const getUserMedia = vi.fn(() => new Promise<MediaStream>((resolve) => { resolvePermission = resolve; }));
+    const OriginalMediaRecorder = globalThis.MediaRecorder;
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    const createObjectURL = vi.fn(() => "blob:voice-preview");
+    const revokeObjectURL = vi.fn();
+    class FakeMediaRecorder extends EventTarget {
+      static isTypeSupported() { return true; }
+      state: RecordingState = "inactive";
+      start() { this.state = "recording"; }
+      stop() {
+        this.state = "inactive";
+        this.dispatchEvent(new MessageEvent("dataavailable", { data: new Blob(["voice"], { type: "audio/webm" }) }));
+        this.dispatchEvent(new Event("stop"));
+      }
+    }
+    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia } });
+    Object.defineProperty(globalThis, "MediaRecorder", { configurable: true, value: FakeMediaRecorder });
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revokeObjectURL });
+    try {
+      render(<AttachmentPicker onUpload={upload} transfer={transfer} />);
+      await user.click(screen.getByRole("button", { name: "Record voice message" }));
+      expect(screen.getByRole("status")).toHaveTextContent("Waiting for microphone permission");
+      expect(screen.getByRole("button", { name: "Requesting microphone permission" })).toBeDisabled();
+      expect(screen.queryByRole("timer")).not.toBeInTheDocument();
+
+      await act(async () => { resolvePermission(stream); });
+      expect(screen.getByRole("button", { name: "Stop voice recording" })).toBeInTheDocument();
+      expect(screen.getByRole("img", { name: "Live voice waveform" })).toBeInTheDocument();
+      expect(screen.getByRole("timer", { name: /Recording duration/ })).toHaveTextContent("0:00");
+      await user.click(screen.getByRole("button", { name: "Stop and preview" }));
+
+      expect(document.querySelector("audio source[src='blob:voice-preview']")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Play recorded voice message" })).toBeInTheDocument();
+      expect(screen.getByRole("slider", { name: "Seek recorded voice message" })).toBeInTheDocument();
+      expect(screen.getByRole("timer", { name: /recorded voice message playback time/ })).toHaveTextContent("0:00 / 0:00");
+      expect(screen.getByRole("button", { name: "Discard recording" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Record again" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Add recording through Google Drive" })).toBeDisabled();
+      await user.click(screen.getByRole("button", { name: "Add recording to message" }));
+      expect(upload).toHaveBeenCalledWith(expect.any(File));
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:voice-preview");
+      expect(track.stop).toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(globalThis, "MediaRecorder", { configurable: true, value: OriginalMediaRecorder });
+      Object.defineProperty(URL, "createObjectURL", { configurable: true, value: originalCreateObjectURL });
+      Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: originalRevokeObjectURL });
+    }
+  });
+
+  it("explains denied microphone permission and stops a late permission stream after unmount", async () => {
+    const user = userEvent.setup();
+    const denied = vi.fn(async () => { throw new DOMException("Permission denied", "NotAllowedError"); });
+    const OriginalMediaRecorder = globalThis.MediaRecorder;
+    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: denied } });
+    Object.defineProperty(globalThis, "MediaRecorder", { configurable: true, value: class FakeMediaRecorder {} });
+    try {
+      const deniedRender = render(<AttachmentPicker transfer={transfer} />);
+      await user.click(screen.getByRole("button", { name: "Record voice message" }));
+      await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Microphone permission was denied"));
+      deniedRender.unmount();
+    } finally {
+      Object.defineProperty(globalThis, "MediaRecorder", { configurable: true, value: OriginalMediaRecorder });
+    }
+
+    let resolvePermission!: (value: MediaStream) => void;
+    const track = { stop: vi.fn() };
+    const stream = { getTracks: () => [track] } as unknown as MediaStream;
+    const deferred = vi.fn(() => new Promise<MediaStream>((resolve) => { resolvePermission = resolve; }));
+    Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: deferred } });
+    Object.defineProperty(globalThis, "MediaRecorder", { configurable: true, value: class FakeMediaRecorder {} });
+    const { unmount } = render(<AttachmentPicker transfer={transfer} />);
+    await user.click(screen.getByRole("button", { name: "Record voice message" }));
+    unmount();
+    await act(async () => { resolvePermission(stream); });
+    expect(track.stop).toHaveBeenCalled();
   });
 });

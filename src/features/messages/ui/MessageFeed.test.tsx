@@ -74,9 +74,9 @@ function feedElement(messages: Message[]) {
 }
 
 describe("MessageFeed scrolling", () => {
-  it("shows disabled history controls while Matterhorn history transport is unavailable", () => {
+  it("keeps defensive history controls inert without a controller", () => {
     renderFeed([]);
-    expect(screen.getByRole("group", { name: "Message history controls" })).toHaveTextContent("History navigation is unavailable");
+    expect(screen.getByRole("group", { name: "Message history controls" })).not.toContainElement(screen.queryByRole("status"));
     expect(screen.getByRole("button", { name: "Load older messages" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "History options" })).toBeDisabled();
   });
@@ -209,28 +209,6 @@ describe("MessageFeed scrolling", () => {
     expect(list.scrollTop).toBe(1000);
   });
 
-  it("preserves custom-media references for normal sends", async () => {
-    const user = userEvent.setup();
-    const onSend = vi.fn();
-    const customMediaRefs = [{ mediaId: "media-1", scopeType: "channel", scopeId: "general", mediaType: "emoji" as const }];
-    render(
-      <ChatUiStoreProvider storageKeys={storageKeys()}>
-        <MessageFeed
-          title="# general"
-          messages={[]}
-          memberNamesById={{ mina: "Mina" }}
-          mode="channel"
-          onSend={onSend}
-          customMediaRefs={customMediaRefs}
-        />
-      </ChatUiStoreProvider>
-    );
-
-    await user.click(screen.getByRole("button", { name: "Send message" }));
-
-    expect(onSend).toHaveBeenCalledWith("", customMediaRefs);
-  });
-
   it("allows a channel attachment-only send when a completed attachment is pending", async () => {
     const user = userEvent.setup();
     const onSend = vi.fn();
@@ -285,6 +263,31 @@ describe("MessageFeed scrolling", () => {
     await user.click(send);
 
     expect(onSend).toHaveBeenCalledWith("");
+  });
+
+  it("allows an attachment-only reply when a completed attachment is pending", async () => {
+    const user = userEvent.setup();
+    const onReply = vi.fn();
+    render(
+      <ChatUiStoreProvider storageKeys={storageKeys()}>
+        <MessageFeed
+          title="# general"
+          messages={[message("m1", "source")]}
+          memberNamesById={{ mina: "Mina" }}
+          mode="channel"
+          canSendWithoutText
+          onSend={vi.fn()}
+          onReply={onReply}
+        />
+      </ChatUiStoreProvider>
+    );
+
+    const row = screen.getByText("source").closest("article")!;
+    fireEvent.mouseEnter(row);
+    await user.click(screen.getByRole("button", { name: "Reply to message from Mina" }));
+    await user.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(onReply).toHaveBeenCalledWith("m1", "");
   });
 
   it("keeps an empty send disabled while an attachment transfer is in progress", async () => {

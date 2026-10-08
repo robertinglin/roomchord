@@ -17,6 +17,9 @@ export function ChannelGroup({
   open,
   onAdd,
   onToggle,
+  headingProps,
+  dropProps,
+  heading,
   children,
 }: React.PropsWithChildren<{
   addLabel?: string;
@@ -24,10 +27,13 @@ export function ChannelGroup({
   open?: boolean;
   onAdd?: () => void;
   onToggle?: () => void;
+  headingProps?: React.HTMLAttributes<HTMLDivElement> & Record<string, unknown>;
+  dropProps?: React.HTMLAttributes<HTMLDivElement> & Record<string, unknown>;
+  heading?: React.ReactNode;
 }>) {
   return (
-    <div {...stylex.props(styles.group)}>
-      <GroupHeading addLabel={addLabel} label={label} open={open} onAdd={onAdd} onToggle={onToggle} />
+    <div {...stylex.props(styles.group)} {...dropProps}>
+      {heading || <GroupHeading addLabel={addLabel} label={label} open={open} onAdd={onAdd} onToggle={onToggle} dragProps={headingProps} />}
       {children}
     </div>
   );

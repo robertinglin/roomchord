@@ -9,9 +9,28 @@ import {
   messageEmbeds
 } from "@entities/chat/model/chatViewModel";
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
-import type { MatterhornCustomMediaMessageReference, MatterhornReshareForForwardResult } from "matterhorn-sdk/browser";
+import type { MatterhornReshareForForwardResult } from "matterhorn-sdk/browser";
 
 type ForwardMessageResult = false | true | string | MatterhornReshareForForwardResult;
+type MessageDeleteResult = true | string;
+
+const DELETE_OPERATION_TIMEOUT_MS = 15_000;
+
+async function withDeleteTimeout<T>(operation: Promise<T>, message: string) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error(message)), DELETE_OPERATION_TIMEOUT_MS); })
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
+function hasMessageContent(body: string, attachmentIds: string[]) {
+  return body.trim().length > 0 || attachmentIds.length > 0;
+}
 
 function rejectedForwardReason(result: unknown): string | false | undefined {
   if (!result || typeof result !== "object" || !("ok" in result)) return undefined;
@@ -29,12 +48,12 @@ export function messageActions(input: ChatActionHandlersInput) {
   // surface the data its audience expressions need. Mentions can only be
   // resolved client-side (member names live here), so we attach the resolved
   // recipient ids as `mentionIds`; the relay still never sees message content.
-  async function sendChannelMessageToChannel(channelId: string, body: string, attachmentIds: string[] = [], customMediaRefs: MatterhornCustomMediaMessageReference[] = [], tagIds: string[] = []) {
-    if (view.actorChatDisabled) return;
+  async function sendChannelMessageToChannel(channelId: string, body: string, attachmentIds: string[] = [], tagIds: string[] = []) {
+    if (view.actorChatDisabled || !hasMessageContent(body, attachmentIds)) return;
     const embeds = messageEmbeds(body);
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
     const normalizedTagIds = [...new Set(tagIds.map((tagId) => tagId.trim()).filter(Boolean))].slice(0, 32);
-    const payload = { channelId: channelId as ChannelId, body, embeds, mentionIds: mentionIds as MemberId[], attachmentIds, ...(normalizedTagIds.length ? { tagIds: normalizedTagIds } : {}), ...(customMediaRefs.length ? { customMediaRefs } : {}) };
+    const payload = { channelId: channelId as ChannelId, body, embeds, mentionIds: mentionIds as MemberId[], attachmentIds, ...(normalizedTagIds.length ? { tagIds: normalizedTagIds } : {}) };
     await dispatch("messageSend", payload);
     for (const embed of embeds) {
       if (embed.provider === "link") continue;
@@ -42,20 +61,19 @@ export function messageActions(input: ChatActionHandlersInput) {
     }
   }
 
-  async function sendChannelMessage(body: string, attachmentIds: string[] = [], customMediaRefs: MatterhornCustomMediaMessageReference[] = [], tagIds: string[] = []) {
+  async function sendChannelMessage(body: string, attachmentIds: string[] = [], tagIds: string[] = []) {
     if (!view.currentChannelId) return;
-    await sendChannelMessageToChannel(view.currentChannelId, body, attachmentIds, customMediaRefs, tagIds);
+    await sendChannelMessageToChannel(view.currentChannelId, body, attachmentIds, tagIds);
   }
 
-  async function sendDirectMessageToThread(threadId: string, userIds: string[], body: string, attachmentIds: string[] = [], customMediaRefs: MatterhornCustomMediaMessageReference[] = []) {
-    if (view.actorChatDisabled) return;
+  async function sendDirectMessageToThread(threadId: string, userIds: string[], body: string, attachmentIds: string[] = []) {
+    if (view.actorChatDisabled || !hasMessageContent(body, attachmentIds)) return;
     try {
       const payload = {
         userIds: userIds as MemberId[],
         ...(view.activeThread?.topicKey ? { topicKey: view.activeThread.topicKey } : {}),
         body,
-        attachmentIds,
-        ...(customMediaRefs.length ? { customMediaRefs } : {})
+        attachmentIds
       };
       await dispatch("directMessageSend", payload);
     } catch {
@@ -72,11 +90,11 @@ export function messageActions(input: ChatActionHandlersInput) {
     ui.setActiveThreadId(threadId);
   }
 
-  async function sendDirectMessage(body: string, attachmentIds: string[] = [], customMediaRefs: MatterhornCustomMediaMessageReference[] = []) {
+  async function sendDirectMessage(body: string, attachmentIds: string[] = []) {
     if (!view.currentThreadId) return;
     const userIds = view.activeThread?.userIds;
     if (!userIds || userIds.length < 2) return;
-    await sendDirectMessageToThread(view.currentThreadId, userIds, body, attachmentIds, customMediaRefs);
+    await sendDirectMessageToThread(view.currentThreadId, userIds, body, attachmentIds);
   }
 
   async function forwardMessage(message: Message, target: MessageForwardTarget): Promise<ForwardMessageResult> {
@@ -121,7 +139,8 @@ export function messageActions(input: ChatActionHandlersInput) {
     }
   }
 
-  async function replyToMessage(replyToId: string, body: string, attachmentIds: string[] = [], customMediaRefs: MatterhornCustomMediaMessageReference[] = [], tagIds: string[] = []) {
+  async function replyToMessage(replyToId: string, body: string, attachmentIds: string[] = [], tagIds: string[] = []) {
+    if (!hasMessageContent(body, attachmentIds)) return;
     const directTarget = state.directMessages?.[replyToId as MessageId];
     if (directTarget?.threadId && directTarget.userIds?.length) {
       await dispatch("directMessageReply", {
@@ -129,8 +148,7 @@ export function messageActions(input: ChatActionHandlersInput) {
         topicKey: directTarget.topicKey || undefined,
         replyToId: replyToId as MessageId,
         body,
-        attachmentIds,
-        ...(customMediaRefs.length ? { customMediaRefs } : {})
+        attachmentIds
       });
       return;
     }
@@ -138,7 +156,7 @@ export function messageActions(input: ChatActionHandlersInput) {
     if (view.actorChatDisabled) return;
     const mentionIds = parseMentionedMemberIds(body, view.memberNamesById);
     const normalizedTagIds = [...new Set(tagIds.map((tagId) => tagId.trim()).filter(Boolean))].slice(0, 32);
-    await dispatch("messageReply", { channelId: view.currentChannelId as ChannelId, replyToId: replyToId as MessageId, body, mentionIds: mentionIds as MemberId[], attachmentIds, ...(normalizedTagIds.length ? { tagIds: normalizedTagIds } : {}), ...(customMediaRefs.length ? { customMediaRefs } : {}) });
+    await dispatch("messageReply", { channelId: view.currentChannelId as ChannelId, replyToId: replyToId as MessageId, body, mentionIds: mentionIds as MemberId[], attachmentIds, ...(normalizedTagIds.length ? { tagIds: normalizedTagIds } : {}) });
   }
 
   async function reactToMessage(messageId: string, emoji: string) {
@@ -165,7 +183,7 @@ export function messageActions(input: ChatActionHandlersInput) {
     await dispatch("messageUnpin", { messageId: messageId as MessageId });
   }
 
-  async function deleteMessage(messageId: string) {
+  async function deleteMessage(messageId: string): Promise<MessageDeleteResult> {
     const directMessage = state.directMessages?.[messageId as MessageId];
     const message = directMessage || state.messages?.[messageId as MessageId];
     const otherMessages = [
@@ -176,23 +194,38 @@ export function messageActions(input: ChatActionHandlersInput) {
       !otherMessages.some((candidate) => candidate.attachmentIds?.includes(attachmentId))
     ));
 
-    if (directMessage) {
-      await dispatch("directMessageDelete", { messageId: messageId as MessageId });
-    } else {
-      await dispatch("messageDelete", { messageId: messageId as MessageId });
+    try {
+      const deletion = directMessage
+        ? dispatch("directMessageDelete", { messageId: messageId as MessageId })
+        : dispatch("messageDelete", { messageId: messageId as MessageId });
+      await withDeleteTimeout(deletion, "Deletion was not confirmed because the connection stopped responding.");
+    } catch {
+      return "Deletion was not confirmed. The message and its attached files may still exist. Reconnect and retry.";
     }
 
     const files = Object.entries(state.files || {}) as Array<[string, { id?: string; fileId?: string; removedAt?: number | null }]>;
     const attachments = Object.entries(state.attachments || {}) as Array<[string, { id?: string; assetId?: string; removedAt?: number | null }]>;
-    for (const attachmentId of exclusiveAttachmentIds) {
+    const cleanupResults = await Promise.all(exclusiveAttachmentIds.map(async (attachmentId) => {
       const file = files.find(([key, record]) => !record.removedAt && (key === attachmentId || record.id === attachmentId || record.fileId === attachmentId));
-      if (file) {
-        await dispatch("fileRemove", { fileId: file[1].fileId || attachmentId });
-        continue;
-      }
       const attachment = attachments.find(([key, record]) => !record.removedAt && (key === attachmentId || record.id === attachmentId || record.assetId === attachmentId));
-      if (attachment) await dispatch("attachmentRemove", { attachmentId: attachment[1].id || attachment[0] });
+      const cleanup = file
+        ? dispatch("fileRemove", { fileId: file[1].fileId || attachmentId })
+        : attachment
+          ? dispatch("attachmentRemove", { attachmentId: attachment[1].id || attachment[0] })
+          : undefined;
+      if (!cleanup) return true;
+      try {
+        await withDeleteTimeout(cleanup, "Attachment cleanup stopped responding.");
+        return true;
+      } catch {
+        return false;
+      }
+    }));
+    const failedCleanupCount = cleanupResults.filter((result) => !result).length;
+    if (failedCleanupCount > 0) {
+      return `Message deletion was confirmed, but ${failedCleanupCount} attached ${failedCleanupCount === 1 ? "file was" : "files were"} not removed. Reconnect and retry file cleanup.`;
     }
+    return true;
   }
 
   async function editMessage(messageId: string, body: string) {

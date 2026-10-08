@@ -15,8 +15,6 @@ import { tokens } from "../../../shared/ui/theme.stylex";
 import { AttachmentList } from "@shared/ui/AttachmentList";
 import type { AttachmentPreviewLoader, AttachmentRecord, EncryptedFileRecord } from "@shared/model/attachments";
 import type { MatterhornBookmark, MatterhornReminder } from "matterhorn-sdk/browser";
-import type { CustomMediaMessageItem } from "@shared/model/customMediaMessage";
-import { customMediaForMessage } from "@shared/model/customMediaMessage";
 
 type MessageMenuPosition = { anchored: true } | { anchored: false; x: number; y: number };
 
@@ -174,8 +172,6 @@ export function MessageRow({
   onRemoveBookmark,
   onAddReminder,
   onRemoveReminder
-  , customMediaRecords = []
-  , customMediaScope
 }: {
   canDeleteMessage?: (message: Message) => boolean;
   canEditMessage?: (message: Message) => boolean;
@@ -213,8 +209,6 @@ export function MessageRow({
   onRemoveBookmark?: (bookmarkId: string) => void;
   onAddReminder?: (message: Message) => void;
   onRemoveReminder?: (reminderId: string) => void;
-  customMediaRecords?: CustomMediaMessageItem[];
-  customMediaScope?: { scopeType: string; scopeId: string };
 }) {
   const [editing, setEditing] = useState<{ id: string; body: string } | undefined>();
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
@@ -239,22 +233,6 @@ export function MessageRow({
   const canEdit = Boolean(!pinnedCopy && onEdit && !isDeleted && (!canEditMessage || canEditMessage(message)));
   const canDelete = Boolean(onDelete && !isDeleted && (!canDeleteMessage || canDeleteMessage(message)));
   const canReact = Boolean(onReact);
-  const messageCustomMedia = customMediaScope
-    ? customMediaForMessage(message.customMediaRefs, customMediaRecords, customMediaScope.scopeType, customMediaScope.scopeId)
-    : [];
-  const playableCustomMedia = messageCustomMedia.filter((item) => item.playback.kind === "files-v2"
-    ? Boolean(onDownloadFile && fileRecords.some((file) => file.fileId === item.playback.id && !file.removedAt))
-    : Boolean(onOpenAttachment && attachmentRecords.some((attachment) => attachment.assetId === item.playback.id && !attachment.removedAt)));
-
-  function openCustomMedia(item: CustomMediaMessageItem) {
-    if (item.playback.kind === "files-v2") {
-      const file = fileRecords.find((candidate) => candidate.fileId === item.playback.id && !candidate.removedAt);
-      if (file) onDownloadFile?.(file);
-      return;
-    }
-    const attachment = attachmentRecords.find((candidate) => candidate.assetId === item.playback.id && !candidate.removedAt);
-    if (attachment) onOpenAttachment?.(attachment);
-  }
   const forwardable = Boolean(message.threadId || ("channelId" in message
     && message.channelId
     && !/^message_ui_[1-9]\d*_[1-9]\d*$/.test(message.id)));
@@ -514,23 +492,7 @@ export function MessageRow({
             onDirectMessage={onDirectMessage}
           />
         )}
-        {playableCustomMedia.length ? (
-          <div className="custom-media-message" aria-label="Custom media references">
-            {playableCustomMedia.map((item) => (
-              <span className="custom-media-message-item" key={item.id}>
-                {item.mediaType === "voice" ? "Voice message" : item.name}
-                <small> · {item.mediaType}</small>
-                {item.playback.kind === "files-v2" ? (
-                  <button type="button" aria-label={`${item.mediaType === "voice" ? "Play" : "Open"} ${item.name}`} onClick={() => openCustomMedia(item)}>{item.mediaType === "voice" ? "Play" : "Open"}</button>
-                ) : (
-                  <button type="button" aria-label={`${item.mediaType === "voice" ? "Play" : "Open"} ${item.name}`} onClick={() => openCustomMedia(item)}>{item.mediaType === "voice" ? "Play" : "Open"}</button>
-                )}
-                {item.mediaType === "voice" ? <small data-playback-kind={item.playback.kind} data-playback-id={item.playback.id}> · encrypted playback</small> : null}
-              </span>
-            ))}
-          </div>
-        ) : null}
-        {message.attachmentIds?.length ? (
+        {!isDeleted && message.attachmentIds?.length ? (
           <AttachmentList
             attachments={attachmentRecords.filter((attachment) => message.attachmentIds?.includes(attachment.id) || message.attachmentIds?.includes(attachment.assetId || ""))}
             files={fileRecords.filter((file) => message.attachmentIds?.includes(file.fileId))}

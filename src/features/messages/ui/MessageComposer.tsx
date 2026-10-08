@@ -10,7 +10,6 @@ import { tokens } from "../../../shared/ui/theme.stylex";
 import { AttachmentPicker } from "@shared/ui/AttachmentPicker";
 import type { AttachmentTransferState, PendingAttachmentPreview } from "@shared/model/attachments";
 import type { AttachmentPickerConfig } from "@shared/model/attachmentPicker";
-import type { MatterhornCustomMediaMessageReference } from "matterhorn-sdk/browser";
 import type { ForumTag } from "@entities/community/model/forum";
 import { BotBadge } from "@shared/ui/BotBadge";
 
@@ -203,8 +202,6 @@ export function MessageComposer({
   replyTo,
   title,
   transfer,
-  customMedia,
-  customMediaRefs = [],
   forumTags = [],
   forumTagIds = [],
   onForumTagIdsChange
@@ -223,12 +220,10 @@ export function MessageComposer({
   attachmentUnavailableReason?: string;
   canSendWithoutText?: boolean;
   pendingText?: PendingComposerText;
-  onSend: (body: string, customMediaRefs?: MatterhornCustomMediaMessageReference[], forumTagIds?: string[]) => void;
+  onSend: (body: string, forumTagIds?: string[]) => void;
   replyTo?: Message;
   title: string;
   transfer?: AttachmentTransferState;
-  customMedia?: React.ReactNode;
-  customMediaRefs?: MatterhornCustomMediaMessageReference[];
   forumTags?: ForumTag[];
   forumTagIds?: string[];
   onForumTagIdsChange?: (tagIds: string[]) => void;
@@ -242,7 +237,7 @@ export function MessageComposer({
 
   const mentionOptions = mentionQuery === null ? [] : mentionCandidates(memberNamesById, mentionQuery);
   const mentionMenuOpen = mentionOptions.length > 0;
-  const canSendEmpty = canSendWithoutText === true || customMediaRefs.length > 0;
+  const canSendEmpty = canSendWithoutText === true;
 
   useEffect(() => {
     if (focusKey === undefined) return;
@@ -331,9 +326,8 @@ export function MessageComposer({
     const editor = editorRef.current;
     if (!editor || disabled) return;
     const body = Array.from(editor.childNodes).map(serialize).join("").trim();
-    if (!body && !canSendEmpty && customMediaRefs.length === 0) return;
-    if (forumTagIds.length) onSend(body, customMediaRefs.length ? customMediaRefs : undefined, forumTagIds);
-    else if (customMediaRefs.length) onSend(body, customMediaRefs);
+    if (!body && !canSendEmpty) return;
+    if (forumTagIds.length) onSend(body, forumTagIds);
     else onSend(body);
     editor.innerHTML = "";
     setHasContent(false);
@@ -453,8 +447,6 @@ export function MessageComposer({
               <SmileGlyph size={16} />
             </Button>
             {(onUploadFile || attachmentUnavailableReason || advancedPicker) && transfer ? <AttachmentPicker advancedPicker={advancedPicker} disabled={disabled} onShareDrive={onShareDrive} onUpload={onUploadFile} transfer={transfer} unavailableReason={attachmentUnavailableReason} /> : null}
-            {customMedia}
-            {customMediaRefs.length ? <span role="status">{customMediaRefs.length} custom media item{customMediaRefs.length === 1 ? "" : "s"} attached</span> : null}
           </span>
           <span {...stylex.props(styles.length)} aria-live="polite">{contentLength} / 2000</span>
           <Button
@@ -468,7 +460,6 @@ export function MessageComposer({
             <SendGlyph size={15} />
             Send
           </Button>
-          {!customMedia ? <span role="note">Custom media is unavailable for this room connection.</span> : null}
         </div>
       </div>
       {composerEmojiOpen ? (

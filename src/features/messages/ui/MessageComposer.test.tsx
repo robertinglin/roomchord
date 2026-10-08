@@ -84,49 +84,6 @@ describe("MessageComposer attachment-only send gates", () => {
     expect(onSend).toHaveBeenCalledWith("");
   });
 
-  it("sends typed custom-media references without a text token", async () => {
-    const user = userEvent.setup();
-    const onSend = vi.fn();
-    render(
-      <MessageComposer
-        memberNamesById={{}}
-        mode="channel"
-        onCancelReply={vi.fn()}
-        onSend={onSend}
-        customMediaRefs={[{ mediaId: "media-1", scopeType: "channel", scopeId: "general", mediaType: "emoji" }]}
-        title="# general"
-      />
-    );
-    expect(screen.getByRole("status")).toHaveTextContent("1 custom media item attached");
-    await user.click(screen.getByRole("button", { name: "Send message" }));
-    expect(onSend).toHaveBeenCalledWith("", [{ mediaId: "media-1", scopeType: "channel", scopeId: "general", mediaType: "emoji" }]);
-  });
-
-  it("uses plural custom-media status and suppresses the unavailable note when supplied", () => {
-    render(
-      <MessageComposer
-        memberNamesById={{}}
-        mode="channel"
-        onCancelReply={vi.fn()}
-        onSend={vi.fn()}
-        customMedia={<span>custom media controls</span>}
-        customMediaRefs={[
-          { mediaId: "media-1", scopeType: "channel", scopeId: "general", mediaType: "emoji" },
-          { mediaId: "media-2", scopeType: "channel", scopeId: "general", mediaType: "sticker" }
-        ]}
-        title="# general"
-      />
-    );
-    expect(screen.getByRole("status")).toHaveTextContent("2 custom media items attached");
-    expect(screen.getByText("custom media controls")).toBeInTheDocument();
-    expect(screen.queryByRole("note")).not.toBeInTheDocument();
-  });
-
-  it("shows an explicit custom-media boundary without emulating message linkage", () => {
-    renderComposer("channel", false);
-    expect(screen.getByRole("note")).toHaveTextContent("Custom media is unavailable");
-  });
-
   it("serializes typed text and submits with Enter", async () => {
     const user = userEvent.setup();
     const onSend = renderComposer("channel", false);

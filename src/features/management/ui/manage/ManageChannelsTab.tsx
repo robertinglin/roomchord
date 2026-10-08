@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { optionalChannelGroup, orderedChannelCategories } from "@entities/chat/model/channelGroups";
 import type { Channel, ChannelCategory, ChannelVisibility } from "@entities/chat/model/types";
 import { Glyph, HashGlyph } from "@shared/ui/design";
@@ -21,6 +21,7 @@ function accessIds(visibility: ChannelVisibility, roleIds: string, memberIds: st
 }
 
 export function ManageChannelsTab({
+  initialChannelId,
   canCreateChannels,
   canManageCategories = false,
   accessScopes = {},
@@ -34,6 +35,7 @@ export function ManageChannelsTab({
   onUpdateCategory,
   onUpdateChannel
 }: {
+  initialChannelId?: string;
   canCreateChannels: boolean;
   canManageCategories?: boolean;
   accessScopes?: Record<string, { source?: string; inheritedFrom?: { scopeType: string; scopeId: string } }>;
@@ -109,6 +111,12 @@ export function ManageChannelsTab({
     setEditChannelAllowedMemberIds((channel.allowedMemberIds || []).join(", "));
     setModalMode("edit");
   }
+
+  useEffect(() => {
+    if (!initialChannelId) return;
+    const channel = channels.find((candidate) => candidate.id === initialChannelId);
+    if (channel) openChannelEditor(channel);
+  }, [initialChannelId]);
 
   function closeChannelModal() {
     setModalMode(undefined);

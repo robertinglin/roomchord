@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { channelReadTopic, directThreadReadTopic } from "matterhorn-sdk/browser";
+import { markChannelRead, markReadTag } from "./channelRead";
 import { messageAnchorId, messageIdFromHash } from "@entities/chat/model/messageLinks";
 import { VOICE_RECONNECT_WINDOW_MS, type RecentVoiceJoin } from "@entities/chat/model/localVoiceReconnect";
 import { latestDirectMessageTime } from "@entities/chat/model/state";
@@ -108,31 +108,32 @@ export function useChatSyncEffects(input: ChatSyncEffectsInput) {
 
   useEffect(() => {
     if (showingDm || !currentChannelId) return;
-    const latest = feedMessages
-      .filter((message) => !message.deletedAt)
-      .reduce((current, message) => Number(message.createdAt || 0) > Number(current?.createdAt || 0) ? message : current, undefined as Message | undefined);
-    if (!latest) return;
-    void input.live?.notifications?.markRead(channelReadTopic(currentChannelId), {
-      createdAt: Number(latest.createdAt || 0),
-      operationId: String(latest.id)
-    }, { source: "route-visible" });
-  }, [currentChannelId, feedMessages, showingDm, input.live]);
+    const memberId = input.live?.actor.memberId;
+    const readTag = memberId ? state.members?.[memberId]?.readTags?.["channel:" + currentChannelId] : undefined;
+    void markChannelRead(input.live, feedMessages, currentChannelId, readTag);
+  }, [currentChannelId, feedMessages, showingDm, input.live, state.members]);
 
   useEffect(() => {
     if (!showingDm || !currentThreadId) return;
     const latest = latestDirectMessageTime(state, currentThreadId);
     ui.markDirectThreadRead(currentThreadId, latest);
 
-    const notifications = input.live?.notifications;
-    if (notifications) {
+    if (input.live) {
       const latestMessage = Object.values(state.directMessages || {})
         .filter((message) => message.threadId === currentThreadId && !message.deletedAt)
-        .reduce((current, message) => Number(message.createdAt || 0) > Number(current?.createdAt || 0) ? message : current, undefined as Message | undefined);
+        .reduce((current, message) => {
+          if (!current) return message;
+          const currentAt = Number(current.createdAt || 0);
+          const messageAt = Number(message.createdAt || 0);
+          return messageAt > currentAt || messageAt === currentAt && String(message.id) > String(current.id) ? message : current;
+        }, undefined as Message | undefined);
       if (latestMessage) {
-        void notifications.markRead(directThreadReadTopic(currentThreadId), {
+        const topic = "direct.thread:" + currentThreadId;
+        const readTag = state.members?.[input.live.actor.memberId]?.readTags?.[topic];
+        void markReadTag(input.live, "direct.thread", currentThreadId, {
           createdAt: Number(latestMessage.createdAt || 0),
           operationId: String(latestMessage.id)
-        }, { source: "route-visible" });
+        }, readTag);
       }
     }
   }, [currentThreadId, showingDm, state, ui, input.live]);

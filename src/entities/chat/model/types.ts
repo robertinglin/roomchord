@@ -1,6 +1,5 @@
 import type { Mosh } from "../../../../types";
 import type { MtnHomeData, MtnHomeOpenRoomDetail } from "matterhorn-sdk/browser";
-import type { MatterhornCustomMediaMessageReference } from "matterhorn-sdk/browser";
 import type { CommentThread, ThreadComment } from "@shared/model/commentThreads";
 
 export type { CommentThread, ThreadComment } from "@shared/model/commentThreads";
@@ -26,7 +25,7 @@ export type ChannelCategory = {
   createdBy?: string;
   createdAt?: number;
   updatedAt?: number;
-};
+} & ChannelAccessConfig;
 export type ChannelAccessConfig = {
   visibility?: ChannelVisibility;
   allowedRoleIds?: string[];
@@ -61,7 +60,6 @@ export type Message = (Mosh.Message | Mosh.DirectMessage) & {
   authorImageUrl?: string;
   forwardedFrom?: ForwardedMessageSource | null;
   forwardedFromId?: string | null;
-  customMediaRefs?: MatterhornCustomMediaMessageReference[];
 };
 
 export type DirectThread = Mosh.DirectThread;
@@ -89,6 +87,8 @@ export type MediaRoom = {
   allowsVideo: boolean;
   scopeType?: string;
   scopeId?: string;
+  parentScopeType?: string;
+  parentScopeId?: string;
   locked: boolean;
   spotlightMemberId?: MemberId | null;
   archivedAt: number | null;
@@ -100,6 +100,20 @@ export type MediaRoom = {
   blockedMembers?: Record<string, { actorId?: string; reason?: string | null; at?: number }>;
   kind?: "voice" | "stage";
   stage?: MediaRoomStage;
+};
+export type VoiceRoomPlacement = {
+  id: string;
+  roomId: string;
+  categoryId: string;
+  position: number;
+};
+export type SharedChannelPin = {
+  id?: string;
+  channelId: string;
+  channelKind: "channel" | "voice";
+  pinnedAt?: number;
+  pinnedBy?: MemberId;
+  archivedAt?: number | null;
 };
 
 export type ScreenShare = Mosh.ScreenShare & {

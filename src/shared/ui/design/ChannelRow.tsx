@@ -1,6 +1,7 @@
 import React from "react";
 import * as stylex from "@stylexjs/stylex";
 import { tokens } from "../theme.stylex";
+import { PinGlyph } from "./icons";
 
 const styles = stylex.create({
   base: {
@@ -22,7 +23,23 @@ const styles = stylex.create({
     ":hover": { backgroundColor: tokens.panelHover, color: tokens.fg },
   },
   active: { backgroundColor: tokens.panelActive, color: tokens.fg },
+  dragging: { opacity: 0.42, transform: "scale(0.98)" },
   icon: { color: tokens.quiet, display: "inline-flex", width: "18px", height: "18px", flex: "0 0 auto" },
+  iconWrap: { position: "relative", display: "inline-flex", width: "18px", height: "18px", flex: "0 0 auto" },
+  pinBadge: {
+    position: "absolute",
+    top: "-5px",
+    right: "-6px",
+    width: "11px",
+    height: "11px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "50%",
+    backgroundColor: tokens.surfaceDeep,
+    color: tokens.accent,
+    boxShadow: `0 0 0 1px ${tokens.surfaceDeep}`,
+  },
   iconActive: { color: tokens.accent },
   text: { minWidth: 0 },
   name: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" },
@@ -51,32 +68,42 @@ export function ChannelRow({
   name,
   topic,
   badge,
+  pinned,
   active,
   voice,
   disabled,
+  dragging,
   onClick,
+  dragProps,
   "aria-label": ariaLabel,
 }: {
   icon: React.ReactNode;
   name: string;
   topic?: string;
   badge?: React.ReactNode;
+  pinned?: boolean;
   active?: boolean;
   voice?: boolean;
   disabled?: boolean;
+  dragging?: boolean;
   onClick?: () => void;
+  dragProps?: React.HTMLAttributes<HTMLButtonElement> & Record<string, unknown>;
   "aria-label"?: string;
 }) {
   return (
     <button
-      {...stylex.props(styles.base, active && styles.active)}
+      {...stylex.props(styles.base, active && styles.active, dragging && styles.dragging)}
       data-voice={voice ? "true" : undefined}
       disabled={disabled}
       onClick={onClick}
+      {...dragProps}
       type="button"
       aria-label={ariaLabel}
     >
-      <span {...stylex.props(styles.icon, active && styles.iconActive)}>{icon}</span>
+      <span {...stylex.props(styles.icon, styles.iconWrap, active && styles.iconActive)}>
+        {icon}
+        {pinned ? <span aria-label="Pinned channel" data-pinned="true" {...stylex.props(styles.pinBadge)}><PinGlyph size={9} /></span> : null}
+      </span>
       <span {...stylex.props(styles.text)}>
         <span {...stylex.props(styles.name)}>{name}</span>
         {topic ? <small {...stylex.props(styles.topic)}>{topic}</small> : null}

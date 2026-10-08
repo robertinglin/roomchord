@@ -5,7 +5,6 @@ import { currentHash } from "@entities/chat/model/chatViewModel";
 import { notificationHref, NotificationTarget, notificationTargetFromHash } from "@entities/chat/model/messageLinks";
 import type { MatterhornRoom } from "matterhorn-sdk/client";
 import type { Mosh} from "../../../../types";
-import { loadNotificationPreference, notificationDefinitionAllowed } from "@shared/model/notificationPreferences";
 
 export type ChatNotificationsInput = {
   actions: ChatActionHandlers;
@@ -43,22 +42,6 @@ function linkResult(url: string | undefined) {
   return url ? { kind: "url", url } : undefined;
 }
 
-export function notificationVisible(intent: unknown, live: MatterhornRoom<Mosh>, fallbackDefinition: string) {
-  let record = intentRecord(intent);
-  for (let depth = 0; depth < 4 && record && !record.scope; depth += 1) {
-    const inner = record.value ?? record.payload ?? record.intent;
-    record = intentRecord(inner);
-  }
-  const scope = intentRecord(record?.scope);
-  const scopeType = typeof scope?.type === "string" ? scope.type : undefined;
-  const scopeId = typeof scope?.id === "string" ? scope.id : undefined;
-  if (!scopeType || !scopeId) return true;
-  const roomName = typeof record?.roomName === "string" ? record.roomName : live.envelope?.room?.id || "mosh";
-  const definition = typeof record?.kind === "string" ? record.kind : fallbackDefinition;
-  const preference = loadNotificationPreference({ roomId: roomName, scopeType, scopeId });
-  return notificationDefinitionAllowed(preference, definition);
-}
-
 // Wires Mosh into the Matterhorn notification Player API. The declarative
 // `notifications` block in the app schema drives *who* gets pushed; here we
 // customize the deep link a recipient lands on when they click, and route the
@@ -76,15 +59,13 @@ export function useChatNotifications(input: ChatNotificationsInput) {
       resolveLink: (intent: unknown) => {
         const channelId = notificationLinkParam(intent, "channelId");
         return linkResult(channelId ? notificationHref({ channelId }) : undefined);
-      },
-      isVisible: (intent: unknown) => notificationVisible(intent, live, "notification")
+      }
     };
     const directLink = {
       resolveLink: (intent: unknown) => {
         const memberId = notificationLinkParam(intent, "memberId");
         return linkResult(memberId ? notificationHref({ dmMemberId: memberId }) : undefined);
-      },
-      isVisible: (intent: unknown) => notificationVisible(intent, live, "directMessage")
+      }
     };
     const unsubscribes = [
       notifications.subscribe("messageMention", channelLink),

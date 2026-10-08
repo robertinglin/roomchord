@@ -79,25 +79,19 @@ describe("Matterhorn comments action composition", () => {
     expect(live.dispatch).toHaveBeenNthCalledWith(4, "commentsResolve", { threadId: "old", resolved: false });
   });
 
-  it("wraps authoritative lifecycle, follow, notification, and private-member operations", async () => {
+  it("wraps authoritative lifecycle and private-member operations", async () => {
     const { live, actions } = setup();
     await actions.archiveCommentThread("old");
     await actions.reopenCommentThread("old");
     await actions.lockCommentThread("old");
     await actions.unlockCommentThread("old");
-    await actions.followCommentThread("old");
-    await actions.unfollowCommentThread("old");
-    await actions.setCommentThreadNotifications("old", false);
     await actions.addCommentThreadMember("old", " member-1 ");
     await actions.removeCommentThreadMember("old", "member-1");
     expect(live.dispatch).toHaveBeenNthCalledWith(1, "commentsThreadArchive", { threadId: "old" });
     expect(live.dispatch).toHaveBeenNthCalledWith(2, "commentsThreadReopen", { threadId: "old" });
     expect(live.dispatch).toHaveBeenNthCalledWith(3, "commentsThreadLock", { threadId: "old" });
     expect(live.dispatch).toHaveBeenNthCalledWith(4, "commentsThreadUnlock", { threadId: "old" });
-    expect(live.dispatch).toHaveBeenNthCalledWith(5, "commentsThreadFollow", { threadId: "old" });
-    expect(live.dispatch).toHaveBeenNthCalledWith(6, "commentsThreadUnfollow", { threadId: "old" });
-    expect(live.dispatch).toHaveBeenNthCalledWith(7, "commentsThreadNotifications", { threadId: "old", enabled: false });
-    expect(live.dispatch).toHaveBeenNthCalledWith(8, "commentsThreadMemberAdd", { threadId: "old", memberId: "member-1" });
-    expect(live.dispatch).toHaveBeenNthCalledWith(9, "commentsThreadMemberRemove", { threadId: "old", memberId: "member-1" });
+    expect(live.dispatch).toHaveBeenNthCalledWith(5, "commentsThreadMemberAdd", { threadId: "old", memberId: "member-1" });
+    expect(live.dispatch).toHaveBeenNthCalledWith(6, "commentsThreadMemberRemove", { threadId: "old", memberId: "member-1" });
   });
 });

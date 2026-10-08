@@ -64,8 +64,33 @@
               "createdAt": 0,
               "createdBy": "system",
               "archivedAt": null
+            },
+            {
+              "id": "voice-rooms",
+              "name": "Voice Rooms",
+              "position": 2,
+              "scopeType": "category",
+              "scopeId": "voice-rooms",
+              "createdAt": 0,
+              "createdBy": "system",
+              "archivedAt": null
             }
           ],
+          "voiceRoomPlacements": [
+            {
+              "id": "voice",
+              "roomId": "voice",
+              "categoryId": "voice-rooms",
+              "position": 0
+            },
+            {
+              "id": "guest_voice",
+              "roomId": "guest_voice",
+              "categoryId": "voice-rooms",
+              "position": 1
+            }
+          ],
+          "pinnedChannels": [],
           "messages": {},
           "guests": {},
           "callRoutes": {},
@@ -181,6 +206,29 @@
               "position": {
                 "type": "number",
                 "min": 0
+              },
+              "visibility": {
+                "type": "enum",
+                "values": [
+                  "public",
+                  "private"
+                ]
+              },
+              "allowedRoleIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 120
+                },
+                "max": 64
+              },
+              "allowedMemberIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "max": 240
+                },
+                "max": 128
               }
             }
           },
@@ -194,6 +242,9 @@
               "fields": {
                 "name": "$payload.name",
                 "position": "$payload.position",
+                "visibility": "$payload.visibility",
+                "allowedRoleIds": "$payload.allowedRoleIds",
+                "allowedMemberIds": "$payload.allowedMemberIds",
                 "scopeType": "category",
                 "scopeId": "$payload.categoryId",
                 "createdAt": "$createdAt",
@@ -497,6 +548,213 @@
             }
           ]
         },
+        "channel.reorder": {
+          "authorize": {
+            "roles": [
+              "moderator"
+            ],
+            "scoped": {
+              "scopeType": "channel",
+              "record": {
+                "collection": "channels",
+                "idField": "channelId",
+                "scopeIdField": "scopeId"
+              },
+              "minimumLevel": "moderator"
+            }
+          },
+          "payload": {
+            "required": {
+              "channelId": {
+                "type": "string",
+                "max": 200
+              },
+              "categoryId": {
+                "type": "string",
+                "max": 200
+              },
+              "position": {
+                "type": "number",
+                "min": 0
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "updateRecord",
+              "collection": "channels",
+              "storage": "array",
+              "partition": "channels",
+              "idField": "channelId",
+              "fields": {
+                "categoryId": "$payload.categoryId",
+                "position": "$payload.position",
+                "group": null,
+                "updatedAt": "$createdAt"
+              },
+              "activity": "reordered channel"
+            }
+          ]
+        },
+        "channel.pin": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "pinId": {
+                "type": "string",
+                "max": 420
+              },
+              "channelId": {
+                "type": "string",
+                "max": 200
+              },
+              "channelKind": {
+                "type": "enum",
+                "values": [
+                  "channel",
+                  "voice"
+                ]
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "upsertRecord",
+              "collection": "pinnedChannels",
+              "storage": "array",
+              "partition": "pinnedChannels",
+              "idField": "pinId",
+              "fields": {
+                "channelId": "$payload.channelId",
+                "channelKind": "$payload.channelKind",
+                "pinnedAt": "$createdAt",
+                "pinnedBy": "$actor.memberId",
+                "archivedAt": null
+              },
+              "activity": "pinned channel"
+            }
+          ]
+        },
+        "channel.unpin": {
+          "authorize": {
+            "roles": [
+              "admin"
+            ]
+          },
+          "payload": {
+            "required": {
+              "pinId": {
+                "type": "string",
+                "max": 420
+              },
+              "channelId": {
+                "type": "string",
+                "max": 200
+              },
+              "channelKind": {
+                "type": "enum",
+                "values": [
+                  "channel",
+                  "voice"
+                ]
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "upsertRecord",
+              "collection": "pinnedChannels",
+              "storage": "array",
+              "partition": "pinnedChannels",
+              "idField": "pinId",
+              "fields": {
+                "channelId": "$payload.channelId",
+                "channelKind": "$payload.channelKind",
+                "archivedAt": "$createdAt"
+              },
+              "activity": "unpinned channel"
+            }
+          ]
+        },
+        "voice-room.placement.create": {
+          "authorize": {
+            "roles": [
+              "moderator"
+            ]
+          },
+          "payload": {
+            "required": {
+              "roomId": {
+                "type": "string",
+                "max": 200
+              },
+              "categoryId": {
+                "type": "string",
+                "max": 200
+              },
+              "position": {
+                "type": "number",
+                "min": 0
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "createRecord",
+              "collection": "voiceRoomPlacements",
+              "storage": "array",
+              "partition": "voiceRoomPlacements",
+              "idField": "roomId",
+              "fields": {
+                "roomId": "$payload.roomId",
+                "categoryId": "$payload.categoryId",
+                "position": "$payload.position"
+              },
+              "activity": "placed voice room"
+            }
+          ]
+        },
+        "voice-room.placement.update": {
+          "authorize": {
+            "roles": [
+              "moderator"
+            ]
+          },
+          "payload": {
+            "required": {
+              "roomId": {
+                "type": "string",
+                "max": 200
+              },
+              "categoryId": {
+                "type": "string",
+                "max": 200
+              },
+              "position": {
+                "type": "number",
+                "min": 0
+              }
+            }
+          },
+          "effects": [
+            {
+              "kind": "updateRecord",
+              "collection": "voiceRoomPlacements",
+              "storage": "array",
+              "partition": "voiceRoomPlacements",
+              "idField": "roomId",
+              "fields": {
+                "categoryId": "$payload.categoryId",
+                "position": "$payload.position"
+              },
+              "activity": "moved voice room"
+            }
+          ]
+        },
         "channel.archive": {
           "authorize": {
             "roles": [
@@ -554,7 +812,8 @@
               },
               "body": {
                 "type": "string",
-                "max": 4000
+                "max": 4000,
+                "nonEmpty": false
               }
             },
             "optional": {
@@ -617,6 +876,34 @@
             }
           },
           "guards": [
+            {
+              "kind": "or",
+              "guards": [
+                {
+                  "kind": "gt",
+                  "left": {
+                    "kind": "value.length",
+                    "path": "$payload.body"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": 0
+                  }
+                },
+                {
+                  "kind": "gt",
+                  "left": {
+                    "kind": "value.length",
+                    "path": "$payload.attachmentIds"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": 0
+                  }
+                }
+              ],
+              "message": "A message needs text or an attachment."
+            },
             {
               "kind": "or",
               "guards": [
@@ -699,7 +986,8 @@
               },
               "body": {
                 "type": "string",
-                "max": 4000
+                "max": 4000,
+                "nonEmpty": false
               }
             },
             "optional": {
@@ -759,6 +1047,34 @@
             }
           },
           "guards": [
+            {
+              "kind": "or",
+              "guards": [
+                {
+                  "kind": "gt",
+                  "left": {
+                    "kind": "value.length",
+                    "path": "$payload.body"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": 0
+                  }
+                },
+                {
+                  "kind": "gt",
+                  "left": {
+                    "kind": "value.length",
+                    "path": "$payload.attachmentIds"
+                  },
+                  "right": {
+                    "kind": "value.literal",
+                    "value": 0
+                  }
+                }
+              ],
+              "message": "A message needs text or an attachment."
+            },
             {
               "kind": "or",
               "guards": [
@@ -1387,6 +1703,24 @@
           "storage": "array",
           "partition": "categories"
         },
+        "voiceRoomPlacements": {
+          "readClass": "head",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "array",
+          "partition": "voiceRoomPlacements"
+        },
+        "pinnedChannels": {
+          "readClass": "head",
+          "integrityClass": "signature",
+          "historyVisibility": {
+            "mode": "all"
+          },
+          "storage": "array",
+          "partition": "pinnedChannels"
+        },
         "messages": {
           "readClass": "window",
           "integrityClass": "seq",
@@ -1508,8 +1842,6 @@
                   "resolved": false,
                   "source": "$payload.source",
                   "privateMemberIds": "$payload.privateMemberIds",
-                  "followers": [],
-                  "notificationPreferences": {},
                   "lifecycle": "open",
                   "archived": false,
                   "locked": false
@@ -1805,84 +2137,6 @@
               }
             ]
           },
-          "comments.thread.follow": {
-            "payload": {},
-            "authorize": {
-              "scoped": {
-                "record": {
-                  "collection": "threads",
-                  "idField": "threadId",
-                  "scopeTypeField": "scopeType",
-                  "scopeIdField": "scopeId"
-                },
-                "minimumLevel": "viewer"
-              }
-            },
-            "effects": [
-              {
-                "kind": "insertIdIntoRecordArray",
-                "collection": "threads",
-                "id": "$payload.threadId",
-                "arrayField": "followers",
-                "value": "$actor.memberId"
-              },
-              {
-                "kind": "mergeRecordMap",
-                "collection": "threads",
-                "id": "$payload.threadId",
-                "mapField": "notificationPreferences",
-                "key": "$actor.memberId",
-                "value": true
-              },
-              {
-                "kind": "updateRecord",
-                "collection": "threads",
-                "id": "$payload.threadId",
-                "fields": {
-                  "updatedAt": "$createdAt"
-                }
-              }
-            ]
-          },
-          "comments.thread.unfollow": {
-            "payload": {},
-            "authorize": {
-              "scoped": {
-                "record": {
-                  "collection": "threads",
-                  "idField": "threadId",
-                  "scopeTypeField": "scopeType",
-                  "scopeIdField": "scopeId"
-                },
-                "minimumLevel": "viewer"
-              }
-            },
-            "effects": [
-              {
-                "kind": "removeIdFromRecordArray",
-                "collection": "threads",
-                "id": "$payload.threadId",
-                "arrayField": "followers",
-                "value": "$actor.memberId"
-              },
-              {
-                "kind": "mergeRecordMap",
-                "collection": "threads",
-                "id": "$payload.threadId",
-                "mapField": "notificationPreferences",
-                "key": "$actor.memberId",
-                "value": false
-              },
-              {
-                "kind": "updateRecord",
-                "collection": "threads",
-                "id": "$payload.threadId",
-                "fields": {
-                  "updatedAt": "$createdAt"
-                }
-              }
-            ]
-          },
           "comments.thread.member.add": {
             "payload": {},
             "authorize": {
@@ -1934,38 +2188,6 @@
                 "id": "$payload.threadId",
                 "arrayField": "privateMemberIds",
                 "value": "$payload.memberId"
-              },
-              {
-                "kind": "updateRecord",
-                "collection": "threads",
-                "id": "$payload.threadId",
-                "fields": {
-                  "updatedAt": "$createdAt"
-                }
-              }
-            ]
-          },
-          "comments.thread.notifications": {
-            "payload": {},
-            "authorize": {
-              "scoped": {
-                "record": {
-                  "collection": "threads",
-                  "idField": "threadId",
-                  "scopeTypeField": "scopeType",
-                  "scopeIdField": "scopeId"
-                },
-                "minimumLevel": "viewer"
-              }
-            },
-            "effects": [
-              {
-                "kind": "mergeRecordMap",
-                "collection": "threads",
-                "id": "$payload.threadId",
-                "mapField": "notificationPreferences",
-                "key": "$actor.memberId",
-                "value": "$payload.enabled"
               },
               {
                 "kind": "updateRecord",
@@ -3630,10 +3852,28 @@
       "requiredRole": "admin"
     },
     {
+      "name": "channelPin",
+      "plugin": "primary",
+      "type": "channel.pin",
+      "requiredRole": "admin"
+    },
+    {
       "name": "channelRename",
       "plugin": "primary",
       "type": "channel.rename",
       "requiredRole": "moderator"
+    },
+    {
+      "name": "channelReorder",
+      "plugin": "primary",
+      "type": "channel.reorder",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "channelUnpin",
+      "plugin": "primary",
+      "type": "channel.unpin",
+      "requiredRole": "admin"
     },
     {
       "name": "inviteDisable",
@@ -3712,6 +3952,16 @@
       "plugin": "primary",
       "type": "message.unpin",
       "requiredRole": "moderator"
+    },
+    {
+      "name": "voice-roomPlacementCreate",
+      "plugin": "primary",
+      "type": "voice-room.placement.create"
+    },
+    {
+      "name": "voice-roomPlacementUpdate",
+      "plugin": "primary",
+      "type": "voice-room.placement.update"
     },
     {
       "name": "commentsAdd",
@@ -3871,12 +4121,6 @@
       }
     },
     {
-      "name": "commentsThreadFollow",
-      "plugin": "comments",
-      "type": "comments.thread.follow",
-      "requiredRole": "member"
-    },
-    {
       "name": "commentsThreadLock",
       "plugin": "comments",
       "type": "comments.thread.lock",
@@ -3895,22 +4139,10 @@
       "requiredRole": "moderator"
     },
     {
-      "name": "commentsThreadNotifications",
-      "plugin": "comments",
-      "type": "comments.thread.notifications",
-      "requiredRole": "member"
-    },
-    {
       "name": "commentsThreadReopen",
       "plugin": "comments",
       "type": "comments.thread.reopen",
       "requiredRole": "moderator"
-    },
-    {
-      "name": "commentsThreadUnfollow",
-      "plugin": "comments",
-      "type": "comments.thread.unfollow",
-      "requiredRole": "member"
     },
     {
       "name": "commentsThreadUnlock",
@@ -5093,6 +5325,18 @@
       }
     },
     {
+      "name": "voiceRoomPlacementCreate",
+      "plugin": "primary",
+      "type": "voice-room.placement.create",
+      "requiredRole": "moderator"
+    },
+    {
+      "name": "voiceRoomPlacementUpdate",
+      "plugin": "primary",
+      "type": "voice-room.placement.update",
+      "requiredRole": "moderator"
+    },
+    {
       "name": "mediaRoomCreateScoped",
       "plugin": "mediaRooms",
       "type": "media.room.create.v2",
@@ -5779,5 +6023,5 @@
       }
     }
   },
-  "schemaHash": "sha256-0d0186adc338a19b218462309bf56f6703e5da3a227c524ba2562d58abe4e086"
+  "schemaHash": "sha256-39fd8350384b425fb3ec8b579f4ec82246d673602607001478e99a583f1ae2e7"
 }

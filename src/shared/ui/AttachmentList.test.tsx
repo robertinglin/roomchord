@@ -70,4 +70,74 @@ describe("AttachmentList", () => {
     expect(await screen.findByText("Preview unavailable")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download" })).toBeInTheDocument();
   });
+
+  it("loads encrypted audio into the custom waveform player and cleans up its object URL", async () => {
+    const audioFile = { ...file, title: "voice-message.webm", mimeType: "audio/webm", revision: 1 };
+    const preview = vi.fn(async () => new Blob(["audio"], { type: "audio/webm" }));
+    const createObjectUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:audio-preview");
+    const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const { rerender, unmount, container } = render(<AttachmentList attachments={[]} files={[audioFile]} onDownload={vi.fn()} onOpenAttachment={vi.fn()} onPreview={preview} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading audio");
+    const audio = await waitFor(() => {
+      const element = container.querySelector("audio");
+      expect(element).toBeTruthy();
+      return element as HTMLAudioElement;
+    });
+    expect(audio).not.toHaveAttribute("controls");
+    expect(audio).toHaveAttribute("preload", "none");
+    expect(audio.querySelector("source")).toHaveAttribute("src", "blob:audio-preview");
+    expect(screen.getByRole("button", { name: "Play voice-message.webm" })).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: "Seek voice-message.webm" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download" })).toBeInTheDocument();
+
+    rerender(<AttachmentList attachments={[]} files={[{ ...audioFile }]} onDownload={vi.fn()} onOpenAttachment={vi.fn()} onPreview={vi.fn(preview)} />);
+    expect(preview).toHaveBeenCalledTimes(1);
+    expect(createObjectUrl).toHaveBeenCalledTimes(1);
+    expect(revokeObjectUrl).not.toHaveBeenCalled();
+    unmount();
+    await waitFor(() => expect(revokeObjectUrl).toHaveBeenCalledWith("blob:audio-preview"));
+  });
+
+  it("keeps the audio download card usable when decryption fails", async () => {
+    const audioFile = { ...file, title: "voice-message.webm", mimeType: "audio/webm" };
+    render(<AttachmentList attachments={[]} files={[audioFile]} onDownload={vi.fn()} onOpenAttachment={vi.fn()} onPreview={vi.fn(async () => { throw new Error("decrypt failed"); })} />);
+
+    expect(await screen.findByText("Playback unavailable")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download" })).toBeInTheDocument();
+  });
+
+  it("reports an audio decode failure and releases the preview URL", async () => {
+    const audioFile = { ...file, title: "voice-message.webm", mimeType: "audio/webm" };
+    const createObjectUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:audio-error");
+    const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const { container } = render(<AttachmentList attachments={[]} files={[audioFile]} onDownload={vi.fn()} onOpenAttachment={vi.fn()} onPreview={vi.fn(async () => new Blob(["audio"], { type: "audio/webm" }))} />);
+    const audio = await waitFor(() => {
+      const element = container.querySelector("audio");
+      expect(element).toBeTruthy();
+      return element as HTMLAudioElement;
+    });
+
+    fireEvent.error(audio);
+
+    expect(await screen.findByText("Playback unavailable")).toBeInTheDocument();
+    expect(revokeObjectUrl).toHaveBeenCalledWith("blob:audio-error");
+    expect(createObjectUrl).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Download" })).toBeInTheDocument();
+  });
+
+  it("replaces audio playback when encrypted content revision changes", async () => {
+    const audioFile = { ...file, title: "voice-message.webm", mimeType: "audio/webm", revision: 1 };
+    const preview = vi.fn(async (record: EncryptedFileRecord) => new Blob([String(record.revision)], { type: "audio/webm" }));
+    vi.spyOn(URL, "createObjectURL").mockReturnValueOnce("blob:audio-revision-1").mockReturnValueOnce("blob:audio-revision-2");
+    const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const { rerender, container } = render(<AttachmentList attachments={[]} files={[audioFile]} onDownload={vi.fn()} onOpenAttachment={vi.fn()} onPreview={preview} />);
+    await waitFor(() => expect(container.querySelector("audio source")).toHaveAttribute("src", "blob:audio-revision-1"));
+
+    rerender(<AttachmentList attachments={[]} files={[{ ...audioFile, revision: 2 }]} onDownload={vi.fn()} onOpenAttachment={vi.fn()} onPreview={preview} />);
+
+    await waitFor(() => expect(container.querySelector("audio source")).toHaveAttribute("src", "blob:audio-revision-2"));
+    expect(preview).toHaveBeenCalledTimes(2);
+    expect(revokeObjectUrl).toHaveBeenCalledWith("blob:audio-revision-1");
+  });
 });

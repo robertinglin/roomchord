@@ -5,6 +5,8 @@ const DIRECT_MESSAGE_PROTOCOL = "matterhorn.direct.v1";
 export function emptyChatState(): ChatState {
   return {
     categories: [],
+    voiceRoomPlacements: [],
+    pinnedChannels: [],
     channels: [],
     callRoutes: {},
     messages: {},
@@ -33,6 +35,20 @@ export function emptyChatState(): ChatState {
     roleDefinitions: {},
     access: { version: 1, roleIds: [], scopes: {} }
   };
+}
+
+export type SharedChannelPin = {
+  id?: string;
+  channelId?: string;
+  channelKind?: "channel" | "voice";
+  archivedAt?: number | null;
+};
+
+export function sharedPinnedChannelKeys(state: ChatState): Set<string> {
+  const pins = ((state as ChatState & { pinnedChannels?: SharedChannelPin[] }).pinnedChannels || []);
+  return new Set(pins
+    .filter((pin) => pin.channelId && pin.channelKind && !pin.archivedAt)
+    .map((pin) => `${pin.channelKind}:${pin.channelId}`));
 }
 
 function adminState(state: ChatState) {

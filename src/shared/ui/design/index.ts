@@ -22,6 +22,7 @@ export { RoleChip } from "./RoleChip";
 export { SidebarHead } from "./SidebarHead";
 export { SearchInput } from "./SearchInput";
 export { GroupHeading } from "./GroupHeading";
+export { DropLine } from "./DropLine";
 export { ChannelGroup } from "./ChannelGroup";
 export { ChannelCreateForm } from "./ChannelCreateForm";
 export { ChannelRow } from "./ChannelRow";

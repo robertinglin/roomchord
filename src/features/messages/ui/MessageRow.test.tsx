@@ -113,62 +113,6 @@ describe("MessageRow personal-state actions", () => {
     expect(actions).toHaveStyle({ opacity: "1" });
   });
 
-  it("renders only scope-matched typed custom-media references", () => {
-    const current = { ...message(), customMediaRefs: [{ mediaId: "voice-1", scopeType: "channel", scopeId: "general", mediaType: "voice" as const }] };
-    const { container } = render(
-      <MessageRow
-        currentUserId="alice"
-        customMediaRecords={[{ id: "voice-1", name: "Voice", mediaType: "voice", render: { mode: "audio", durationMs: 1000 }, playback: { kind: "files-v2", id: "file-voice" } }]}
-        customMediaScope={{ scopeType: "channel", scopeId: "general" }}
-        fileRecords={[{ fileId: "file-voice", scopeType: "channel", scopeId: "general", encryptedManifest: {}, ciphertextBytes: 1, chunkCount: 1, relays: [] }]}
-        forwardTargets={[]}
-        instanceKey={current.id}
-        memberAvatarsById={{}}
-        memberNamesById={{ mina: "Mina" }}
-        message={current}
-        messagesById={new Map([[current.id, current]])}
-        onRememberReaction={vi.fn()}
-        onDownloadFile={vi.fn()}
-        pinnedCopy={false}
-        recentReactions={[]}
-      />
-    );
-    expect(screen.getByText("Voice message")).toBeInTheDocument();
-    expect(container.querySelector("[data-playback-kind='files-v2'][data-playback-id='file-voice']")).toBeInTheDocument();
-  });
-
-  it("opens a Drive-backed reference and hides missing backing assets", async () => {
-    const current = { ...message(), customMediaRefs: [
-      { mediaId: "sticker-1", scopeType: "channel", scopeId: "general", mediaType: "sticker" as const },
-      { mediaId: "missing", scopeType: "channel", scopeId: "general", mediaType: "gif" as const }
-    ] };
-    const onOpenAttachment = vi.fn();
-    const { container } = render(
-      <MessageRow
-        currentUserId="alice"
-        customMediaRecords={[
-          { id: "sticker-1", name: "Sticker", mediaType: "sticker", render: { mode: "image" }, playback: { kind: "drive-asset", id: "asset-1" } },
-          { id: "missing", name: "Missing", mediaType: "gif", render: { mode: "video" }, playback: { kind: "drive-asset", id: "asset-missing" } }
-        ]}
-        customMediaScope={{ scopeType: "channel", scopeId: "general" }}
-        attachmentRecords={[{ id: "attachment-1", assetId: "asset-1", scopeType: "channel", scopeId: "general" }]}
-        onOpenAttachment={onOpenAttachment}
-        forwardTargets={[]}
-        instanceKey={current.id}
-        memberAvatarsById={{}}
-        memberNamesById={{ mina: "Mina" }}
-        message={current}
-        messagesById={new Map([[current.id, current]])}
-        onRememberReaction={vi.fn()}
-        pinnedCopy={false}
-        recentReactions={[]}
-      />
-    );
-    await userEvent.setup().click(screen.getByRole("button", { name: "Open Sticker" }));
-    expect(onOpenAttachment).toHaveBeenCalledWith(expect.objectContaining({ assetId: "asset-1" }));
-    expect(container).not.toHaveTextContent("Missing");
-  });
-
   it("keeps Mark Unread disabled until Matterhorn exposes a room personal-state controller", async () => {
     const user = userEvent.setup();
     const current = message();
@@ -592,15 +536,16 @@ describe("MessageRow personal-state actions", () => {
 
   it("shows missing and deleted reply previews without crashing", () => {
     const missing = { ...message(), id: "missing-reply", replyToId: "not-loaded" } as Message;
-    const deletedReply = { ...message(), id: "deleted-reply", deletedAt: 2 } as Message;
+    const deletedReply = { ...message(), id: "deleted-reply", deletedAt: 2, attachmentIds: ["deleted-file"] } as Message;
     render(
       <>
         <MessageRow currentUserId="alice" forwardTargets={[]} instanceKey={missing.id} memberAvatarsById={{}} memberNamesById={{ mina: "Mina" }} message={missing} messagesById={new Map([[missing.id, missing]])} onRememberReaction={vi.fn()} pinnedCopy={false} recentReactions={[]} />
-        <MessageRow currentUserId="alice" forwardTargets={[]} instanceKey={deletedReply.id} memberAvatarsById={{}} memberNamesById={{ mina: "Mina" }} message={deletedReply} messagesById={new Map([[deletedReply.id, deletedReply]])} onRememberReaction={vi.fn()} pinnedCopy={false} recentReactions={[]} />
+        <MessageRow currentUserId="alice" fileRecords={[{ fileId: "deleted-file", title: "orphan.webm", scopeType: "channel", scopeId: "general", encryptedManifest: {}, ciphertextBytes: 1, chunkCount: 1, relays: [] }]} forwardTargets={[]} instanceKey={deletedReply.id} memberAvatarsById={{}} memberNamesById={{ mina: "Mina" }} message={deletedReply} messagesById={new Map([[deletedReply.id, deletedReply]])} onRememberReaction={vi.fn()} pinnedCopy={false} recentReactions={[]} />
       </>
     );
     expect(screen.getByText("Original message unavailable")).toBeInTheDocument();
     expect(screen.getByText("Message deleted")).toBeInTheDocument();
+    expect(screen.queryByText("orphan.webm")).not.toBeInTheDocument();
   });
 
   it("follows a loaded reply and exposes the unpin action", async () => {

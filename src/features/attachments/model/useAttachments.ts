@@ -23,6 +23,29 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
+const UPLOAD_INACTIVITY_TIMEOUT_MS = 20_000;
+
+async function withUploadInactivityTimeout<T>(controller: AbortController, upload: (signal: AbortSignal, keepAlive: () => void) => Promise<T>) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const aborted = new Promise<never>((_, reject) => {
+    const rejectAbort = () => reject(controller.signal.reason instanceof Error ? controller.signal.reason : new DOMException("Upload cancelled.", "AbortError"));
+    if (controller.signal.aborted) rejectAbort();
+    else controller.signal.addEventListener("abort", rejectAbort, { once: true });
+  });
+  const keepAlive = () => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      controller.abort(new Error("Upload stopped because the connection is no longer responding. Try again."));
+    }, UPLOAD_INACTIVITY_TIMEOUT_MS);
+  };
+  keepAlive();
+  try {
+    return await Promise.race([upload(controller.signal, keepAlive), aborted]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: boolean; channelId?: string; threadId?: string; committedDm?: boolean; roomName?: string }) {
   const scope = useMemo(() => attachmentScope(input), [input.channelId, input.showingDm, input.threadId, input.committedDm]);
   const rawFiles = useMemo(() => scopedRecords(live.select.records("files") as unknown as EncryptedFileRecord[], scope), [live.select, live.state.files, scope]);
@@ -31,6 +54,7 @@ export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: b
   const [transfer, setTransfer] = useState<AttachmentTransferState>({ phase: "idle" });
   const [, setPendingRevision] = useState(0);
   const pendingAttachmentIds = useRef(createPendingAttachmentIds());
+  const activeUploadRef = useRef<{ controller: AbortController; draftId: string } | undefined>(undefined);
   const [pendingDrafts, setPendingDrafts] = useState<PendingAttachmentDraft[]>([]);
   const currentScopeKey = scope ? `${scope.scopeType}:${scope.scopeId}` : "";
   const drivePickerAdapter = useMemo<DrivePickerAdapter | undefined>(
@@ -89,7 +113,7 @@ export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: b
     if (!connection) throw new Error("No eligible Google Drive account is connected.");
     const uploaded = await drivePickerAdapter.uploadLocalFile({
       connectionId: connection.connectionId,
-      roomName: input.roomName,
+      roomId: input.roomName,
       file,
       mimeType: file.type || "application/octet-stream"
     });
@@ -157,6 +181,10 @@ export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: b
   );
 
   const removePendingAttachment = useCallback((id: string) => {
+    if (activeUploadRef.current?.draftId === id) {
+      activeUploadRef.current.controller.abort(new DOMException("Upload cancelled.", "AbortError"));
+      setTransfer({ phase: "idle" });
+    }
     setPendingDrafts((current) => current.filter((draft) => draft.id !== id || draft.scopeKey !== currentScopeKey));
   }, [currentScopeKey]);
 
@@ -170,26 +198,35 @@ export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: b
     const attachmentIds: string[] = [];
     try {
       for (const draft of drafts) {
-        if (draft.source.kind === "relay") {
+        const source = draft.source;
+        if (source.kind === "relay") {
           setTransfer({ phase: "uploading", name: draft.name, progress: 0 });
-          const result = await live.files.upload({
-            file: draft.source.file,
-            title: draft.name,
-            scopeType: scope.scopeType,
-            scopeId: scope.scopeId,
-            onProgress: (progress) => setTransfer((current) => ({ ...current, progress: progress.totalBytes ? progress.completedBytes / progress.totalBytes : 0 }))
-          });
+          const controller = new AbortController();
+          activeUploadRef.current = { controller, draftId: draft.id };
+          const result = await withUploadInactivityTimeout(controller, (signal, keepAlive) => live.files.upload({
+              file: source.file,
+              title: draft.name,
+              scopeType: scope.scopeType,
+              scopeId: scope.scopeId,
+              signal,
+              onProgress: (progress) => {
+                keepAlive();
+                setTransfer((current) => ({ ...current, progress: progress.totalBytes ? progress.completedBytes / progress.totalBytes : 0 }));
+              }
+            })).finally(() => {
+              if (activeUploadRef.current?.controller === controller) activeUploadRef.current = undefined;
+            });
           attachmentIds.push(result.record.fileId);
           continue;
         }
         setTransfer({ phase: "sharing", name: draft.name, progress: 0 });
-        if (draft.source.kind === "drive-upload") {
-          const asset = await uploadLocalToDrive(draft.source.file, draft.source.connectionId);
+        if (source.kind === "drive-upload") {
+          const asset = await uploadLocalToDrive(source.file, source.connectionId);
           attachmentIds.push(asset.assetId);
           continue;
         }
         if (!drivePickerAdapter) throw new Error("Google Drive room sharing is unavailable for this scope.");
-        const selection = draft.source.selection;
+        const selection = source.selection;
         const asset = await drivePickerAdapter.shareToRoom(selection.connectionId, selection.file, scope);
         attachmentIds.push(asset.assetId);
       }
@@ -198,6 +235,10 @@ export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: b
       setTransfer({ phase: "idle" });
       return attachmentIds;
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setTransfer({ phase: "idle" });
+        return [];
+      }
       setTransfer({ phase: "idle", error: errorMessage(error), ...(error instanceof MatterhornDriveRoomUploadPartialError ? { recovery: { fileId: error.fileId, cleanupFailed: error.cleanupFailed } } : {}) });
       return [];
     }

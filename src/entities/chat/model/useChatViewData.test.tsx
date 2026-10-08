@@ -106,6 +106,9 @@ describe("direct-message view projection", () => {
       m1: { id: "m1", channelId: "general", authorId: "bob", createdAt: 10 },
       m2: { id: "m2", channelId: "general", authorId: "bob", createdAt: 11, deletedAt: 12 }
     };
+    live.state.members.alice.readTags = {
+      "channel:general": { messageId: "m1", operationId: "m1", readAt: 10 }
+    };
     live.state.channels = [
       { id: "general", name: "general", topic: "General", archivedAt: null },
       { id: "old", name: "old", topic: "Old", archivedAt: 1 }
@@ -145,7 +148,7 @@ describe("direct-message view projection", () => {
     expect(result.current.threadsForChannel).toHaveLength(1);
     expect(result.current.unreadCounts["dm-1"]).toBe(1);
     expect(result.current.unreadCounts["group-1"]).toBe(0);
-    expect(result.current.topicUnreadCounts["channel:general"]).toBe(1);
+    expect(result.current.topicUnreadCounts["channel:general"]).toBeUndefined();
     expect(result.current.effectiveVoicePreferences.deafened).toBe(true);
     expect(result.current.reconnectRoom?.id).toBe("editor-room");
     expect(result.current.visibleRooms.map((room) => room.id)).toEqual(["editor-room"]);

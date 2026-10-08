@@ -4,7 +4,7 @@ import type { MatterhornRoom } from "matterhorn-sdk/client";
 import type { Mosh } from "../../../../types";
 
 export type PersonalProductivityInput = {
-  roomName: string;
+  roomId: string;
   scopeType: string;
   scopeId: string;
   messageId: string;
@@ -21,7 +21,7 @@ function itemId(prefix: "bookmark" | "reminder", messageId: string) {
 export function bookmarkInput(input: PersonalProductivityInput): Omit<MatterhornBookmark, "updatedAt"> {
   return {
     id: itemId("bookmark", input.messageId),
-    roomName: input.roomName,
+    roomId: input.roomId,
     scopeType: input.scopeType,
     scopeId: input.scopeId,
     messageId: input.messageId,
@@ -32,7 +32,7 @@ export function bookmarkInput(input: PersonalProductivityInput): Omit<Matterhorn
 export function reminderInput(input: PersonalProductivityInput, dueAt = Date.now() + 24 * 60 * 60 * 1000): Omit<MatterhornReminder, "updatedAt"> {
   return {
     id: itemId("reminder", input.messageId),
-    roomName: input.roomName,
+    roomId: input.roomId,
     scopeType: input.scopeType,
     scopeId: input.scopeId,
     messageId: input.messageId,

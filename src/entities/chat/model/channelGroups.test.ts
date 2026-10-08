@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { groupedChannelItems, orderedChannelCategories } from "@entities/chat/model/channelGroups";
+import { canViewChannelCategory, groupedChannelItems, orderedChannelCategories } from "@entities/chat/model/channelGroups";
 
 describe("channel categories", () => {
+  it("limits private categories to selected roles and members", () => {
+    const category = { id: "staff", name: "Staff", position: 0, visibility: "private" as const, allowedRoleIds: ["moderator"], allowedMemberIds: ["alice"] };
+    expect(canViewChannelCategory(category, "alice", ["member"])).toBe(true);
+    expect(canViewChannelCategory(category, "bob", ["moderator"])).toBe(true);
+    expect(canViewChannelCategory(category, "bob", ["member"])).toBe(false);
+  });
+
   it("orders active categories by position and keeps empty categories visible", () => {
     const categories = [
       { id: "later", name: "Later", position: 2 },
@@ -28,6 +35,24 @@ describe("channel categories", () => {
     ], "General")).toEqual([
       { key: "ops", label: "Ops", items: [{ id: "one", group: " Ops " }] },
       { key: "general", label: "General", items: [{ id: "two", group: undefined }] }
+    ]);
+  });
+
+  it("only renders explicitly categorized channels when categories exist", () => {
+    expect(groupedChannelItems([{ id: "orphan", group: "General" }], "General", [
+      { id: "general", name: "General", position: 0 }
+    ])).toEqual([{ key: "category:general", label: "General", categoryId: "general", items: [] }]);
+  });
+
+  it("orders channels within each group by their persisted position", () => {
+    expect(groupedChannelItems([
+      { id: "second", categoryId: "first", position: 2 },
+      { id: "first", categoryId: "first", position: 1 },
+    ], "General", [{ id: "first", name: "First", position: 0 }])).toEqual([
+      { key: "category:first", label: "First", categoryId: "first", items: [
+        { id: "first", categoryId: "first", position: 1 },
+        { id: "second", categoryId: "first", position: 2 },
+      ] },
     ]);
   });
 });

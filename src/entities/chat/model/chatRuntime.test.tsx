@@ -33,6 +33,11 @@ const view = {
 const live: any = {
   actor: { memberId: "alice", role: "member" }, state: { rooms: [{ id: "room-1", name: "Lounge" }] }, media: {},
   can: vi.fn(() => true),
+  notificationPreferences: {
+    load: vi.fn().mockResolvedValue({ kind: "matterhorn.notification-preferences.v1", version: 1, ownerId: "alice", revision: 0, updatedAt: 1, preferences: {}, followedThreads: {} }),
+    get: vi.fn(), resolve: vi.fn(), upsert: vi.fn(), clear: vi.fn(), followThread: vi.fn(), unfollowThread: vi.fn(), isThreadFollowed: vi.fn(() => false),
+    subscribe: vi.fn((listener) => { listener({ kind: "matterhorn.notification-preferences.v1", version: 1, ownerId: "alice", revision: 0, updatedAt: 1, preferences: {}, followedThreads: {} }); return vi.fn(); })
+  },
   personal: {
     load: vi.fn().mockResolvedValue({}),
     bookmarks: vi.fn().mockResolvedValue([]),

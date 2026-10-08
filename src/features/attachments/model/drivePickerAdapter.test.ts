@@ -117,7 +117,7 @@ describe("Drive picker adapter", () => {
       shareToRoom: vi.fn()
     } as never);
 
-    const result = await adapter.uploadLocalFile({ connectionId: "google-1", roomName: "general", file: new File(["notes"], "notes.txt", { type: "text/plain" }) });
+    const result = await adapter.uploadLocalFile({ connectionId: "google-1", roomId: "general", file: new File(["notes"], "notes.txt", { type: "text/plain" }) });
     expect(result.url).toBe("https://drive.example/file");
     expect(upload).toHaveBeenCalledWith(expect.objectContaining({ parentId: "folder" }));
   });
@@ -134,7 +134,7 @@ describe("Drive picker adapter", () => {
       shareToRoom: vi.fn()
     } as never);
 
-    await expect(adapter.uploadLocalFile({ connectionId: "google-1", roomName: "general", file: new File(["x"], "x.txt") }))
+    await expect(adapter.uploadLocalFile({ connectionId: "google-1", roomId: "general", file: new File(["x"], "x.txt") }))
       .rejects.toMatchObject({ fileId: "orphan", cleanupFailed: false });
     expect(remove).toHaveBeenCalledWith({ connectionId: "google-1", fileId: "orphan" });
   });

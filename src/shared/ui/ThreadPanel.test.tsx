@@ -56,18 +56,17 @@ describe("ThreadPanel", () => {
     expect(onResolve).toHaveBeenCalledWith(false);
   });
 
-  it("exposes authoritative lifecycle, follow, notification, source, and private-member controls", async () => {
+  it("exposes authoritative lifecycle, follow, source, and private-member controls", async () => {
     const user = userEvent.setup();
     const callbacks = {
       onArchive: vi.fn(),
       onFollow: vi.fn(),
-      onSetNotifications: vi.fn(),
       onAddMember: vi.fn(),
       onRemoveMember: vi.fn(),
       onOpenSource: vi.fn()
     };
     render(<ThreadPanel
-      thread={{ id: "thread", scopeType: "channel", scopeId: "general", title: "Private", resolved: false, lifecycle: "open", visibility: "private", source: { kind: "channel", scopeId: "general", messageId: "message-1" }, privateMemberIds: ["mina"], followers: [], notificationPreferences: { mina: true }, createdAt: 1 } as never}
+      thread={{ id: "thread", scopeType: "channel", scopeId: "general", title: "Private", resolved: false, lifecycle: "open", visibility: "private", source: { kind: "channel", scopeId: "general", messageId: "message-1" }, privateMemberIds: ["mina"], createdAt: 1 } as never}
       comments={[]}
       memberNamesById={{ mina: "Mina", bob: "Bob" }}
       currentUserId="mina"
@@ -80,15 +79,33 @@ describe("ThreadPanel", () => {
     await user.click(screen.getByRole("button", { name: "Open source message" }));
     await user.click(screen.getByRole("button", { name: "Archive thread" }));
     await user.click(screen.getByRole("button", { name: "Follow" }));
-    await user.click(screen.getByRole("button", { name: "Mute notifications" }));
     await user.click(screen.getByRole("button", { name: "Remove Mina" }));
     await user.selectOptions(screen.getByRole("combobox", { name: "Private member to add" }), "bob");
     await user.click(screen.getByRole("button", { name: "Add member" }));
     expect(callbacks.onOpenSource).toHaveBeenCalled();
     expect(callbacks.onArchive).toHaveBeenCalled();
     expect(callbacks.onFollow).toHaveBeenCalled();
-    expect(callbacks.onSetNotifications).toHaveBeenCalledWith(false);
     expect(callbacks.onRemoveMember).toHaveBeenCalledWith("mina");
     expect(callbacks.onAddMember).toHaveBeenCalledWith("bob");
+  });
+
+  it("saves global notification controls from the thread header", () => {
+    const onNotificationModeChange = vi.fn();
+    render(<ThreadPanel
+      thread={{ id: "thread", scopeType: "channel", scopeId: "general", title: "Planning", resolved: false, lifecycle: "open", visibility: "members", privateMemberIds: [], createdAt: 1 } as never}
+      comments={[]}
+      memberNamesById={{}}
+      currentUserId="mina"
+      onAddComment={vi.fn()}
+      onResolve={vi.fn()}
+      onClose={vi.fn()}
+      onNotificationModeChange={onNotificationModeChange}
+    />);
+
+    fireEvent.contextMenu(screen.getByText("Planning"), { clientX: 40, clientY: 40 });
+    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "Notification Settings" }));
+    expect(screen.getByRole("menuitemradio", { name: "Use Parent Default" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "All Messages" }));
+    expect(onNotificationModeChange).toHaveBeenCalledWith("all");
   });
 });
