@@ -1,19 +1,19 @@
-import type { MatterhornManagementRole, MatterhornManagementScope, MatterhornRoleRule } from "matterhorn-sdk/browser";
+import type { ManagementRole, ManagementScope, RoleRule } from "matterhorn-sdk/browser";
 
 export type ConfiguredMemberAccess = {
-  scope: MatterhornManagementScope;
+  scope: ManagementScope;
   grants: Array<{ roleName: string; operations: string[] }>;
 };
 
-function matches(rule: MatterhornRoleRule, scope: MatterhornManagementScope) {
+function matches(rule: RoleRule, scope: ManagementScope) {
   return (rule.scopeType === scope.scopeType || rule.scopeType === "*")
     && (rule.scopeId === scope.scopeId || rule.scopeId === "*");
 }
 
 export function configuredMemberAccess(
   roleIds: readonly string[],
-  roles: readonly MatterhornManagementRole[],
-  scopes: readonly MatterhornManagementScope[]
+  roles: readonly ManagementRole[],
+  scopes: readonly ManagementScope[]
 ): ConfiguredMemberAccess[] {
   const assigned = roles.filter((role) => roleIds.includes(role.id));
   return scopes.map((scope) => ({

@@ -1,4 +1,4 @@
-import type { MatterhornFilePickerMode } from "matterhorn-sdk/file-picker";
+import type { FilePickerMode } from "matterhorn-sdk/file-picker";
 
 export type AttachmentPickerDriveEntry = {
   id: string;
@@ -32,7 +32,7 @@ export type AdvancedPickerSelection =
 export type AttachmentPickerConfig = {
   adapter?: AttachmentPickerDriveAdapter;
   acceptedMimeTypes?: string;
-  mode?: MatterhornFilePickerMode;
+  mode?: FilePickerMode;
   onSelect?: (selection: AdvancedPickerSelection) => void | Promise<void>;
   onLocalFile?: (file: File) => void | Promise<void>;
   onLocalDriveUpload?: (file: File, connectionId: string) => void | Promise<void>;

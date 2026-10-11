@@ -7,14 +7,14 @@ import {
 type MarkdownToken
 } from "matterhorn-sdk/browser/markdown";
 import {
-  MATTERHORN_EMBED_FRAME_ALLOW,
-  MATTERHORN_EMBED_FRAME_SANDBOX,
-  matterhornEmbedExternalUrl,
-  matterhornEmbedFrameUrl,
-  matterhornEmbedProviderLabel,
-  matterhornEmbedSourceUrl,
-  matterhornEmbedSupportsFullscreenDialog,
-  matterhornEmbedTitle
+  EMBED_FRAME_ALLOW,
+  EMBED_FRAME_SANDBOX,
+  embedExternalUrl,
+  embedFrameUrl,
+  embedProviderLabel,
+  embedSourceUrl,
+  embedSupportsFullscreenDialog,
+  embedTitle
 } from "matterhorn-sdk/browser/embedFrame";
 import { mentionSegments, renderMentionNames } from "@entities/chat/model/mentions";
 import { CloseIcon, MaximizeIcon } from "@shared/ui/Icons";
@@ -103,8 +103,8 @@ function Inline({
           );
         }
         const embed = token.embed && token.embed.provider !== "link" ? token.embed : undefined;
-        const title = embed ? matterhornEmbedTitle(embed) : token.text;
-        const canFullscreen = Boolean(embed && matterhornEmbedSupportsFullscreenDialog(embed));
+        const title = embed ? embedTitle(embed) : token.text;
+        const canFullscreen = Boolean(embed && embedSupportsFullscreenDialog(embed));
         if (!embed) {
           return (
             <a key={index} href={token.url} target="_blank" rel="noreferrer">
@@ -114,7 +114,7 @@ function Inline({
         }
         return (
           <span key={index} className="embed-link-inline">
-            <strong className="embed-link-provider">{matterhornEmbedProviderLabel(embed)}</strong>
+            <strong className="embed-link-provider">{embedProviderLabel(embed)}</strong>
             {canFullscreen && onFullscreen ? (
               <button
                 type="button"
@@ -203,7 +203,7 @@ function MarkdownNodes({
 }
 
 function frameUrl(embed: MarkdownEmbed) {
-  return matterhornEmbedFrameUrl(embed, { parentHost: typeof window === "undefined" ? undefined : window.location.hostname });
+  return embedFrameUrl(embed, { parentHost: typeof window === "undefined" ? undefined : window.location.hostname });
 }
 
 function providerClassName(embed: MarkdownEmbed) {
@@ -223,8 +223,8 @@ export function EmbedCard({
   isFullscreen?: boolean;
   onCloseFullscreen?: () => void;
 }) {
-  const href = matterhornEmbedExternalUrl(embed);
-  const title = matterhornEmbedTitle(embed);
+  const href = embedExternalUrl(embed);
+  const title = embedTitle(embed);
   const baseClassName = `message-embed message-embed-inline ${providerClassName(embed)}`;
   const closeRef = useRef<HTMLButtonElement>(null);
   const closeTimeoutRef = useRef<number | null>(null);
@@ -319,10 +319,10 @@ export function EmbedCard({
               title={title}
               src={src}
               loading="lazy"
-              allow={MATTERHORN_EMBED_FRAME_ALLOW}
+              allow={EMBED_FRAME_ALLOW}
               allowFullScreen
               referrerPolicy="strict-origin-when-cross-origin"
-              sandbox={MATTERHORN_EMBED_FRAME_SANDBOX}
+              sandbox={EMBED_FRAME_SANDBOX}
             />
           </span>
         </figure>
@@ -330,7 +330,7 @@ export function EmbedCard({
     }
   }
   if (embed.renderMode === "image") {
-    const src = matterhornEmbedSourceUrl(embed);
+    const src = embedSourceUrl(embed);
     if (src) {
       return (
         <figure className={`${baseClassName} message-embed-image`}>
@@ -342,7 +342,7 @@ export function EmbedCard({
     }
   }
   if (embed.renderMode === "video") {
-    const src = matterhornEmbedSourceUrl(embed);
+    const src = embedSourceUrl(embed);
     if (src) {
       return (
         <figure className={`${baseClassName} message-embed-video`}>
@@ -354,7 +354,7 @@ export function EmbedCard({
     }
   }
   if (embed.renderMode === "audio") {
-    const src = matterhornEmbedSourceUrl(embed);
+    const src = embedSourceUrl(embed);
     if (src) {
       return (
         <figure className={`${baseClassName} message-embed-audio`}>

@@ -2,7 +2,7 @@ import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { installMatterhornAppScope, resetMatterhornForTests } from "matterhorn-sdk/client";
+import { installAppScope, resetForTests } from "matterhorn-sdk/client";
 import { MeshRoomCallController } from "matterhorn-sdk/browser/meshRoomCalls";
 import { SfuCallController } from "matterhorn-sdk/browser/sfuCalls";
 import { loadCallIdentityForProfile, signBoundCallSignal } from "matterhorn-sdk/browser/callIdentity";
@@ -12,7 +12,7 @@ import { ChatApp } from "@pages/chat/ui/ChatPage";
 import { MarkdownMessage } from "@features/messages/ui/MarkdownMessage";
 import { UserControls } from "@features/user-controls/ui/UserControls";
 import { VoiceRoomView } from "@features/voice-room/ui/VoiceRoomView";
-import { mountMatterhornChat } from "@app/matterhornChat";
+import { mountChat } from "@app/matterhornChat";
 import { defaultVoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import { voiceReconnectStorageKey } from "@entities/chat/model/localVoiceReconnect";
 import { channelMessages } from "@entities/chat/model/state";
@@ -185,20 +185,20 @@ function boundCallSignal(sourceClientId: string, targetClientId: string, signal:
   };
 }
 
-function installTestMatterhornScope(
+function installTestScope(
   initialState: ChatState = state,
   actor = { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" },
   sendOperation: ReturnType<typeof vi.fn> = vi.fn(async (operation) => ({ ok: true, state: initialState, operation })),
   hostOverrides: Record<string, unknown> = {}
 ) {
-  resetMatterhornForTests();
+  resetForTests();
   const sendRoomOperation = vi.fn(async (operation) => {
     if (operation.type === "read.tag.set" || operation.schemaAction === "read.tag.set") {
       return { ok: true, operation };
     }
     return sendOperation(operation);
   });
-  installMatterhornAppScope({
+  installAppScope({
     appId: "gg.matterhorn.mosh",
     appName: "Mosh",
     metadata: testAppMetadata,
@@ -351,7 +351,7 @@ function renderChat(
 ) {
   window.localStorage.removeItem("matterhorn:notification-read-state");
   const sender = sendOperation || vi.fn(async (operation) => ({ ok: true, state: initialState, operation }));
-  installTestMatterhornScope(initialState, actor, sender, hostOverrides);
+  installTestScope(initialState, actor, sender, hostOverrides);
   return { ...render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor }} />), sendOperation: sender };
 }
 
@@ -385,11 +385,11 @@ function stateWithMessage(body: string): ChatState {
 describe("ChatApp", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    installTestMatterhornScope();
+    installTestScope();
   });
 
   afterEach(() => {
-    resetMatterhornForTests();
+    resetForTests();
   });
 
   it("matches direct call presence to exact one-to-one and group DM threads", () => {
@@ -443,7 +443,7 @@ describe("ChatApp", () => {
       }
     } as ChatState;
     expect(getResolvedDirectMessageThreads(malformedState as any)).toEqual([]);
-    installTestMatterhornScope(malformedState);
+    installTestScope(malformedState);
 
     expect(() => render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />)).not.toThrow();
     expect(await screen.findByRole("button", { name: "#general" })).toBeInTheDocument();
@@ -469,7 +469,7 @@ describe("ChatApp", () => {
 
   it("opens launch home rooms from SDK mount options without exposing room data in callbacks", async () => {
     const openRoom = vi.fn();
-    installTestMatterhornScope();
+    installTestScope();
     const { container } = render(
       <ChatApp
         envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }}
@@ -501,7 +501,7 @@ describe("ChatApp", () => {
 
   it("uses the installed Matterhorn app scope", async () => {
     const sender = vi.fn(async (operation) => ({ ok: true, state, operation }));
-    installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, sender);
+    installTestScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, sender);
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
 
@@ -705,7 +705,7 @@ describe("ChatApp", () => {
       }
     };
     const getState = vi.fn(async () => currentReadState);
-    installTestMatterhornScope(currentReadState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: currentReadState, operation })), { getState });
+    installTestScope(currentReadState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: currentReadState, operation })), { getState });
 
     render(<ChatApp />);
 
@@ -730,7 +730,7 @@ describe("ChatApp", () => {
     const getState = vi.fn(() => new Promise<ChatState>((resolve) => {
       resolveGetState = resolve;
     }));
-    installTestMatterhornScope(subscribedState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: subscribedState, operation })), {
+    installTestScope(subscribedState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: subscribedState, operation })), {
       getState,
       subscribe(listener: (next: ChatState) => void) {
         listener(subscribedState);
@@ -754,7 +754,7 @@ describe("ChatApp", () => {
   it("updates direct-message unread counts from room subscription pushes", async () => {
     const dmListeners: Array<(groups: any[]) => void> = [];
     const firstGroup = { thread: state.directThreads.dm_alice__lee, messages: [state.directMessages.dm_msg_1], unreadCount: 1, firstUnreadMessageId: "dm_msg_1" };
-    installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
+    installTestScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
       getDMs: () => [firstGroup],
       subscribeDMs(listener: (groups: any[]) => void) {
         dmListeners.push(listener);
@@ -790,7 +790,7 @@ describe("ChatApp", () => {
       }
     };
     let latestState = initialState;
-    installTestMatterhornScope(initialState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: latestState, operation })), {
+    installTestScope(initialState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: latestState, operation })), {
       getState: () => latestState,
       subscribe(listener: (next: ChatState) => void) {
         subscriptionListeners.push(listener);
@@ -851,7 +851,7 @@ describe("ChatApp", () => {
       journal = { revision: revision + 1, value: next };
       return { ok: true, revision: journal.revision };
     });
-    installTestMatterhornScope(rawState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: rawState, operation })), {
+    installTestScope(rawState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: rawState, operation })), {
       getDMs,
       getNotificationJournal,
       compareAndSwapNotificationJournal
@@ -875,12 +875,12 @@ describe("ChatApp", () => {
   });
 
   it("injects styles through the launcher mount path", async () => {
-    installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" });
+    installTestScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" });
     const target = document.createElement("div");
     document.body.appendChild(target);
     let unmount = () => {};
     await act(async () => {
-      unmount = mountMatterhornChat(target, { envelope: { room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } } });
+      unmount = mountChat(target, { envelope: { room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } } });
     });
 
     try {
@@ -1207,7 +1207,7 @@ describe("ChatApp", () => {
       release: vi.fn(),
       token: vi.fn()
     }));
-    installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, sendOperation, {
+    installTestScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, sendOperation, {
       getMediaPeer: vi.fn(() => mediaPeer),
       getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
       getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
@@ -1246,7 +1246,7 @@ describe("ChatApp", () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     const getUserMedia = installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
-    installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
+    installTestScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
       getMediaPeer: vi.fn(() => mediaPeer),
       getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
       getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
@@ -1277,7 +1277,7 @@ describe("ChatApp", () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
-    installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
+    installTestScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
       getMediaPeer: vi.fn(() => mediaPeer),
       getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
       getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
@@ -1299,7 +1299,7 @@ describe("ChatApp", () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
-    installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
+    installTestScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
       getMediaPeer: vi.fn(() => mediaPeer),
       getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
       getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
@@ -1575,7 +1575,7 @@ describe("ChatApp", () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     const getUserMedia = installMediaCapture();
     const mediaPeer = { id: "peer-alice", open: true, on: vi.fn(), call: vi.fn() };
-    installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
+    installTestScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state, operation })), {
       getMediaPeer: vi.fn(() => mediaPeer),
       getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
       getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
@@ -1613,7 +1613,7 @@ describe("ChatApp", () => {
         { id: "media2", roomId: "media2", categoryId: "voice-rooms", position: 1 }
       ]
     };
-    installTestMatterhornScope(twoRoomState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: twoRoomState, operation })), {
+    installTestScope(twoRoomState, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, vi.fn(async (operation) => ({ ok: true, state: twoRoomState, operation })), {
       getMediaPeer: vi.fn(() => mediaPeer),
       getMediaPeerAddress: vi.fn(() => "peerjs:peer-alice"),
       getRelaySfuInfo: vi.fn(() => ({ enabled: false })),
@@ -2261,7 +2261,7 @@ describe("ChatApp", () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     const sendPresence = vi.fn(async () => true);
     const sendOperation = vi.fn(async (operation) => ({ ok: true, state, operation }));
-    installTestMatterhornScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, sendOperation, { sendPresence });
+    installTestScope(state, { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" }, sendOperation, { sendPresence });
 
     render(<ChatApp envelope={{ room: { id: "chat", name: "Chat" }, actor: { memberId: "alice", deviceId: "dev", role: "admin", displayName: "Alice" } }} />);
     await user.click(await screen.findByRole("button", { name: "Open status menu" }));

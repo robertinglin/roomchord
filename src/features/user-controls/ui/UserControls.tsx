@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import type { CallMediaSettings, SfuCallState } from "matterhorn-sdk/browser/types";
-import type { MatterhornMediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
+import type { MediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
 import { mediaWithVoicePreferences, type VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { MediaRoom, ScreenShare } from "@entities/chat/model/types";
 import { VoiceSettingsDialog } from "@features/user-controls/ui/VoiceSettingsDialog";
@@ -22,7 +22,7 @@ export type UserControlsProps = {
   sfu: SfuCallState;
   error?: string;
   voicePreferences: VoicePreferences;
-  mediaDeviceController?: MatterhornMediaDeviceController;
+  mediaDeviceController?: MediaDeviceController;
   reconnectRoom?: MediaRoom;
   screenShares: ScreenShare[];
   onUpdateMedia: (room: MediaRoom, media: CallMediaSettings) => void | Promise<void>;

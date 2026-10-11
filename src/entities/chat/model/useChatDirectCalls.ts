@@ -2,18 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DirectCallOrchestrator } from "matterhorn-sdk/browser/directCalls";
 import type { DirectCallDockOptions } from "matterhorn-sdk/browser/directCallDock";
 import { MeshRoomCallController } from "matterhorn-sdk/browser/meshRoomCalls";
-import type { MatterhornMediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
+import type { MediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
 import type { CallMediaSettings, CallMode, DirectCallState, PeerJsMediaConnection, RoomParticipant } from "matterhorn-sdk/browser/types";
 import { mediaBridgeFromHost } from "@entities/chat/api/callBridge";
 import { avatarForActor } from "@entities/chat/model/chatViewModel";
 import type { Actor, AvatarSource, ChatState, MemberModeration, RoomMember } from "@entities/chat/model/types";
-import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Room } from "matterhorn-sdk/client";
 import type { Mosh } from "../../../../types";
 
 type Input = {
   actor: Actor;
-  live: MatterhornRoom<Mosh>;
-  mediaDeviceController?: MatterhornMediaDeviceController;
+  live: Room<Mosh>;
+  mediaDeviceController?: MediaDeviceController;
   incomingActions?: DirectCallDockOptions["incomingActions"];
   onBeforeAccept?: (call: DirectCallState) => boolean | void | Promise<boolean | void>;
   roomName: string;

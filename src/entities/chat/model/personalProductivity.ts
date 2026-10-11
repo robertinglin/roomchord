@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { MatterhornBookmark, MatterhornReminder } from "matterhorn-sdk/browser";
-import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Bookmark, Reminder } from "matterhorn-sdk/browser";
+import type { Room } from "matterhorn-sdk/client";
 import type { Mosh } from "../../../../types";
 
 export type PersonalProductivityInput = {
@@ -12,13 +12,13 @@ export type PersonalProductivityInput = {
 
 export type PersonalProductivityController = ReturnType<typeof usePersonalProductivity>;
 
-type PersonalProductivityRoom = Pick<MatterhornRoom<Mosh>, "personal">;
+type PersonalProductivityRoom = Pick<Room<Mosh>, "personal">;
 
 function itemId(prefix: "bookmark" | "reminder", messageId: string) {
   return `${prefix}:${messageId}`;
 }
 
-export function bookmarkInput(input: PersonalProductivityInput): Omit<MatterhornBookmark, "updatedAt"> {
+export function bookmarkInput(input: PersonalProductivityInput): Omit<Bookmark, "updatedAt"> {
   return {
     id: itemId("bookmark", input.messageId),
     roomId: input.roomId,
@@ -29,7 +29,7 @@ export function bookmarkInput(input: PersonalProductivityInput): Omit<Matterhorn
   };
 }
 
-export function reminderInput(input: PersonalProductivityInput, dueAt = Date.now() + 24 * 60 * 60 * 1000): Omit<MatterhornReminder, "updatedAt"> {
+export function reminderInput(input: PersonalProductivityInput, dueAt = Date.now() + 24 * 60 * 60 * 1000): Omit<Reminder, "updatedAt"> {
   return {
     id: itemId("reminder", input.messageId),
     roomId: input.roomId,
@@ -42,8 +42,8 @@ export function reminderInput(input: PersonalProductivityInput, dueAt = Date.now
 }
 
 export function usePersonalProductivity(live: PersonalProductivityRoom) {
-  const [bookmarks, setBookmarks] = useState<MatterhornBookmark[]>([]);
-  const [reminders, setReminders] = useState<MatterhornReminder[]>([]);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const refreshRequest = useRef(0);
@@ -89,10 +89,10 @@ export function usePersonalProductivity(live: PersonalProductivityRoom) {
     return queued;
   }, [refresh]);
 
-  const addBookmark = useCallback((input: Omit<MatterhornBookmark, "updatedAt">) => mutate(() => live.personal.addBookmark(input)), [live.personal, mutate]);
+  const addBookmark = useCallback((input: Omit<Bookmark, "updatedAt">) => mutate(() => live.personal.addBookmark(input)), [live.personal, mutate]);
   const removeBookmark = useCallback((id: string) => mutate(() => live.personal.removeBookmark(id)), [live.personal, mutate]);
-  const addReminder = useCallback((input: Omit<MatterhornReminder, "updatedAt">) => mutate(() => live.personal.addReminder(input)), [live.personal, mutate]);
-  const scheduleReminder = useCallback((input: Omit<MatterhornReminder, "updatedAt">) => mutate(() => live.personal.scheduleReminder(input)), [live.personal, mutate]);
+  const addReminder = useCallback((input: Omit<Reminder, "updatedAt">) => mutate(() => live.personal.addReminder(input)), [live.personal, mutate]);
+  const scheduleReminder = useCallback((input: Omit<Reminder, "updatedAt">) => mutate(() => live.personal.scheduleReminder(input)), [live.personal, mutate]);
   const markReminderRead = useCallback((id: string) => mutate(() => live.personal.markReminderRead(id)), [live.personal, mutate]);
   const completeReminder = useCallback((id: string) => mutate(() => live.personal.completeReminder(id)), [live.personal, mutate]);
   const removeReminder = useCallback((id: string) => mutate(() => live.personal.removeReminder(id)), [live.personal, mutate]);

@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type {
-  MatterhornIntegrationCapability,
-  MatterhornIntegrationCommand,
-  MatterhornIntegrationController,
-  MatterhornIntegrationInstallation,
-  MatterhornWebhookModeratorPolicy,
-  MatterhornWebhookRateLimit
+  IntegrationCapability,
+  IntegrationCommand,
+  IntegrationController,
+  IntegrationInstallation,
+  WebhookModeratorPolicy,
+  WebhookRateLimit
 } from "matterhorn-sdk/browser";
 import { button, layout, misc, panel, row } from "@shared/ui/manage.styles";
 import { integrationCapabilityGroups, integrationCapabilityInfo } from "@shared/model/integrationCapabilities";
@@ -13,7 +13,7 @@ import * as stylex from "@stylexjs/stylex";
 
 const DEFAULT_CAPABILITIES = "events.ingress, events.egress, secrets.write, commands.register, commands.invoke, commands.result, webhooks.receive, webhooks.manage";
 
-function parseCapabilities(value: string): MatterhornIntegrationCapability[] {
+function parseCapabilities(value: string): IntegrationCapability[] {
   return [...new Set(value.split(",").map((item) => item.trim()).filter(Boolean))];
 }
 
@@ -25,7 +25,7 @@ function parseJson(value: string, label: string): unknown {
   }
 }
 
-function rateLimit(maxRequests: string, windowMs: string, burst: string): MatterhornWebhookRateLimit {
+function rateLimit(maxRequests: string, windowMs: string, burst: string): WebhookRateLimit {
   const parsed = { maxRequests: Number(maxRequests), windowMs: Number(windowMs), burst: Number(burst) };
   if (!Number.isSafeInteger(parsed.maxRequests) || parsed.maxRequests < 1
     || !Number.isSafeInteger(parsed.windowMs) || parsed.windowMs < 1
@@ -35,8 +35,8 @@ function rateLimit(maxRequests: string, windowMs: string, burst: string): Matter
   return parsed;
 }
 
-export function ManageIntegrationsTab({ controller, canManage }: { controller?: MatterhornIntegrationController; canManage: boolean }) {
-  const [installations, setInstallations] = useState<MatterhornIntegrationInstallation[]>([]);
+export function ManageIntegrationsTab({ controller, canManage }: { controller?: IntegrationController; canManage: boolean }) {
+  const [installations, setInstallations] = useState<IntegrationInstallation[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -63,7 +63,7 @@ export function ManageIntegrationsTab({ controller, canManage }: { controller?: 
   const [pendingDestructiveAction, setPendingDestructiveAction] = useState<string>();
 
   const selected = useMemo(() => installations.find((item) => item.integrationId === selectedId), [installations, selectedId]);
-  const hasCapability = (capability: MatterhornIntegrationCapability) => Boolean(selected?.capabilities.includes(capability));
+  const hasCapability = (capability: IntegrationCapability) => Boolean(selected?.capabilities.includes(capability));
   const requestedCapabilities = useMemo(() => parseCapabilities(installCapabilities), [installCapabilities]);
 
   useEffect(() => {
@@ -247,7 +247,7 @@ export function ManageIntegrationsTab({ controller, canManage }: { controller?: 
               </div>
               <p {...stylex.props(misc.hint)}>Requested command permissions: {parseCapabilities(commandCapabilities).map((capability) => integrationCapabilityInfo(capability).label).join(", ") || "none"}.</p>
               <button type="button" disabled={busy || !commandId || !commandName || !hasCapability("commands.register")} onClick={() => {
-                const command: MatterhornIntegrationCommand = { integrationId: selected.integrationId, commandId, name: commandName, description: commandDescription || undefined, capabilities: parseCapabilities(commandCapabilities) };
+                const command: IntegrationCommand = { integrationId: selected.integrationId, commandId, name: commandName, description: commandDescription || undefined, capabilities: parseCapabilities(commandCapabilities) };
                 void perform("Command registered.", () => controller.registerCommand(command));
               }} {...stylex.props(button.btn, button.secondary)}>Register command</button>
               <button type="button" disabled={busy || !commandId || !hasCapability("commands.register")} onClick={() => destructiveAction(`command:${selected.integrationId}:${commandId}`, "command removal", "Command unregistered.", () => controller.unregisterCommand({ integrationId: selected.integrationId, commandId }))} {...stylex.props(button.btn, button.danger)}>{pendingDestructiveAction === `command:${selected.integrationId}:${commandId}` ? "Confirm unregister command" : "Unregister command"}</button>
@@ -273,7 +273,7 @@ export function ManageIntegrationsTab({ controller, canManage }: { controller?: 
               </div>
               <label {...stylex.props(layout.checkbox)}><input type="checkbox" checked={requireModerator} onChange={(event) => setRequireModerator(event.target.checked)} /> Require moderator approval</label>
               <button type="button" onClick={() => {
-                const moderatorPolicy: MatterhornWebhookModeratorPolicy = { requireModeratorApproval: requireModerator };
+                const moderatorPolicy: WebhookModeratorPolicy = { requireModeratorApproval: requireModerator };
                 void perform("Webhook registered.", () => controller.registerWebhook({ integrationId: selected.integrationId, webhookId, rateLimit: rateLimit(webhookMaxRequests, webhookWindowMs, webhookBurst), moderatorPolicy }));
               }} {...stylex.props(button.btn, button.secondary)} disabled={busy || !webhookId || !hasCapability("webhooks.manage")}>Register webhook</button>
               <button type="button" disabled={busy || !webhookId || !hasCapability("webhooks.manage")} onClick={() => destructiveAction(`webhook:${selected.integrationId}:${webhookId}`, "webhook removal", "Webhook removed.", () => controller.removeWebhook({ integrationId: selected.integrationId, webhookId }))} {...stylex.props(button.btn, button.danger)}>{pendingDestructiveAction === `webhook:${selected.integrationId}:${webhookId}` ? "Confirm remove webhook" : "Remove webhook"}</button>

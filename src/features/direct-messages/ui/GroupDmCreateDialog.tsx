@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { MatterhornDirectThreadReservation } from "matterhorn-sdk/client";
+import type { DirectThreadReservation } from "matterhorn-sdk/client";
 
 export type GroupThreadInput = { memberIds: string[]; name?: string };
 export type MemberOption = { id: string; name: string };
@@ -13,7 +13,7 @@ export function GroupDmCreateDialog({
 }: {
   memberCandidates: MemberOption[];
   onClose: () => void;
-  onCreate: (input: GroupThreadInput) => Promise<MatterhornDirectThreadReservation>;
+  onCreate: (input: GroupThreadInput) => Promise<DirectThreadReservation>;
   onCreated: (threadId: string) => void;
 }) {
   const titleId = useId();

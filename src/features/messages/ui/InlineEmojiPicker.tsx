@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from "react";
-import { createMatterhornEmojiPicker, type MatterhornEmojiPicker } from "matterhorn-sdk/browser/emojiPicker";
-import type { MatterhornEmoji } from "matterhorn-sdk/browser/emojiData";
+import { createEmojiPicker, type EmojiPicker } from "matterhorn-sdk/browser/emojiPicker";
+import type { Emoji } from "matterhorn-sdk/browser/emojiData";
 
 export function InlineEmojiPicker({ ariaLabel, searchPlaceholder, onSelect }: { ariaLabel: string; searchPlaceholder: string; onSelect: (emoji: string) => void }) {
   const targetRef = useRef<HTMLDivElement>(null);
-  const pickerRef = useRef<MatterhornEmojiPicker | undefined>(undefined);
+  const pickerRef = useRef<EmojiPicker | undefined>(undefined);
   const selectRef = useRef(onSelect);
 
   useEffect(() => {
@@ -14,11 +14,11 @@ export function InlineEmojiPicker({ ariaLabel, searchPlaceholder, onSelect }: { 
   useEffect(() => {
     const target = targetRef.current;
     if (!target) return undefined;
-    pickerRef.current = createMatterhornEmojiPicker({
+    pickerRef.current = createEmojiPicker({
       target,
       ariaLabel,
       searchPlaceholder,
-      onSelect(emoji: MatterhornEmoji) {
+      onSelect(emoji: Emoji) {
         selectRef.current(emoji.emoji);
       }
     });

@@ -3,12 +3,12 @@ import type { ChatActionHandlers } from "@entities/chat/model/chatActions";
 import type { ChatUiActions } from "@entities/chat/model/chatUiStore";
 import { currentHash } from "@entities/chat/model/chatViewModel";
 import { notificationHref, NotificationTarget, notificationTargetFromHash } from "@entities/chat/model/messageLinks";
-import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Room } from "matterhorn-sdk/client";
 import type { Mosh} from "../../../../types";
 
 export type ChatNotificationsInput = {
   actions: ChatActionHandlers;
-  live: MatterhornRoom<Mosh>;
+  live: Room<Mosh>;
   ui: ChatUiActions;
 };
 

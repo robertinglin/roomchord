@@ -1,6 +1,6 @@
 import { mediaStreamForTrackRole, mediaTrackRole } from "matterhorn-sdk/browser/mediaCapture";
 import type { CallMediaSettings, CallMediaTrackInfo, ScreenPreviewSnapshot } from "matterhorn-sdk/browser/types";
-import type { MatterhornEphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
+import type { EphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
 import type { VoiceParticipant, VoiceRoomViewProps } from "@features/voice-room/model/types";
 
 function projectedModeration(room: VoiceRoomViewProps["room"], memberId: string | undefined) {
@@ -24,18 +24,18 @@ function blockedByRoom(room: VoiceRoomViewProps["room"], memberId: string | unde
   return Boolean(memberId && room.blockedMembers?.[memberId]);
 }
 
-function tokenMedia(token: MatterhornEphemeralToken): CallMediaSettings | undefined {
+function tokenMedia(token: EphemeralToken): CallMediaSettings | undefined {
   const media = token.payload?.media;
   if (!media || typeof media !== "object") return undefined;
   return media as CallMediaSettings;
 }
 
-function tokenMediaTracks(token: MatterhornEphemeralToken): CallMediaTrackInfo[] | undefined {
+function tokenMediaTracks(token: EphemeralToken): CallMediaTrackInfo[] | undefined {
   const mediaTracks = token.payload?.mediaTracks;
   return Array.isArray(mediaTracks) ? mediaTracks as CallMediaTrackInfo[] : undefined;
 }
 
-function tokenScreenPreview(token: MatterhornEphemeralToken): ScreenPreviewSnapshot | undefined {
+function tokenScreenPreview(token: EphemeralToken): ScreenPreviewSnapshot | undefined {
   const preview = token.payload?.screenPreview;
   if (!preview || typeof preview !== "object") return undefined;
   const snapshot = preview as ScreenPreviewSnapshot;
@@ -44,11 +44,11 @@ function tokenScreenPreview(token: MatterhornEphemeralToken): ScreenPreviewSnaps
   return snapshot;
 }
 
-function tokenAvatar(token: MatterhornEphemeralToken) {
+function tokenAvatar(token: EphemeralToken) {
   return typeof token.payload?.avatar === "string" ? token.payload.avatar : undefined;
 }
 
-function tokenVoiceStatus(token: MatterhornEphemeralToken) {
+function tokenVoiceStatus(token: EphemeralToken) {
   const status = token.payload?.voiceStatus;
   if (!status || typeof status !== "object") return {};
   const value = status as { deafened?: unknown; muted?: unknown };

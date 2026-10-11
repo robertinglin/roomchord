@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import type { MatterhornActiveRules, MatterhornManagementRole, MatterhornManagementScope, MatterhornMemberModerationStatus, MatterhornModerationAuditEntry } from "matterhorn-sdk/browser";
+import type { ActiveRules, ManagementRole, ManagementScope, MemberModerationStatus, ModerationAuditEntry } from "matterhorn-sdk/browser";
 import { roleNames, primaryRoleFor, roleChipFor, presenceStatus, type MemberOption } from "@entities/chat/model/roles";
 import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import type { ChatState, RoleDefinition } from "@entities/chat/model/types";
@@ -43,8 +43,8 @@ export function ManageMembersTab({
   profileOnly?: boolean;
   roleDefinitions?: ChatState["roleDefinitions"];
   roles: RoleDefinition[];
-  managementRoles?: MatterhornManagementRole[];
-  managementScopes?: MatterhornManagementScope[];
+  managementRoles?: ManagementRole[];
+  managementScopes?: ManagementScope[];
   onAssignMemberRoles: (memberId: string, roleIds: string[], displayName?: string) => Promise<void>;
   onSetMemberBlock: (memberId: string, blocked: boolean) => void;
   onSetMemberIgnore: (memberId: string, ignored: boolean) => void;
@@ -52,12 +52,12 @@ export function ManageMembersTab({
   onSetMemberNote: (memberId: string, note: string | null) => void;
   canReport?: boolean;
   onReportMember?: (memberId: string, reason: string) => Promise<void>;
-  onGetStatus?: (memberId: string) => Promise<MatterhornMemberModerationStatus>;
+  onGetStatus?: (memberId: string) => Promise<MemberModerationStatus>;
   onClearTimeout?: (memberId: string, revision: number, reason?: string) => Promise<void>;
   onClearQuarantine?: (memberId: string, revision: number, reason?: string) => Promise<void>;
-  onActiveRules?: () => Promise<MatterhornActiveRules | undefined>;
+  onActiveRules?: () => Promise<ActiveRules | undefined>;
   onAcceptRules?: (version?: number) => Promise<void>;
-  onAuditQuery?: () => Promise<MatterhornModerationAuditEntry[]>;
+  onAuditQuery?: () => Promise<ModerationAuditEntry[]>;
 }) {
   const [selectedMemberId, setSelectedMemberId] = useState<string | undefined>(initialMemberId);
   const selectedMember = members.find((member) => member.id === selectedMemberId) || members[0];

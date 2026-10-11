@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import styleX from "@stylexjs/rollup-plugin";
-import { matterhorn } from "matterhorn-sdk/vite";
+import { vitePlugin } from "matterhorn-sdk/vite";
 import path from "node:path";
 
 export default defineConfig({
@@ -10,7 +10,7 @@ export default defineConfig({
   define: {
     "process.env.NODE_ENV": JSON.stringify("production")
   },
-  plugins: [react(), styleX({ runtimeInjection: true }), matterhorn({ archiveManifest: "external" })],
+  plugins: [react(), styleX({ runtimeInjection: true }), vitePlugin({ archiveManifest: "external" })],
   resolve: {
     alias: {
       "@app": path.resolve(__dirname, "src", "app"),

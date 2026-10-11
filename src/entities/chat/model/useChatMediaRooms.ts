@@ -3,22 +3,22 @@ import { MeshRoomCallController, type MeshRoomParticipant } from "matterhorn-sdk
 import { SfuCallController } from "matterhorn-sdk/browser/sfuCalls";
 import { mediaStreamForTrackRole, mediaTrackRole, normalizeCallMediaSettings, publicCallMediaSettings, startScreenPreviewSnapshots } from "matterhorn-sdk/browser/mediaCapture";
 import type { CallMediaSettings, PeerJsMediaConnection, SfuCallState, ScreenPreviewSnapshot } from "matterhorn-sdk/browser/types";
-import type { MatterhornEphemeralToken, MatterhornEphemeralTokenHandle } from "matterhorn-sdk/browser/liveRoomConnector";
+import type { EphemeralToken, EphemeralTokenHandle } from "matterhorn-sdk/browser/liveRoomConnector";
 import { mediaBridgeFromHost } from "@entities/chat/api/callBridge";
-import type { MatterhornMediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
+import type { MediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import type { Actor, MediaRoom } from "@entities/chat/model/types";
-import type { MatterhornMedia } from "matterhorn-sdk/client";
+import type { Media } from "matterhorn-sdk/client";
 
 type LiveInput = {
   actor: Actor;
-  media: MatterhornMedia;
+  media: Media;
 };
 
 type Input = {
   heldMediaRoomIds?: Record<string, boolean>;
   live: LiveInput;
-  mediaDeviceController?: MatterhornMediaDeviceController;
+  mediaDeviceController?: MediaDeviceController;
   onVoiceConnected?: (roomId: string, media: CallMediaSettings) => void;
   roomName: string;
   voicePreferences: VoicePreferences;
@@ -42,11 +42,11 @@ export function useChatMediaRooms(input: Input) {
   const actorProfileAvatar = actorAvatar(input.live.actor);
   const [sfuState, setSfuState] = useState<SfuCallState>({ status: "unavailable", remoteStreams: [] });
   const [meshState, setMeshState] = useState<SfuCallState>({ status: "idle", remoteStreams: [] });
-  const [voiceTokens, setVoiceTokens] = useState<MatterhornEphemeralToken[]>(() => bridge?.getEphemeralTokens?.().filter((token) => token.kind === "media-room.join") || []);
+  const [voiceTokens, setVoiceTokens] = useState<EphemeralToken[]>(() => bridge?.getEphemeralTokens?.().filter((token) => token.kind === "media-room.join") || []);
   const [error, setError] = useState("");
   const sfuRef = useRef<SfuCallController | undefined>(undefined);
   const meshRef = useRef<MeshRoomCallController | undefined>(undefined);
-  const voiceTokenRef = useRef<MatterhornEphemeralTokenHandle | undefined>(undefined);
+  const voiceTokenRef = useRef<EphemeralTokenHandle | undefined>(undefined);
   const activeRoomRef = useRef<MediaRoom | undefined>(undefined);
   const screenPreviewRef = useRef<ScreenPreviewSnapshot | undefined>(undefined);
   const connectedSessionRef = useRef<string | undefined>(undefined);
@@ -127,7 +127,7 @@ export function useChatMediaRooms(input: Input) {
     return sfuState.status !== "unavailable" ? sfuState : meshState;
   }
 
-  function meshParticipantFromToken(token: MatterhornEphemeralToken): MeshRoomParticipant | undefined {
+  function meshParticipantFromToken(token: EphemeralToken): MeshRoomParticipant | undefined {
     const payload = token.payload || {};
     if (typeof payload.roomId !== "string" || payload.roomId !== activeCallState().mediaRoomId) return undefined;
     if (typeof payload.clientId !== "string" || typeof payload.callPubkey !== "string") return undefined;

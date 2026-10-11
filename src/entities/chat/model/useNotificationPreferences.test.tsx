@@ -1,11 +1,11 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { createMatterhornNotificationPreferencesClient } from "matterhorn-sdk/browser";
+import { createNotificationPreferencesClient } from "matterhorn-sdk/browser";
 import { describe, expect, it, vi } from "vitest";
 import { useNotificationPreferences } from "./useNotificationPreferences";
 
 describe("useNotificationPreferences", () => {
   it("loads personal state and keeps mode, mute, and follow changes independent", async () => {
-    const client = createMatterhornNotificationPreferencesClient({ ownerId: "member-1", now: () => 100 });
+    const client = createNotificationPreferencesClient({ ownerId: "member-1", now: () => 100 });
     const live = { notificationPreferences: client } as never;
     const { result } = renderHook(() => useNotificationPreferences(live));
     await waitFor(() => expect(result.current.ready).toBe(true));

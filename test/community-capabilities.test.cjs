@@ -23,7 +23,7 @@ test("community composes Matterhorn calendar, polls, and channel primitives", ()
   ]) {
     assert.ok(composition.actions.some((action) => action.type === operation), `${operation} must be exposed for its Mosh UI`);
   }
-  const declaredAliases = app.toMatterhornExports().appPack.composition.actions;
+  const declaredAliases = app.toExports().appPack.composition.actions;
   assert.equal(declaredAliases.find((action) => action.name === "mediaRoomCreateScoped")?.type, "media.room.create.v2");
   assert.equal(declaredAliases.some((action) => action.name === "scopeRoleSet"), false, "Mosh must not declare the legacy scope-role alias");
   for (const view of ["pollsForScope", "pollForId", "calendarNotificationsForMember", "channelsForScope", "channelForId", "postingPolicyForChannel"]) {

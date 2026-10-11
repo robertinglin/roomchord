@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import type { MatterhornManagementAction, MatterhornManagementScope, MatterhornRoleRule } from "matterhorn-sdk/browser";
+import type { ManagementAction, ManagementScope, RoleRule } from "matterhorn-sdk/browser";
 import { scopedRoomAccessSummary } from "@entities/chat/model/roles";
 import type { ChannelCategory, MediaRoom, RoleDefinition, RoomRoleAccess, VoiceRoomPlacement } from "@entities/chat/model/types";
 import { RoleAccessEditor } from "@features/management/ui/manage/RoleFields";
@@ -34,13 +34,13 @@ export function ManageVoiceTab({
   placements: VoiceRoomPlacement[];
   roles: RoleDefinition[];
   rooms: MediaRoom[];
-  permissionActions?: MatterhornManagementAction[];
-  permissionScopes?: MatterhornManagementScope[];
-  scopedRulesByRoom?: Record<string, Record<string, MatterhornRoleRule[]>>;
+  permissionActions?: ManagementAction[];
+  permissionScopes?: ManagementScope[];
+  scopedRulesByRoom?: Record<string, Record<string, RoleRule[]>>;
   onArchiveRoom: (roomId: string) => void;
   onCreateRoom: (input: { name: string; categoryId: string; position: number; allowsVideo: boolean; roleAccess?: RoomRoleAccess }) => void;
   onReorderRoom: (roomId: string, categoryId: string, position: number) => void;
-  onScopedRulesChange?: (roomId: string, roleId: string, rules: MatterhornRoleRule[]) => void;
+  onScopedRulesChange?: (roomId: string, roleId: string, rules: RoleRule[]) => void;
   onUpdateRoom: (roomId: string, settings: RoomSettings) => void;
 }) {
   const defaultCategoryId = categories.find((category) => category.id === "voice-rooms")?.id || categories[0]?.id || "";
@@ -54,7 +54,7 @@ export function ManageVoiceTab({
   const [editRoomAllowsVideo, setEditRoomAllowsVideo] = useState(true);
   const [editRoomLocked, setEditRoomLocked] = useState(false);
   const [editRoomRoleAccess, setEditRoomRoleAccess] = useState<RoomRoleAccess>({});
-  const [editScopedRulesByRole, setEditScopedRulesByRole] = useState<Record<string, MatterhornRoleRule[]>>({});
+  const [editScopedRulesByRole, setEditScopedRulesByRole] = useState<Record<string, RoleRule[]>>({});
   const [modalMode, setModalMode] = useState<VoiceModalMode | undefined>();
   const editingRoom = editingRoomId ? rooms.find((room) => room.id === editingRoomId) : undefined;
   const isCreating = modalMode === "create";

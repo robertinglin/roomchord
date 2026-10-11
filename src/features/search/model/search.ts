@@ -1,5 +1,5 @@
-import type { MatterhornRoomDataScope } from "matterhorn-sdk/browser";
-import type { MatterhornRoomSearchInput } from "matterhorn-sdk/client";
+import type { RoomDataScope } from "matterhorn-sdk/browser";
+import type { RoomSearchInput } from "matterhorn-sdk/client";
 
 export type SearchScope = "all" | "messages" | "files" | "members" | "channels" | "threads";
 
@@ -12,7 +12,7 @@ export type SearchFilters = {
   before?: number;
   offset?: number;
   limit?: number;
-  scopes?: readonly MatterhornRoomDataScope[];
+  scopes?: readonly RoomDataScope[];
   concurrency?: number;
 };
 
@@ -30,7 +30,7 @@ export function matterhornSearchInput(
   filters: SearchFilters,
   scopeId: string | undefined,
   signal: AbortSignal
-): MatterhornRoomSearchInput {
+): RoomSearchInput {
   const category = filters.scope || "all";
   const explicitScopes = filters.scopes?.length ? filters.scopes : undefined;
   const scope = explicitScopes

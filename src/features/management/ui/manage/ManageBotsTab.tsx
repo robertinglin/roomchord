@@ -1,16 +1,16 @@
 import React, { useState } from "react";
-import type { MatterhornManagementInvite, MatterhornManagementSnapshot } from "matterhorn-sdk/browser/management";
+import type { ManagementInvite, ManagementSnapshot } from "matterhorn-sdk/browser/management";
 import { button, field, notice, panel, row, section } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
 
 type Props = {
-  managementSnapshot?: MatterhornManagementSnapshot;
+  managementSnapshot?: ManagementSnapshot;
   channels?: Array<{ id: string; name: string }>;
   channelAccessByMemberId?: Record<string, string[]>;
   healthByMemberId?: Record<string, { state: string; model?: string; queueSaturated?: boolean; status?: string; visible?: boolean } | undefined>;
-  onCreateInvite(input: { serviceId: string; displayName: string }): Promise<MatterhornManagementInvite>;
+  onCreateInvite(input: { serviceId: string; displayName: string }): Promise<ManagementInvite>;
   onRemove(memberId: string): Promise<unknown>;
-  onRotate(memberId: string, deviceId: string): Promise<MatterhornManagementInvite>;
+  onRotate(memberId: string, deviceId: string): Promise<ManagementInvite>;
   onSetChannelAccess(memberId: string, channelIds: string[]): Promise<unknown>;
 };
 
@@ -24,7 +24,7 @@ export function botStatus(status: string | undefined, health?: { state: string; 
 export function ManageBotsTab({ managementSnapshot, channels = [], channelAccessByMemberId = {}, healthByMemberId = {}, onCreateInvite, onRemove, onRotate, onSetChannelAccess }: Props) {
   const [serviceId, setServiceId] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [createdInvite, setCreatedInvite] = useState<MatterhornManagementInvite>();
+  const [createdInvite, setCreatedInvite] = useState<ManagementInvite>();
   const [invitePurpose, setInvitePurpose] = useState<"admission" | "rotation">("admission");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);

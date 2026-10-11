@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { MatterhornFilesPublicRecord } from "matterhorn-sdk/browser";
-import { MatterhornDriveRoomUploadPartialError } from "matterhorn-sdk/file-picker";
-import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { FilesPublicRecord } from "matterhorn-sdk/browser";
+import { DriveRoomUploadPartialError } from "matterhorn-sdk/file-picker";
+import type { Room } from "matterhorn-sdk/client";
 import type { Mosh } from "../../../../types";
 import { attachmentScope, scopedRecords } from "@features/attachments/model/attachmentScope";
 import { createDrivePickerAdapter } from "@features/attachments/model/drivePickerAdapter";
@@ -46,7 +46,7 @@ async function withUploadInactivityTimeout<T>(controller: AbortController, uploa
   }
 }
 
-export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: boolean; channelId?: string; threadId?: string; committedDm?: boolean; roomName?: string }) {
+export function useAttachments(live: Room<Mosh>, input: { showingDm: boolean; channelId?: string; threadId?: string; committedDm?: boolean; roomName?: string }) {
   const scope = useMemo(() => attachmentScope(input), [input.channelId, input.showingDm, input.threadId, input.committedDm]);
   const rawFiles = useMemo(() => scopedRecords(live.select.records("files") as unknown as EncryptedFileRecord[], scope), [live.select, live.state.files, scope]);
   const [fileMetadata, setFileMetadata] = useState<Record<string, { title: string; fileName: string; mimeType: string }>>({});
@@ -67,7 +67,7 @@ export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: b
     let active = true;
     void Promise.all(rawFiles.filter((file) => !file.removedAt).map(async (file) => {
       try {
-        const metadata = await live.files.inspect(file as unknown as MatterhornFilesPublicRecord);
+        const metadata = await live.files.inspect(file as unknown as FilesPublicRecord);
         return [file.fileId, { title: metadata.title, fileName: metadata.fileName, mimeType: metadata.mimeType }] as const;
       } catch {
         return undefined;
@@ -129,7 +129,7 @@ export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: b
     } catch (error) {
       let cleanupFailed = false;
       try { await drivePickerAdapter.remove(connection.connectionId, uploaded.file.id); } catch { cleanupFailed = true; }
-      throw new MatterhornDriveRoomUploadPartialError(
+      throw new DriveRoomUploadPartialError(
         cleanupFailed ? "Google Drive sharing failed, and the uploaded file could not be removed." : "Google Drive sharing failed. The uploaded file was removed.",
         uploaded.file.id,
         cleanupFailed,
@@ -239,7 +239,7 @@ export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: b
         setTransfer({ phase: "idle" });
         return [];
       }
-      setTransfer({ phase: "idle", error: errorMessage(error), ...(error instanceof MatterhornDriveRoomUploadPartialError ? { recovery: { fileId: error.fileId, cleanupFailed: error.cleanupFailed } } : {}) });
+      setTransfer({ phase: "idle", error: errorMessage(error), ...(error instanceof DriveRoomUploadPartialError ? { recovery: { fileId: error.fileId, cleanupFailed: error.cleanupFailed } } : {}) });
       return [];
     }
   }, [currentScopeKey, drivePickerAdapter, live, pendingDrafts, scope, uploadLocalToDrive]);
@@ -247,7 +247,7 @@ export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: b
   const downloadFile = useCallback(async (record: EncryptedFileRecord) => {
     setTransfer({ phase: "downloading", name: record.fileId });
     try {
-      const result = await live.files.download(record as unknown as MatterhornFilesPublicRecord);
+      const result = await live.files.download(record as unknown as FilesPublicRecord);
       const url = URL.createObjectURL(result.blob);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -261,7 +261,7 @@ export function useAttachments(live: MatterhornRoom<Mosh>, input: { showingDm: b
   }, [live]);
 
   const previewFile = useCallback(async (record: EncryptedFileRecord) => {
-    const result = await live.files.download(record as unknown as MatterhornFilesPublicRecord);
+    const result = await live.files.download(record as unknown as FilesPublicRecord);
     return result.blob;
   }, [live.files]);
 

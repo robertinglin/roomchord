@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { DirectCallDockOptions } from "matterhorn-sdk/browser/directCallDock";
-import { createMatterhornMediaDeviceController, type MatterhornMediaDeviceController, type MatterhornMediaDeviceState } from "matterhorn-sdk/browser/mediaDevices";
+import { createMediaDeviceController, type MediaDeviceController, type MediaDeviceState } from "matterhorn-sdk/browser/mediaDevices";
 import { chatActionHandlers, type ChatActionHandlers } from "@entities/chat/model/chatActions";
 import type { CallSwitchDecision, CallSwitchPromptInput } from "@entities/chat/model/actions/types";
 import { useChatDirectCalls, type ChatDirectCalls } from "@entities/chat/model/useChatDirectCalls";
@@ -12,17 +12,17 @@ import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiSto
 import { useVoiceModerationState } from "@entities/chat/model/voiceModeration";
 import { usePersonalProductivity, type PersonalProductivityController } from "@entities/chat/model/personalProductivity";
 import { useNotificationPreferences, type NotificationPreferencesController } from "@entities/chat/model/useNotificationPreferences";
-import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Room } from "matterhorn-sdk/client";
 import type { Mosh} from "../../../../types";
 import { CallSwitchDialog } from "@shared/ui/CallSwitchDialog";
 
 type ChatRuntime = {
   actions: ChatActionHandlers;
   directCalls: ChatDirectCalls;
-  live: MatterhornRoom<Mosh>;
+  live: Room<Mosh>;
   media: ChatMediaRooms;
-  mediaDevices: MatterhornMediaDeviceController;
-  mediaDeviceState: MatterhornMediaDeviceState;
+  mediaDevices: MediaDeviceController;
+  mediaDeviceState: MediaDeviceState;
   notificationPreferences: NotificationPreferencesController;
   productivity: PersonalProductivityController;
   roomName: string;
@@ -31,7 +31,7 @@ type ChatRuntime = {
 
 const ChatRuntimeContext = createContext<ChatRuntime | undefined>(undefined);
 
-export function ChatRuntimeProvider({ children, live, roomName }: { children: ReactNode; live: MatterhornRoom<Mosh>; roomName: string }) {
+export function ChatRuntimeProvider({ children, live, roomName }: { children: ReactNode; live: Room<Mosh>; roomName: string }) {
   const state = live.state;
   const ui = useChatUiActions();
   const activeChannelId = useChatUiStore((value) => value.activeChannelId);
@@ -50,8 +50,8 @@ export function ChatRuntimeProvider({ children, live, roomName }: { children: Re
   const selectedMediaRoomId = useChatUiStore((value) => value.selectedMediaRoomId);
   const voicePreferences = useChatUiStore((value) => value.voicePreferences);
   const voiceSettingsOpen = useChatUiStore((value) => value.voiceSettingsOpen);
-  const mediaDevices = React.useMemo(() => createMatterhornMediaDeviceController(), []);
-  const [mediaDeviceState, setMediaDeviceState] = useState<MatterhornMediaDeviceState>(() => mediaDevices.state());
+  const mediaDevices = React.useMemo(() => createMediaDeviceController(), []);
+  const [mediaDeviceState, setMediaDeviceState] = useState<MediaDeviceState>(() => mediaDevices.state());
   useEffect(() => {
     const unsubscribe = mediaDevices.subscribe(setMediaDeviceState);
     return () => {

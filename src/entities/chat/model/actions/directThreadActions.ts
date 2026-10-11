@@ -1,8 +1,8 @@
 import type {
-  MatterhornDirectThreadCreateInput,
-  MatterhornDirectThreadMembersInput,
-  MatterhornDirectThreadRenameInput,
-  MatterhornDirectThreadReservation
+  DirectThreadCreateInput,
+  DirectThreadMembersInput,
+  DirectThreadRenameInput,
+  DirectThreadReservation
 } from "matterhorn-sdk/client";
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
 
@@ -11,18 +11,18 @@ export function directThreadActions({ live }: ChatActionHandlersInput) {
     return live.reserveDirectThread({ userIds, topicKey });
   }
 
-  async function createDirectThread(input: MatterhornDirectThreadCreateInput): Promise<MatterhornDirectThreadReservation> {
+  async function createDirectThread(input: DirectThreadCreateInput): Promise<DirectThreadReservation> {
     const reservation = await live.createDirectThread(input);
     await live.refresh();
     return reservation;
   }
 
-  async function addDirectThreadMembers(input: MatterhornDirectThreadMembersInput) {
+  async function addDirectThreadMembers(input: DirectThreadMembersInput) {
     await live.addDirectThreadMembers(input);
     await live.refresh();
   }
 
-  async function removeDirectThreadMembers(input: MatterhornDirectThreadMembersInput) {
+  async function removeDirectThreadMembers(input: DirectThreadMembersInput) {
     await live.removeDirectThreadMembers(input);
     await live.refresh();
   }
@@ -32,7 +32,7 @@ export function directThreadActions({ live }: ChatActionHandlersInput) {
     await live.refresh();
   }
 
-  async function renameDirectThread(input: MatterhornDirectThreadRenameInput) {
+  async function renameDirectThread(input: DirectThreadRenameInput) {
     await live.renameDirectThread(input);
     await live.refresh();
   }

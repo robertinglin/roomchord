@@ -14,7 +14,7 @@ import { parseMentionedMemberIds, renderMentionNames } from "@entities/chat/mode
 import { tokens } from "../../../shared/ui/theme.stylex";
 import { AttachmentList } from "@shared/ui/AttachmentList";
 import type { AttachmentPreviewLoader, AttachmentRecord, EncryptedFileRecord } from "@shared/model/attachments";
-import type { MatterhornBookmark, MatterhornReminder } from "matterhorn-sdk/browser";
+import type { Bookmark, Reminder } from "matterhorn-sdk/browser";
 
 type MessageMenuPosition = { anchored: true } | { anchored: false; x: number; y: number };
 
@@ -203,8 +203,8 @@ export function MessageRow({
   onMarkUnread?: (message: Message) => void;
   onClearUnread?: () => void;
   unreadMarkerMessageId?: string;
-  bookmarks?: MatterhornBookmark[];
-  reminders?: MatterhornReminder[];
+  bookmarks?: Bookmark[];
+  reminders?: Reminder[];
   onAddBookmark?: (message: Message) => void;
   onRemoveBookmark?: (bookmarkId: string) => void;
   onAddReminder?: (message: Message) => void;

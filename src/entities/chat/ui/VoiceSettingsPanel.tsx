@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import type { MatterhornMediaDeviceController, MatterhornMediaDeviceState } from "matterhorn-sdk/browser/mediaDevices";
+import type { MediaDeviceController, MediaDeviceState } from "matterhorn-sdk/browser/mediaDevices";
 import * as stylex from "@stylexjs/stylex";
 import { runVoiceProcessingPipelineDiagnostic, type VoicePipelineDiagnosticResult } from "matterhorn-sdk/browser/voicePipelineDiagnostics";
 import {
@@ -67,7 +67,7 @@ export function VoiceSettingsPanel({
   onChange,
   view = "all"
 }: {
-  mediaDeviceController?: MatterhornMediaDeviceController;
+  mediaDeviceController?: MediaDeviceController;
   preferences: VoicePreferences;
   onChange: (preferences: VoicePreferences) => void;
   view?: "all" | "voice" | "advanced";
@@ -79,7 +79,7 @@ export function VoiceSettingsPanel({
   const [diagnosticRunning, setDiagnosticRunning] = useState(false);
   const [diagnosticResult, setDiagnosticResult] = useState<VoicePipelineDiagnosticResult | undefined>();
   const [diagnosticError, setDiagnosticError] = useState<string | undefined>();
-  const [mediaDeviceState, setMediaDeviceState] = useState<MatterhornMediaDeviceState>(() => mediaDeviceController?.state() || {
+  const [mediaDeviceState, setMediaDeviceState] = useState<MediaDeviceState>(() => mediaDeviceController?.state() || {
     devices: [], outputVolume: 1, outputSelectionSupported: false
   });
   const [mediaDeviceError, setMediaDeviceError] = useState<string | undefined>();

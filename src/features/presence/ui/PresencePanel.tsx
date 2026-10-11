@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import * as stylex from "@stylexjs/stylex";
-import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
-import type { MatterhornEphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
+import { displayName } from "matterhorn-sdk/browser/displayName";
+import type { EphemeralToken } from "matterhorn-sdk/browser/liveRoomConnector";
 import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import type { Actor, ChatEmbed, ChatState, CommentThread, MediaRoom, Presence, RoleDefinition, RoomMember, ScreenShare } from "@entities/chat/model/types";
 import { mentionToken } from "@entities/chat/model/mentions";
@@ -82,7 +82,7 @@ const styles = stylex.create({
 function memberName(member: RoomMember, id: string) {
   const serviceName = member.kind === "bot" ? String(member.serviceDisplayName || "").trim() : "";
   if (serviceName) return serviceName;
-  return matterhornDisplayName({ member, fallbackId: id });
+  return displayName({ member, fallbackId: id });
 }
 
 function avatarFor(member?: RoomMember, presence?: Presence, actor?: Actor) {
@@ -115,7 +115,7 @@ function memberRows(roomMembers: Record<string, RoomMember> | undefined, presenc
     rows.set(memberId, {
       id: memberId,
       kind: current?.kind,
-      name: current?.kind === "bot" ? current.name : matterhornDisplayName({ presence: item, fallback: current?.name, fallbackId: memberId }),
+      name: current?.kind === "bot" ? current.name : displayName({ presence: item, fallback: current?.name, fallbackId: memberId }),
       status: item.visible === false ? "offline" : item.status || current?.status || "online",
       activity: item.activity ?? current?.activity,
       avatar: avatarFor(safeRoomMembers[memberId], item, actor?.memberId === memberId ? actor : undefined) || current?.avatar,
@@ -129,7 +129,7 @@ function memberRows(roomMembers: Record<string, RoomMember> | undefined, presenc
     rows.set(actor.memberId, {
       id: actor.memberId,
       kind: safeRoomMembers[actor.memberId]?.kind === "bot" ? "bot" : undefined,
-      name: matterhornDisplayName({ actor, fallbackId: actor.memberId }),
+      name: displayName({ actor, fallbackId: actor.memberId }),
       status: "online",
       activity: actor.role,
       avatar: avatarFor(undefined, undefined, actor),
@@ -175,7 +175,7 @@ export function PresencePanel({
   threads: CommentThread[];
   rooms: MediaRoom[];
   screenShares: ScreenShare[];
-  voiceTokens: MatterhornEphemeralToken[];
+  voiceTokens: EphemeralToken[];
   roleDefinitions?: ChatState["roleDefinitions"];
   memberPreferences?: Record<string, MemberPreference>;
   memberRoles?: Partial<ChatState>;

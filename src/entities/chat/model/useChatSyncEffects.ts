@@ -6,11 +6,11 @@ import { latestDirectMessageTime } from "@entities/chat/model/state";
 import type { ChatUiActions } from "@entities/chat/model/chatUiStore";
 import type { ChatState, DirectThread, Message } from "@entities/chat/model/types";
 import { currentHash, directThreadForUsers, hasDirectMessages, linkedMessageLocation } from "@entities/chat/model/chatViewModel";
-import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Room } from "matterhorn-sdk/client";
 import type { Mosh} from "../../../../types";
 
 export type ChatSyncEffectsInput = {
-  live?: MatterhornRoom<Mosh>;
+  live?: Room<Mosh>;
   channels: Array<{ id: string }>;
   currentChannelId?: string;
   currentThreadId?: string;

@@ -1,4 +1,4 @@
-import type { MatterhornManagementAction, MatterhornManagementScope, MatterhornRoleRule } from "matterhorn-sdk/browser";
+import type { ManagementAction, ManagementScope, RoleRule } from "matterhorn-sdk/browser";
 
 export type PermissionDecision = "inherit" | "allow" | "deny";
 
@@ -6,7 +6,7 @@ export function isRoleManagementOperation(operationType: string): boolean {
   return operationType.startsWith("access.role.") || operationType.startsWith("scope.member.");
 }
 
-export function cloneRoleRules(rules: readonly MatterhornRoleRule[] | undefined): MatterhornRoleRule[] {
+export function cloneRoleRules(rules: readonly RoleRule[] | undefined): RoleRule[] {
   return (rules || []).map((rule) => ({
     scopeType: rule.scopeType,
     scopeId: rule.scopeId,
@@ -15,18 +15,18 @@ export function cloneRoleRules(rules: readonly MatterhornRoleRule[] | undefined)
   }));
 }
 
-export function permissionDecision(rule: MatterhornRoleRule | undefined, operationType: string): PermissionDecision {
+export function permissionDecision(rule: RoleRule | undefined, operationType: string): PermissionDecision {
   if (rule?.allowOperations.includes(operationType)) return "allow";
   if (rule?.denyOperations.includes(operationType)) return "deny";
   return "inherit";
 }
 
 export function setPermissionDecision(
-  rules: readonly MatterhornRoleRule[],
-  scope: Pick<MatterhornManagementScope, "scopeType" | "scopeId">,
+  rules: readonly RoleRule[],
+  scope: Pick<ManagementScope, "scopeType" | "scopeId">,
   operationType: string,
   decision: PermissionDecision
-): MatterhornRoleRule[] {
+): RoleRule[] {
   const next = cloneRoleRules(rules);
   let rule = next.find((item) => item.scopeType === scope.scopeType && item.scopeId === scope.scopeId);
   if (!rule) {
@@ -40,14 +40,14 @@ export function setPermissionDecision(
   return next;
 }
 
-export function removeRoleScope(rules: readonly MatterhornRoleRule[], scope: Pick<MatterhornManagementScope, "scopeType" | "scopeId">): MatterhornRoleRule[] {
+export function removeRoleScope(rules: readonly RoleRule[], scope: Pick<ManagementScope, "scopeType" | "scopeId">): RoleRule[] {
   return cloneRoleRules(rules).filter((rule) => rule.scopeType !== scope.scopeType || rule.scopeId !== scope.scopeId);
 }
 
-export function actionLabel(action: MatterhornManagementAction): string {
+export function actionLabel(action: ManagementAction): string {
   return action.label || action.operationType.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[._-]+/g, " ");
 }
 
-export function roleScopeRules(role: { rules?: readonly MatterhornRoleRule[] } | undefined): MatterhornRoleRule[] {
+export function roleScopeRules(role: { rules?: readonly RoleRule[] } | undefined): RoleRule[] {
   return cloneRoleRules(role?.rules);
 }

@@ -23,7 +23,7 @@ function ensureKeyboardOverlayMode() {
   if (keyboard) keyboard.overlaysContent = true;
 }
 
-export function mountMatterhornChat(target: HTMLElement, options: ChatProps = {}) {
+export function mountChat(target: HTMLElement, options: ChatProps = {}) {
   ensureChatStyles();
   ensureKeyboardOverlayMode();
   const root: Root = createRoot(target);
@@ -31,11 +31,11 @@ export function mountMatterhornChat(target: HTMLElement, options: ChatProps = {}
   return () => root.unmount();
 }
 
-export function mountMatterhornApp(target: HTMLElement, options: ChatProps = {}) {
-  return mountMatterhornChat(target, options);
+export function mountApp(target: HTMLElement, options: ChatProps = {}) {
+  return mountChat(target, options);
 }
 
 const autoMountTarget = typeof document !== "undefined"
   ? document.getElementById("matterhorn-mosh-root")
   : null;
-if (autoMountTarget) mountMatterhornApp(autoMountTarget);
+if (autoMountTarget) mountApp(autoMountTarget);

@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  createMatterhornThumbnailLoader,
-  matterhornMimeTypeMatches,
-  normalizeMatterhornMimeTypes,
-  type MatterhornThumbnailLoader
+  createThumbnailLoader,
+  mimeTypeMatches,
+  normalizeMimeTypes,
+  type ThumbnailLoader
 } from "matterhorn-sdk/file-picker";
 import type {
   AdvancedPickerSelection,
@@ -17,7 +17,7 @@ export type DrivePickerEntry = AttachmentPickerDriveEntry;
 type DrivePickerAdapter = AttachmentPickerDriveAdapter;
 
 type LazyThumbnailProps = {
-  loader: MatterhornThumbnailLoader;
+  loader: ThumbnailLoader;
   sourceKey: string;
   size: number;
   load: (signal: AbortSignal) => Promise<Blob>;
@@ -93,12 +93,12 @@ export function AttachmentPickerAdvanced({
   const [folderStack, setFolderStack] = useState<Array<{ id: string; name: string }>>([]);
   const [entries, setEntries] = useState<DrivePickerEntry[]>([]);
   const [selectedDriveFile, setSelectedDriveFile] = useState<DrivePickerEntry>();
-  const thumbnailLoaderRef = useRef<MatterhornThumbnailLoader | undefined>(undefined);
-  const accepted = normalizeMatterhornMimeTypes(mimeInput, mode);
+  const thumbnailLoaderRef = useRef<ThumbnailLoader | undefined>(undefined);
+  const accepted = normalizeMimeTypes(mimeInput, mode);
   const acceptedKey = accepted.join(",");
   const validMimeTypes = accepted.length > 0;
 
-  if (!thumbnailLoaderRef.current) thumbnailLoaderRef.current = createMatterhornThumbnailLoader();
+  if (!thumbnailLoaderRef.current) thumbnailLoaderRef.current = createThumbnailLoader();
   const thumbnailLoader = thumbnailLoaderRef.current;
 
   useEffect(() => () => {
@@ -127,7 +127,7 @@ export function AttachmentPickerAdvanced({
     setStatus("Loading Drive files…");
     void adapter.listFiles(connectionId, folderId).then((next) => {
       if (!active) return;
-      const filtered = next.filter((entry) => entry.isFolder || matterhornMimeTypeMatches(entry.mimeType, accepted));
+      const filtered = next.filter((entry) => entry.isFolder || mimeTypeMatches(entry.mimeType, accepted));
       setEntries(filtered);
       setStatus(filtered.length ? "Select a file to share." : "This folder has no matching files.");
     }).catch((cause) => {
@@ -139,7 +139,7 @@ export function AttachmentPickerAdvanced({
   function chooseLocalFile(file: File | undefined) {
     if (!file) return;
     const mimeType = file.type || "application/octet-stream";
-    if (!validMimeTypes || !matterhornMimeTypeMatches(mimeType, accepted)) {
+    if (!validMimeTypes || !mimeTypeMatches(mimeType, accepted)) {
       setError(`${file.name} does not match the selected MIME types.`);
       setLocalFile(undefined);
       return;

@@ -1,25 +1,25 @@
 import React, { useEffect, useState } from "react";
 import type {
-  MatterhornAutoModDecision,
-  MatterhornAutoModOverrideInput,
-  MatterhornAutoModPolicy,
-  MatterhornAutoModRule
+  AutoModDecision,
+  AutoModOverrideInput,
+  AutoModPolicy,
+  AutoModRule
 } from "matterhorn-sdk/browser";
 import { button, field, misc, notice, panel, section } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
 
 type Props = {
   canModerate: boolean;
-  onActive?: () => Promise<MatterhornAutoModPolicy | undefined>;
-  onPublish?: (input: MatterhornAutoModPolicy & { reason?: string }) => Promise<void>;
-  onOverride?: (input: MatterhornAutoModOverrideInput) => Promise<void>;
-  onRedact?: (input: Omit<MatterhornAutoModOverrideInput, "action">) => Promise<void>;
-  onQuarantine?: (input: Omit<MatterhornAutoModOverrideInput, "action">) => Promise<void>;
-  onEvaluate?: (input: { body: string; scopeId?: string }) => Promise<MatterhornAutoModDecision>;
+  onActive?: () => Promise<AutoModPolicy | undefined>;
+  onPublish?: (input: AutoModPolicy & { reason?: string }) => Promise<void>;
+  onOverride?: (input: AutoModOverrideInput) => Promise<void>;
+  onRedact?: (input: Omit<AutoModOverrideInput, "action">) => Promise<void>;
+  onQuarantine?: (input: Omit<AutoModOverrideInput, "action">) => Promise<void>;
+  onEvaluate?: (input: { body: string; scopeId?: string }) => Promise<AutoModDecision>;
 };
 
-function policyRuleFromForm(id: string, action: MatterhornAutoModRule["action"], match: NonNullable<MatterhornAutoModRule["match"]>, terms: string, scopeId: string, durationMs: string): MatterhornAutoModRule {
-  const rule: MatterhornAutoModRule = { id: id.trim() || "mosh-rule", action, match, terms: terms.split("\n").map((term) => term.trim()).filter(Boolean) };
+function policyRuleFromForm(id: string, action: AutoModRule["action"], match: NonNullable<AutoModRule["match"]>, terms: string, scopeId: string, durationMs: string): AutoModRule {
+  const rule: AutoModRule = { id: id.trim() || "mosh-rule", action, match, terms: terms.split("\n").map((term) => term.trim()).filter(Boolean) };
   if (scopeId.trim()) rule.scopeId = scopeId.trim();
   const duration = Number(durationMs);
   if (Number.isFinite(duration) && duration > 0) rule.durationMs = duration * 1000;
@@ -27,10 +27,10 @@ function policyRuleFromForm(id: string, action: MatterhornAutoModRule["action"],
 }
 
 export function AutoModControls({ canModerate, onActive, onPublish, onOverride, onRedact, onQuarantine, onEvaluate }: Props) {
-  const [policy, setPolicy] = useState<MatterhornAutoModPolicy>();
+  const [policy, setPolicy] = useState<AutoModPolicy>();
   const [ruleId, setRuleId] = useState("mosh-rule");
-  const [ruleAction, setRuleAction] = useState<MatterhornAutoModRule["action"]>("block");
-  const [ruleMatch, setRuleMatch] = useState<NonNullable<MatterhornAutoModRule["match"]>>("contains");
+  const [ruleAction, setRuleAction] = useState<AutoModRule["action"]>("block");
+  const [ruleMatch, setRuleMatch] = useState<NonNullable<AutoModRule["match"]>>("contains");
   const [ruleTerms, setRuleTerms] = useState("");
   const [ruleScope, setRuleScope] = useState("");
   const [ruleDuration, setRuleDuration] = useState("");
@@ -43,7 +43,7 @@ export function AutoModControls({ canModerate, onActive, onPublish, onOverride, 
   const [overrideReason, setOverrideReason] = useState("");
   const [evaluationBody, setEvaluationBody] = useState("");
   const [evaluationScope, setEvaluationScope] = useState("");
-  const [decision, setDecision] = useState<MatterhornAutoModDecision>();
+  const [decision, setDecision] = useState<AutoModDecision>();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -83,7 +83,7 @@ export function AutoModControls({ canModerate, onActive, onPublish, onOverride, 
     }
   }
 
-  function overrideInput(): Omit<MatterhornAutoModOverrideInput, "action"> {
+  function overrideInput(): Omit<AutoModOverrideInput, "action"> {
     return {
       messageId: messageId.trim(),
       policyVersion: Math.max(1, Number(overridePolicyVersion || 0)),
@@ -106,8 +106,8 @@ export function AutoModControls({ canModerate, onActive, onPublish, onOverride, 
           <label {...stylex.props(field.field)}><span {...stylex.props(field.label)}>Version</span><input {...stylex.props(field.input)} inputMode="numeric" value={policyVersion} onChange={(event) => setPolicyVersion(event.target.value)} /></label>
           <label><input type="checkbox" checked={policyEnabled} onChange={(event) => setPolicyEnabled(event.target.checked)} /> Enable automated moderation</label>
           <label {...stylex.props(field.field)}><span {...stylex.props(field.label)}>Rule name</span><input {...stylex.props(field.input)} value={ruleId} onChange={(event) => setRuleId(event.target.value)} /></label>
-          <label {...stylex.props(field.field)}><span {...stylex.props(field.label)}>Action</span><select {...stylex.props(field.input)} value={ruleAction} onChange={(event) => setRuleAction(event.target.value as MatterhornAutoModRule["action"])}><option value="block">Block</option><option value="redact">Redact</option><option value="quarantine">Quarantine</option></select></label>
-          <label {...stylex.props(field.field)}><span {...stylex.props(field.label)}>Match</span><select {...stylex.props(field.input)} value={ruleMatch} onChange={(event) => setRuleMatch(event.target.value as NonNullable<MatterhornAutoModRule["match"]>)}><option value="contains">Contains</option><option value="exact">Exactly matches</option></select></label>
+          <label {...stylex.props(field.field)}><span {...stylex.props(field.label)}>Action</span><select {...stylex.props(field.input)} value={ruleAction} onChange={(event) => setRuleAction(event.target.value as AutoModRule["action"])}><option value="block">Block</option><option value="redact">Redact</option><option value="quarantine">Quarantine</option></select></label>
+          <label {...stylex.props(field.field)}><span {...stylex.props(field.label)}>Match</span><select {...stylex.props(field.input)} value={ruleMatch} onChange={(event) => setRuleMatch(event.target.value as NonNullable<AutoModRule["match"]>)}><option value="contains">Contains</option><option value="exact">Exactly matches</option></select></label>
           <label {...stylex.props(field.field)}><span {...stylex.props(field.label)}>Terms (one per line)</span><textarea {...stylex.props(field.input)} rows={3} value={ruleTerms} onChange={(event) => setRuleTerms(event.target.value)} /></label>
           <label {...stylex.props(field.field)}><span {...stylex.props(field.label)}>Channel scope (optional)</span><input {...stylex.props(field.input)} value={ruleScope} onChange={(event) => setRuleScope(event.target.value)} /></label>
           <label {...stylex.props(field.field)}><span {...stylex.props(field.label)}>Quarantine duration (seconds, optional)</span><input {...stylex.props(field.input)} inputMode="numeric" value={ruleDuration} onChange={(event) => setRuleDuration(event.target.value)} /></label>

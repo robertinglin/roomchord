@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
-import { channelReadTopic, roleRank, unreadCountsByTopic, type MatterhornReadTopic, type TopicReadCursor, type TopicReadableItem } from "matterhorn-sdk/browser";
+import { displayName } from "matterhorn-sdk/browser/displayName";
+import { channelReadTopic, roleRank, unreadCountsByTopic, type ReadTopic, type TopicReadCursor, type TopicReadableItem } from "matterhorn-sdk/browser";
 import type { MessageForwardTarget } from "@entities/chat/model/messageForwardingTypes";
 import type { ActiveView } from "@entities/chat/model/chatUiStore";
 import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
@@ -18,7 +18,7 @@ import {
   memberNamesForState
 } from "@entities/chat/model/chatViewModel";
 import { threadTitle } from "@entities/chat/model/directThreads";
-import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Room } from "matterhorn-sdk/client";
 import type { Mosh} from "../../../../types";
 
 export type ChatViewDataInput = {
@@ -29,7 +29,7 @@ export type ChatViewDataInput = {
   closedDirectThreads: Record<string, number>;
   draftDirectThread?: DirectThread;
   joinedMediaRoomId?: string;
-  live: MatterhornRoom<Mosh>;
+  live: Room<Mosh>;
   media: ChatMediaRooms;
   memberPreferences: Record<string, MemberPreference>;
   recentVoiceJoin?: RecentVoiceJoin;
@@ -46,7 +46,7 @@ export function useChatViewData(input: ChatViewDataInput) {
   // Receipt is controlled by participant-scoped DM projection, not the send capability.
   const actorCanReceiveDirectMessages = true;
   const channels = useMemo(() => ((live.select.channels?.() || state.channels) as Channel[]).filter((channel) => !channel.archivedAt), [live.select, state.channels]);
-  const [directGroups, setDirectGroups] = useState<Awaited<ReturnType<MatterhornRoom<Mosh>["getDMs"]>>>([]);
+  const [directGroups, setDirectGroups] = useState<Awaited<ReturnType<Room<Mosh>["getDMs"]>>>([]);
   useEffect(() => {
     if (!actorCanReceiveDirectMessages) {
       setDirectGroups([]);
@@ -101,7 +101,7 @@ export function useChatViewData(input: ChatViewDataInput) {
   const memberAvatarsById = useMemo(() => memberAvatarsForState(state, live.actor), [live.actor, state.members, state.presence]);
   const topicUnreadCounts = useMemo(() => {
     const readTags = state.members?.[live.actor.memberId]?.readTags || {};
-    const items: TopicReadableItem<MatterhornReadTopic>[] = [
+    const items: TopicReadableItem<ReadTopic>[] = [
       ...Object.values(state.messages || {}).filter((message) => !message.deletedAt && message.channelId).map((message) => ({
         topic: channelReadTopic(String(message.channelId)),
         id: String(message.id),
@@ -187,7 +187,7 @@ export function useChatViewData(input: ChatViewDataInput) {
     memberNamesById,
     state
   }), [channels, currentChannelId, currentThreadId, input.activeView, live.actor.memberId, memberNamesById, state]);
-  const actorName = matterhornDisplayName({ actor: live.actor, fallbackId: live.actor.memberId });
+  const actorName = displayName({ actor: live.actor, fallbackId: live.actor.memberId });
   const roomLabel = live.envelope.room?.name || live.envelope.room?.id || "mosh";
   const roomName = live.envelope.room?.id || live.envelope.room?.name || "mosh";
 

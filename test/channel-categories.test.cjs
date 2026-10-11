@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const sdkApp = require("../mosh.cjs");
 
-const app = sdkApp.toMatterhornExports();
+const app = sdkApp.toExports();
 
 function primaryOperation(type) {
   return app.compositionSchema.primaryPlugin.model.operations[type];

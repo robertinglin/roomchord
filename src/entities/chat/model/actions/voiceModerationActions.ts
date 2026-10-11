@@ -1,20 +1,20 @@
 import type { MediaRoom } from "@entities/chat/model/types";
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
 import {
-  MATTERHORN_MEDIA_MODERATION_OPERATIONS,
-  type MatterhornMediaModerationController,
-  type MatterhornMediaModerationResult
+  MEDIA_MODERATION_OPERATIONS,
+  type MediaModerationController,
+  type MediaModerationResult
 } from "matterhorn-sdk/browser/mediaModeration";
 import type { VoiceMemberModerationAction, VoiceModerationHandlers, VoiceStageAction } from "@entities/chat/model/voiceModeration";
 
-const MEMBER_ACTIONS: Record<VoiceMemberModerationAction, keyof typeof MATTERHORN_MEDIA_MODERATION_OPERATIONS> = {
+const MEMBER_ACTIONS: Record<VoiceMemberModerationAction, keyof typeof MEDIA_MODERATION_OPERATIONS> = {
   mute: "mute",
   deafen: "deafen",
   kick: "kick",
   suppress: "suppress"
 };
 
-const STAGE_ACTIONS: Record<VoiceStageAction, keyof typeof MATTERHORN_MEDIA_MODERATION_OPERATIONS> = {
+const STAGE_ACTIONS: Record<VoiceStageAction, keyof typeof MEDIA_MODERATION_OPERATIONS> = {
   open: "openStage",
   close: "closeStage",
   requestSpeaker: "requestToSpeak",
@@ -35,7 +35,7 @@ function participantFor(room: MediaRoom, memberId: string) {
   return room.participants[memberId];
 }
 
-function controllerFor(input: ChatActionHandlersInput): MatterhornMediaModerationController | undefined {
+function controllerFor(input: ChatActionHandlersInput): MediaModerationController | undefined {
   const controller = input.live.media?.moderation;
   return controller && typeof controller.mute === "function" ? controller : undefined;
 }
@@ -63,7 +63,7 @@ function canMemberAction(input: ChatActionHandlersInput, roomId: string, memberI
   } catch {
     return false;
   }
-  const operation = MATTERHORN_MEDIA_MODERATION_OPERATIONS[MEMBER_ACTIONS[action]];
+  const operation = MEDIA_MODERATION_OPERATIONS[MEMBER_ACTIONS[action]];
   return Boolean(controller && input.live.can(operation));
 }
 
@@ -74,10 +74,10 @@ function canStageAction(input: ChatActionHandlersInput, roomId: string, action: 
     return memberId === input.live.actor.memberId
       && Boolean(participantFor(room, input.live.actor.memberId))
       && Boolean(room.stage?.open)
-      && input.live.can(MATTERHORN_MEDIA_MODERATION_OPERATIONS[STAGE_ACTIONS[action]]);
+      && input.live.can(MEDIA_MODERATION_OPERATIONS[STAGE_ACTIONS[action]]);
   }
   if ((action === "approveSpeaker" || action === "removeSpeaker") && (!memberId || !participantFor(room, memberId))) return false;
-  return input.live.can(MATTERHORN_MEDIA_MODERATION_OPERATIONS[STAGE_ACTIONS[action]]);
+  return input.live.can(MEDIA_MODERATION_OPERATIONS[STAGE_ACTIONS[action]]);
 }
 
 export function voiceModerationActions(input: ChatActionHandlersInput): VoiceModerationHandlers {
@@ -96,7 +96,7 @@ export function voiceModerationActions(input: ChatActionHandlersInput): VoiceMod
             ? "Voice moderation is paused until the media relay reconnects."
             : "Voice moderation is unavailable until authoritative media policy is ready.";
 
-  async function run(operation: () => Promise<MatterhornMediaModerationResult>): Promise<boolean> {
+  async function run(operation: () => Promise<MediaModerationResult>): Promise<boolean> {
     if (!controller || !canUseController(input)) return false;
     state?.begin();
     try {

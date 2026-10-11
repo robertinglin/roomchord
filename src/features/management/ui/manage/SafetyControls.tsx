@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { MemberOption } from "@entities/chat/model/roles";
-import type { MatterhornActiveRules, MatterhornMemberModerationStatus, MatterhornModerationAuditEntry, MatterhornModerationReport } from "matterhorn-sdk/browser";
+import type { ActiveRules, MemberModerationStatus, ModerationAuditEntry, ModerationReport } from "matterhorn-sdk/browser";
 import { panel, button, field, misc, notice, section } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
 
@@ -13,15 +13,15 @@ type Props = {
   onQuarantineMember?: (memberId: string, input: { durationMs?: number; permanent?: boolean; scopeId?: string; reason?: string }) => Promise<void>;
   onSetSlowmode?: (scopeId: string, intervalMs: number, input?: { reason?: string }) => Promise<void>;
   onReportMember?: (memberId: string, reason: string) => Promise<void>;
-  onGetStatus?: (memberId: string) => Promise<MatterhornMemberModerationStatus>;
+  onGetStatus?: (memberId: string) => Promise<MemberModerationStatus>;
   onClearTimeout?: (memberId: string, revision: number, reason?: string) => Promise<void>;
   onClearQuarantine?: (memberId: string, revision: number, reason?: string) => Promise<void>;
-  onActiveRules?: () => Promise<MatterhornActiveRules | undefined>;
+  onActiveRules?: () => Promise<ActiveRules | undefined>;
   onPublishRules?: (text: string, version: number, required?: boolean, reason?: string) => Promise<void>;
   onAcceptRules?: (version?: number) => Promise<void>;
-  onReportInbox?: () => Promise<MatterhornModerationReport[]>;
+  onReportInbox?: () => Promise<ModerationReport[]>;
   onResolveReport?: (reportId: string, status: "resolved" | "dismissed", reason?: string) => Promise<void>;
-  onAuditQuery?: () => Promise<MatterhornModerationAuditEntry[]>;
+  onAuditQuery?: () => Promise<ModerationAuditEntry[]>;
 };
 
 export function SafetyControls({ members, channels = [], canModerate, canReport, onTimeoutMember, onQuarantineMember, onSetSlowmode, onReportMember, onGetStatus, onClearTimeout, onClearQuarantine, onActiveRules, onPublishRules, onAcceptRules, onReportInbox, onResolveReport, onAuditQuery }: Props) {
@@ -33,10 +33,10 @@ export function SafetyControls({ members, channels = [], canModerate, canReport,
   const [reportReason, setReportReason] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [status, setStatus] = useState<MatterhornMemberModerationStatus>();
-  const [rules, setRules] = useState<MatterhornActiveRules>();
-  const [reports, setReports] = useState<MatterhornModerationReport[]>([]);
-  const [audit, setAudit] = useState<MatterhornModerationAuditEntry[]>([]);
+  const [status, setStatus] = useState<MemberModerationStatus>();
+  const [rules, setRules] = useState<ActiveRules>();
+  const [reports, setReports] = useState<ModerationReport[]>([]);
+  const [audit, setAudit] = useState<ModerationAuditEntry[]>([]);
   const [reportsLoaded, setReportsLoaded] = useState(false);
   const [auditLoaded, setAuditLoaded] = useState(false);
   const [rulesText, setRulesText] = useState("");

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { MatterhornMediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
+import type { MediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
 import type { VoicePreferences } from "@entities/chat/model/localVoicePreferences";
 import { VoiceSettingsPanel } from "@entities/chat/ui/VoiceSettingsPanel";
 import { Glyph } from "@shared/ui/design";
@@ -8,7 +8,7 @@ import { tokens } from "../../../shared/ui/theme.stylex";
 import * as stylex from "@stylexjs/stylex";
 
 type Props = {
-  mediaDeviceController?: MatterhornMediaDeviceController;
+  mediaDeviceController?: MediaDeviceController;
   preferences: VoicePreferences;
   onChange: (preferences: VoicePreferences) => void;
   onClose: () => void;

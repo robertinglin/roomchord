@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { MatterhornMediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
+import type { MediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
 
 type RemoteAudioStream = {
   id: string;
@@ -8,7 +8,7 @@ type RemoteAudioStream = {
 };
 
 type Props = {
-  mediaDeviceController?: MatterhornMediaDeviceController;
+  mediaDeviceController?: MediaDeviceController;
   muted?: boolean;
   streams: RemoteAudioStream[];
 };
@@ -35,7 +35,7 @@ class RemoteAudioSinkController {
   private releaseDeviceSubscription?: () => void;
   private muted = false;
 
-  constructor(private readonly mediaDeviceController?: MatterhornMediaDeviceController) {
+  constructor(private readonly mediaDeviceController?: MediaDeviceController) {
     this.releaseDeviceSubscription = mediaDeviceController?.subscribe((state) => {
       for (const nodes of this.nodes.values()) nodes.gain.gain.value = this.muted ? 0 : state.outputVolume;
     });

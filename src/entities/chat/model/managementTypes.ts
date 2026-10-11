@@ -1,9 +1,9 @@
 import type { RoomRoleAccess } from "@entities/chat/model/types";
-import type { MatterhornRoleRule } from "matterhorn-sdk/browser";
+import type { RoleRule } from "matterhorn-sdk/browser";
 
 export type ManagementTab = "overview" | "channels" | "voice" | "roles" | "members" | "bots" | "admin" | "community" | "integrations" | "audio";
-export type RoleInput = { roleId: string; name: string; description?: string; color?: string; rules?: MatterhornRoleRule[] };
-export type RoleUpdateInput = { name?: string; description?: string; color?: string; rules?: MatterhornRoleRule[] };
+export type RoleInput = { roleId: string; name: string; description?: string; color?: string; rules?: RoleRule[] };
+export type RoleUpdateInput = { name?: string; description?: string; color?: string; rules?: RoleRule[] };
 export type InviteInput = { name?: string; roleId: string; maxUses?: number | null; expiresAt?: number | null };
 export type RoomSettings = { name?: string; group?: string | null; allowsVideo?: boolean; locked?: boolean; roleAccess?: RoomRoleAccess };
 

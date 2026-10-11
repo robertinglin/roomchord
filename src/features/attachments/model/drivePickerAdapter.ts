@@ -1,10 +1,10 @@
 import {
-  MATTERHORN_GOOGLE_DRIVE_ROOM_UPLOAD_REQUIREMENTS,
-  uploadMatterhornFileToGoogleDriveRoom
+  GOOGLE_DRIVE_ROOM_UPLOAD_REQUIREMENTS,
+  uploadFileToGoogleDriveRoom
 } from "matterhorn-sdk/file-picker";
 import type {
-  MatterhornDriveManagementHost,
-  MatterhornThirdPartyConnection
+  DriveManagementHost,
+  ThirdPartyConnection
 } from "matterhorn-sdk/client";
 import type { DrivePickerAdapter, DrivePickerEntry } from "@shared/model/drivePickerAdapter";
 export type { DrivePickerAdapter, DrivePickerEntry } from "@shared/model/drivePickerAdapter";
@@ -13,11 +13,11 @@ export type { DrivePickerAdapter, DrivePickerEntry } from "@shared/model/drivePi
 // the room-folder upload helper intentionally has a smaller requirement set.
 const REMOTE_PICKER_REQUIRED_FEATURE = "files.content.read";
 
-export function eligibleGoogleDriveConnection(connection: MatterhornThirdPartyConnection): boolean {
+export function eligibleGoogleDriveConnection(connection: ThirdPartyConnection): boolean {
   return connection.provider === "google-drive"
     && connection.status === "active"
     && connection.features.includes(REMOTE_PICKER_REQUIRED_FEATURE)
-    && MATTERHORN_GOOGLE_DRIVE_ROOM_UPLOAD_REQUIREMENTS.features.every((feature) => connection.features.includes(feature));
+    && GOOGLE_DRIVE_ROOM_UPLOAD_REQUIREMENTS.features.every((feature) => connection.features.includes(feature));
 }
 
 function driveRecord(value: unknown): Record<string, unknown> | undefined {
@@ -41,7 +41,7 @@ function driveEntries(value: unknown): DrivePickerEntry[] {
   });
 }
 
-export function createDrivePickerAdapter(management: MatterhornDriveManagementHost): DrivePickerAdapter {
+export function createDrivePickerAdapter(management: DriveManagementHost): DrivePickerAdapter {
   return {
     async listConnections() {
       const connections = await management.listConnections({ disclosures: ["accountLabel"] });
@@ -92,7 +92,7 @@ export function createDrivePickerAdapter(management: MatterhornDriveManagementHo
     },
 
     async uploadLocalFile(input) {
-      return uploadMatterhornFileToGoogleDriveRoom({
+      return uploadFileToGoogleDriveRoom({
         request: (value) => management.request(value),
         upload: async (value) => management.upload(value),
         createShareLink: async (value) => management.createShareLink(value),

@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { Actor, Channel, ChannelVisibility, ChatState, MediaRoom, RoleDefinition } from "@entities/chat/model/types";
-import type { MatterhornManagementInvite, MatterhornManagementSnapshot } from "matterhorn-sdk/browser/management";
-import type { MatterhornMediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
-import type { MatterhornActiveRules, MatterhornAutoModDecision, MatterhornAutoModOverrideInput, MatterhornAutoModPolicy, MatterhornMemberModerationStatus, MatterhornModerationAuditEntry, MatterhornModerationReport, MatterhornRoleRule } from "matterhorn-sdk/browser";
-import type { MatterhornIntegrationController } from "matterhorn-sdk/browser";
+import type { ManagementInvite, ManagementSnapshot } from "matterhorn-sdk/browser/management";
+import type { MediaDeviceController } from "matterhorn-sdk/browser/mediaDevices";
+import type { ActiveRules, AutoModDecision, AutoModOverrideInput, AutoModPolicy, MemberModerationStatus, ModerationAuditEntry, ModerationReport, RoleRule } from "matterhorn-sdk/browser";
+import type { IntegrationController } from "matterhorn-sdk/browser";
 import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import { activeRoles, memberOptions } from "@entities/chat/model/roles";
 import { joinRequestsForState } from "@entities/chat/model/state";
@@ -35,7 +35,7 @@ type Props = {
   canManageRooms: boolean;
   canManageRoles: boolean;
   canManageMembers: boolean;
-  managementSnapshot?: MatterhornManagementSnapshot;
+  managementSnapshot?: ManagementSnapshot;
   initialTab?: ManagementTab;
   initialMemberId?: string;
   initialChannelId?: string;
@@ -43,7 +43,7 @@ type Props = {
   memberPreferences: Record<string, MemberPreference>;
   profileOnly?: boolean;
   voicePreferences: VoicePreferences;
-  mediaDeviceController?: MatterhornMediaDeviceController;
+  mediaDeviceController?: MediaDeviceController;
   onClose: () => void;
   onCreateCategory: (input: { name: string; position?: number }) => void;
   onUpdateCategory: (id: string, input: { name?: string; position?: number }) => void;
@@ -67,9 +67,9 @@ type Props = {
   onModerateMember: (memberId: string, input: { chatDisabled?: boolean; nameLocked?: boolean }) => void;
   onRemoveInvite: (inviteId: string) => void;
   onCreateInvite: (input: InviteInput) => Promise<unknown>;
-  onCreateBotInvite?: (input: { serviceId: string; displayName: string }) => Promise<MatterhornManagementInvite>;
+  onCreateBotInvite?: (input: { serviceId: string; displayName: string }) => Promise<ManagementInvite>;
   onRemoveBot?: (memberId: string) => Promise<unknown>;
-  onRotateBotDevice?: (memberId: string, deviceId: string) => Promise<MatterhornManagementInvite>;
+  onRotateBotDevice?: (memberId: string, deviceId: string) => Promise<ManagementInvite>;
   onSetBotChannelAccess?: (memberId: string, channelIds: string[]) => Promise<unknown>;
   onSetMemberBlock: (memberId: string, blocked: boolean) => void;
   onSetMemberIgnore: (memberId: string, ignored: boolean) => void;
@@ -77,21 +77,21 @@ type Props = {
   onSetMemberNote: (memberId: string, note: string | null) => void;
   canReport?: boolean;
   onReportMember?: (memberId: string, reason: string) => Promise<void>;
-  onGetStatus?: (memberId: string) => Promise<MatterhornMemberModerationStatus>;
+  onGetStatus?: (memberId: string) => Promise<MemberModerationStatus>;
   onClearTimeout?: (memberId: string, revision: number, reason?: string) => Promise<void>;
   onClearQuarantine?: (memberId: string, revision: number, reason?: string) => Promise<void>;
-  onActiveRules?: () => Promise<MatterhornActiveRules | undefined>;
+  onActiveRules?: () => Promise<ActiveRules | undefined>;
   onPublishRules?: (text: string, version: number, required?: boolean, reason?: string) => Promise<void>;
   onAcceptRules?: (version?: number) => Promise<void>;
-  onReportInbox?: () => Promise<MatterhornModerationReport[]>;
+  onReportInbox?: () => Promise<ModerationReport[]>;
   onResolveReport?: (reportId: string, status: "resolved" | "dismissed", reason?: string) => Promise<void>;
-  onAuditQuery?: () => Promise<MatterhornModerationAuditEntry[]>;
-  onActiveAutoMod?: () => Promise<MatterhornAutoModPolicy | undefined>;
-  onPublishAutoMod?: (input: MatterhornAutoModPolicy & { reason?: string }) => Promise<void>;
-  onOverrideAutoMod?: (input: MatterhornAutoModOverrideInput) => Promise<void>;
-  onRedactAutoMod?: (input: Omit<MatterhornAutoModOverrideInput, "action">) => Promise<void>;
-  onQuarantineAutoMod?: (input: Omit<MatterhornAutoModOverrideInput, "action">) => Promise<void>;
-  onEvaluateAutoMod?: (input: { body: string; scopeId?: string }) => Promise<MatterhornAutoModDecision>;
+  onAuditQuery?: () => Promise<ModerationAuditEntry[]>;
+  onActiveAutoMod?: () => Promise<AutoModPolicy | undefined>;
+  onPublishAutoMod?: (input: AutoModPolicy & { reason?: string }) => Promise<void>;
+  onOverrideAutoMod?: (input: AutoModOverrideInput) => Promise<void>;
+  onRedactAutoMod?: (input: Omit<AutoModOverrideInput, "action">) => Promise<void>;
+  onQuarantineAutoMod?: (input: Omit<AutoModOverrideInput, "action">) => Promise<void>;
+  onEvaluateAutoMod?: (input: { body: string; scopeId?: string }) => Promise<AutoModDecision>;
   canModerateSafety?: boolean;
   onTimeoutMember?: (memberId: string, input: { durationMs?: number; permanent?: boolean; reason?: string }) => Promise<void>;
   onQuarantineMember?: (memberId: string, input: { durationMs?: number; permanent?: boolean; scopeId?: string; reason?: string }) => Promise<void>;
@@ -115,7 +115,7 @@ type Props = {
   onArchiveForumTag?: (channelId: string, tagId: string) => void;
   roomScopeId?: string;
   onCreateChannelKind?: (input: { scopeType: string; scopeId: string; name: string; kind: "text" | "forum" | "announcement" | "onboarding" | "rules" | "voice-text" | "stage"; mediaRoomId?: string }) => void;
-  integrations?: MatterhornIntegrationController;
+  integrations?: IntegrationController;
 };
 
 function allowedTabs(input: {
@@ -519,7 +519,7 @@ export function ManageOverviewDialog({
                 permissionActions={managementSnapshot?.actions}
                 permissionScopes={managementSnapshot?.scopes}
                 scopedRulesByRoom={scopedRulesByRoom}
-                onScopedRulesChange={(roomId, roleId, nextRules: MatterhornRoleRule[]) => {
+                onScopedRulesChange={(roomId, roleId, nextRules: RoleRule[]) => {
                   const room = rooms.find((item) => item.id === roomId);
                   const role = managementSnapshot?.roles.find((item) => item.id === roleId);
                   if (!room || !role) return;

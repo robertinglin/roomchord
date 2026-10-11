@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import type { MatterhornManagementAction, MatterhornManagementScope, MatterhornRoleRule } from "matterhorn-sdk/browser";
+import type { ManagementAction, ManagementScope, RoleRule } from "matterhorn-sdk/browser";
 import { actionLabel, isRoleManagementOperation, permissionDecision, removeRoleScope, setPermissionDecision, type PermissionDecision } from "@features/management/model/rolePermissions";
 import { button, field, layout, misc, panel } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
@@ -10,10 +10,10 @@ export function RolePermissionEditor({
   value,
   onChange
 }: {
-  actions: MatterhornManagementAction[];
-  scopes: MatterhornManagementScope[];
-  value: MatterhornRoleRule[];
-  onChange: (rules: MatterhornRoleRule[]) => void;
+  actions: ManagementAction[];
+  scopes: ManagementScope[];
+  value: RoleRule[];
+  onChange: (rules: RoleRule[]) => void;
 }) {
   const [query, setQuery] = useState("");
   const visibleActions = useMemo(() => {
@@ -21,7 +21,7 @@ export function RolePermissionEditor({
     return actions.filter((action) => !isRoleManagementOperation(action.operationType) && (!normalized || `${actionLabel(action)} ${action.operationType}`.toLowerCase().includes(normalized)));
   }, [actions, query]);
 
-  function change(scope: MatterhornManagementScope, action: MatterhornManagementAction, decision: PermissionDecision) {
+  function change(scope: ManagementScope, action: ManagementAction, decision: PermissionDecision) {
     onChange(setPermissionDecision(value, scope, action.operationType, decision));
   }
 

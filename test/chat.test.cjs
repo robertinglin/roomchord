@@ -4,7 +4,7 @@ const path = require("node:path");
 const test = require("node:test");
 const permissionsApi = require("matterhorn-sdk/permissions");
 const sdkApp = require("../mosh.cjs");
-const app = sdkApp.toMatterhornExports();
+const app = sdkApp.toExports();
 
 function primaryAction(type) {
   return app.appPack.composition.actions.find((action) => (action.plugin === "primary" || action.plugin === "$primary") && (!type || action.type === type));
@@ -56,8 +56,8 @@ test("Chat exports schema-only Matterhorn app metadata", () => {
 
 test("Chat generated TypeScript contract stays flattened across SDK export helpers", () => {
   const checkedInTypes = fs.readFileSync(path.join(__dirname, "../types.d.ts"), "utf8");
-  const exports = sdkApp.toMatterhornExports();
-  const bundle = sdkApp.toMatterhornBundle();
+  const exports = sdkApp.toExports();
+  const bundle = sdkApp.toBundle();
 
   for (const types of [
     checkedInTypes,
@@ -423,7 +423,7 @@ test("Chat generated player actions dispatch composition descriptors", async () 
 });
 
 test("Chat SDK client uses app scope for role gates and dispatch errors", async () => {
-  const { Matterhorn, MatterhornValidationError, installMatterhornAppScope, resetMatterhornForTests } = await import("matterhorn-sdk/client");
+  const { getRoom, ValidationError, installAppScope, resetForTests } = await import("matterhorn-sdk/client");
   const state = {
     channels: [],
     messages: {
@@ -434,8 +434,8 @@ test("Chat SDK client uses app scope for role gates and dispatch errors", async 
       embed_1: { id: "embed_1", scopeType: "channel", scopeId: "general", url: "https://example.test", note: null, addedAt: 3, removedAt: null }
     }
   };
-  resetMatterhornForTests();
-  installMatterhornAppScope({
+  resetForTests();
+  installAppScope({
     appId: "gg.matterhorn.mosh",
     appName: "Mosh",
     metadata: { composition: app.compositionSchema },
@@ -449,15 +449,15 @@ test("Chat SDK client uses app scope for role gates and dispatch errors", async 
     actor: { memberId: "ada", deviceId: "dev_ada", role: "member", displayName: "Ada" },
     envelope: { room: { id: "chat" }, actor: { memberId: "ada", deviceId: "dev_ada", role: "member", displayName: "Ada" } }
   });
-  const room = Matterhorn();
+  const room = getRoom();
 
   assert.equal(room.can("messageSend"), true);
   assert.equal(room.can("channelCreate"), false);
   await assert.rejects(
     () => room.dispatch("messageSend", { channelId: "general", body: "x".repeat(4001) }),
-    (error) => error instanceof MatterhornValidationError && /body/.test(error.message)
+    (error) => error instanceof ValidationError && /body/.test(error.message)
   );
-  resetMatterhornForTests();
+  resetForTests();
 });
 
 test("Chat defineApp export does not depend on a demo sidecar", async () => {

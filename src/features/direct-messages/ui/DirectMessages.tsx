@@ -3,7 +3,7 @@ import type { DirectThread } from "@entities/chat/model/types";
 import type { DirectCallThreadPresence } from "@entities/chat/model/directCallThreads";
 import { threadAvatar, threadTitle } from "@entities/chat/model/directThreads";
 import { Badge, ChannelGroup, DirectMessageRow } from "@shared/ui/design";
-import type { MatterhornDirectThreadReservation } from "matterhorn-sdk/client";
+import type { DirectThreadReservation } from "matterhorn-sdk/client";
 import { GroupDmCreateDialog, type GroupThreadInput, type MemberOption } from "./GroupDmCreateDialog";
 
 export function DirectMessages({
@@ -33,7 +33,7 @@ export function DirectMessages({
   callPresenceByThreadId?: Record<string, DirectCallThreadPresence>;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
-  onCreateGroup?: (input: GroupThreadInput) => Promise<MatterhornDirectThreadReservation>;
+  onCreateGroup?: (input: GroupThreadInput) => Promise<DirectThreadReservation>;
   onAddMembers?: (threadId: string, memberIds: string[]) => Promise<void>;
   onRemoveMembers?: (threadId: string, memberIds: string[]) => Promise<void>;
   onLeaveThread?: (threadId: string) => Promise<void>;

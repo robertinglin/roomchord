@@ -1,6 +1,6 @@
 import React from "react";
 import type { CallMediaSettings } from "matterhorn-sdk/browser/types";
-import type { MatterhornManagementSnapshot } from "matterhorn-sdk/browser/management";
+import type { ManagementSnapshot } from "matterhorn-sdk/browser/management";
 import type { Mosh } from "../../../../types";
 import { useChatRuntime } from "@entities/chat/model/chatRuntime";
 import { useChatUiActions, useChatUiStore } from "@entities/chat/model/chatUiStore";
@@ -91,7 +91,7 @@ export function ChatManageDialog() {
   const memberPreferences = useChatUiStore((value) => value.memberPreferences);
   const localMediaSettings = useChatUiStore((value) => value.localMediaSettings);
   const voicePreferences = useChatUiStore((value) => value.voicePreferences);
-  const [managementSnapshot, setManagementSnapshot] = React.useState<MatterhornManagementSnapshot>();
+  const [managementSnapshot, setManagementSnapshot] = React.useState<ManagementSnapshot>();
   const [communityProjection, setCommunityProjection] = React.useState<CommunityProjection>({ events: [], polls: [], notifications: [], channels: [] });
   const communityProjectionRequest = React.useRef(0);
   const mediaBeforeSettings = React.useRef<CallMediaSettings | undefined>(undefined);

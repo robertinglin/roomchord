@@ -5,7 +5,7 @@ import type { ChatDirectCalls } from "@entities/chat/model/useChatDirectCalls";
 import type { ChatMediaRooms } from "@entities/chat/model/useChatMediaRooms";
 import type { ChatViewData } from "@entities/chat/model/useChatViewData";
 import type { CallMediaSettings } from "matterhorn-sdk/browser/types";
-import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Room } from "matterhorn-sdk/client";
 import type { Mosh} from "../../../../../types";
 import type { VoiceModerationState } from "@entities/chat/model/voiceModeration";
 
@@ -14,7 +14,7 @@ export type ChatActionHandlersInput = {
   heldDirectCallRoomId?: string;
   heldMediaRoomIds: Record<string, boolean>;
   joinedMediaRoomId?: string;
-  live: MatterhornRoom<Mosh>;
+  live: Room<Mosh>;
   localMediaSettings: CallMediaSettings;
   localVoicePreferences: VoicePreferences;
   media: ChatMediaRooms;

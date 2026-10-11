@@ -1,4 +1,4 @@
-import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
+import { displayName } from "matterhorn-sdk/browser/displayName";
 import { parseMarkdown, type MarkdownEmbed } from "matterhorn-sdk/browser/markdown";
 import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import type { Actor, AvatarSource, ChatState, DirectThread, MemberId, Message, MessageId, RoomMember, ThreadId } from "@entities/chat/model/types";
@@ -51,7 +51,7 @@ export function linkedMessageLocation(state: ChatState, hash: string, messageIdF
 function roomMemberName(member: RoomMember, id: string) {
   const serviceName = member.kind === "bot" ? String(member.serviceDisplayName || "").trim() : "";
   if (serviceName) return serviceName;
-  return matterhornDisplayName({ member, fallbackId: id });
+  return displayName({ member, fallbackId: id });
 }
 
 export function memberNamesForState(state: ChatState, actor: Actor, memberPreferences: Record<string, MemberPreference> = {}): Record<string, string> {
@@ -63,9 +63,9 @@ export function memberNamesForState(state: ChatState, actor: Actor, memberPrefer
   for (const [key, item] of Object.entries(state.presence || {})) {
     const id = item.memberId || key;
     const member = state.members?.[id as MemberId];
-    if (id && member?.kind !== "bot") names[id] = matterhornDisplayName({ presence: item, member, fallback: names[id], fallbackId: id });
+    if (id && member?.kind !== "bot") names[id] = displayName({ presence: item, member, fallback: names[id], fallbackId: id });
   }
-  names[actor.memberId] = matterhornDisplayName({ actor, fallback: names[actor.memberId], fallbackId: actor.memberId });
+  names[actor.memberId] = displayName({ actor, fallback: names[actor.memberId], fallbackId: actor.memberId });
   for (const [memberId, preference] of Object.entries(memberPreferences)) {
     if (preference.nickname) names[memberId] = preference.nickname;
   }

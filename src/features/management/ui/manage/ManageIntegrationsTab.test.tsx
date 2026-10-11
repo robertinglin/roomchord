@@ -2,7 +2,7 @@ import React from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { MatterhornIntegrationController } from "matterhorn-sdk/browser";
+import type { IntegrationController } from "matterhorn-sdk/browser";
 import { ManageIntegrationsTab } from "@features/management/ui/manage/ManageIntegrationsTab";
 
 const installation = {
@@ -15,7 +15,7 @@ const installation = {
   updatedAt: 1
 };
 
-function controller(overrides: Partial<MatterhornIntegrationController> = {}) {
+function controller(overrides: Partial<IntegrationController> = {}) {
   const value = {
     createIdentity: vi.fn(async () => ({ signedIdentity: { identity: { integrationId: "new-bot" } }, privateKey: "private" })),
     verifyIdentity: vi.fn(),
@@ -38,7 +38,7 @@ function controller(overrides: Partial<MatterhornIntegrationController> = {}) {
     list: vi.fn(async () => [installation]),
     subscribe: vi.fn(() => () => undefined),
     ...overrides
-  } as unknown as MatterhornIntegrationController;
+  } as unknown as IntegrationController;
   return value;
 }
 

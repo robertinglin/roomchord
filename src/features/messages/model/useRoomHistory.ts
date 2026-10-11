@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { EncryptedEventResponse, MatterhornRoom } from "matterhorn-sdk/client";
+import type { EncryptedEventResponse, Room } from "matterhorn-sdk/client";
 import type { Mosh } from "../../../../types";
 
 export type RoomHistoryState = {
@@ -16,7 +16,7 @@ function recordsFromResponse(response: EncryptedEventResponse) {
   return (response.records || []).filter((record): record is Record<string, unknown> => Boolean(record) && typeof record === "object" && !Array.isArray(record));
 }
 
-export function useRoomHistory(live: MatterhornRoom<Mosh>, scopeId?: string, scopeType: RoomHistoryScopeType = "channel"): RoomHistoryState {
+export function useRoomHistory(live: Room<Mosh>, scopeId?: string, scopeType: RoomHistoryScopeType = "channel"): RoomHistoryState {
   const [records, setRecords] = useState<Array<Record<string, unknown>>>([]);
   const [cursor, setCursor] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);

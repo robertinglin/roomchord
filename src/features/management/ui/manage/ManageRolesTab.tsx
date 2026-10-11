@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { MatterhornManagementAction, MatterhornManagementRole, MatterhornManagementScope, MatterhornRoleRule } from "matterhorn-sdk/browser";
+import type { ManagementAction, ManagementRole, ManagementScope, RoleRule } from "matterhorn-sdk/browser";
 import { cleanRoleId } from "@entities/chat/model/roles";
 import type { RoleDefinition } from "@entities/chat/model/types";
 import type { RoleInput, RoleUpdateInput } from "@entities/chat/model/managementTypes";
@@ -14,10 +14,10 @@ function roleIdForNewRole(name: string, roles: RoleDefinition[]) {
   return roles.some((role) => role.id === baseRoleId) ? `${baseRoleId}-${roles.length + 1}` : baseRoleId;
 }
 
-function roleRecord(role: RoleDefinition, managementRoles: MatterhornManagementRole[] | undefined): MatterhornManagementRole {
+function roleRecord(role: RoleDefinition, managementRoles: ManagementRole[] | undefined): ManagementRole {
   const managed = managementRoles?.find((item) => item.id === role.id);
   if (managed) return managed;
-  return role as RoleDefinition & MatterhornManagementRole;
+  return role as RoleDefinition & ManagementRole;
 }
 
 export function ManageRolesTab({
@@ -32,9 +32,9 @@ export function ManageRolesTab({
 }: {
   canManageRoles: boolean;
   roles: RoleDefinition[];
-  managementRoles?: MatterhornManagementRole[];
-  permissionActions?: MatterhornManagementAction[];
-  permissionScopes?: MatterhornManagementScope[];
+  managementRoles?: ManagementRole[];
+  permissionActions?: ManagementAction[];
+  permissionScopes?: ManagementScope[];
   onArchiveRole: (roleId: string) => void;
   onCreateRole: (input: RoleInput) => void;
   onUpdateRole: (roleId: string, input: RoleUpdateInput) => void;
@@ -42,12 +42,12 @@ export function ManageRolesTab({
   const [roleName, setRoleName] = useState("");
   const [roleDescription, setRoleDescription] = useState("");
   const [roleColor, setRoleColor] = useState("#38bdf8");
-  const [roleRules, setRoleRules] = useState<MatterhornRoleRule[]>([]);
+  const [roleRules, setRoleRules] = useState<RoleRule[]>([]);
   const [editingRoleId, setEditingRoleId] = useState<string | undefined>();
   const [editRoleName, setEditRoleName] = useState("");
   const [editRoleDescription, setEditRoleDescription] = useState("");
   const [editRoleColor, setEditRoleColor] = useState("");
-  const [editRoleRules, setEditRoleRules] = useState<MatterhornRoleRule[]>([]);
+  const [editRoleRules, setEditRoleRules] = useState<RoleRule[]>([]);
   const editingRole = editingRoleId ? roles.find((role) => role.id === editingRoleId) : undefined;
 
   function createRole(event: React.FormEvent<HTMLFormElement>) {

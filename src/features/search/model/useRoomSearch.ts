@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { EncryptedSearchResult, MatterhornRoom } from "matterhorn-sdk/client";
+import type { EncryptedSearchResult, Room } from "matterhorn-sdk/client";
 import type { Mosh } from "../../../../types";
 import { matterhornSearchInput, type SearchFilters } from "./search";
 
@@ -10,7 +10,7 @@ export type RoomSearchState = {
   result?: EncryptedSearchResult;
 };
 
-export function useRoomSearch(live: MatterhornRoom<Mosh>, filters: SearchFilters, scopeId?: string): RoomSearchState {
+export function useRoomSearch(live: Room<Mosh>, filters: SearchFilters, scopeId?: string): RoomSearchState {
   const [state, setState] = useState<RoomSearchState>({ loading: false });
 
   useEffect(() => {

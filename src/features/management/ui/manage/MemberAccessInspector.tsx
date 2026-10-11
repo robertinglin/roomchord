@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import type { MatterhornManagementRole, MatterhornManagementScope } from "matterhorn-sdk/browser";
+import type { ManagementRole, ManagementScope } from "matterhorn-sdk/browser";
 import { configuredMemberAccess } from "@features/management/model/memberAccess";
 import { panel, row, layout, misc } from "@shared/ui/manage.styles";
 import * as stylex from "@stylexjs/stylex";
@@ -12,8 +12,8 @@ export function MemberAccessInspector({
 }: {
   memberName: string;
   roleIds: string[];
-  roles: MatterhornManagementRole[];
-  scopes: MatterhornManagementScope[];
+  roles: ManagementRole[];
+  scopes: ManagementScope[];
 }) {
   const entries = useMemo(() => configuredMemberAccess(roleIds, roles, scopes), [roleIds, roles, scopes]);
   if (!roles.length || !scopes.length) return null;

@@ -1,11 +1,11 @@
-import { matterhornDisplayName } from "matterhorn-sdk/browser/displayName";
+import { displayName } from "matterhorn-sdk/browser/displayName";
 import {
   ROOM_ACCESS_RANKS,
   roleIdsForActor,
   roomAccessLevelForActor as matterhornRoomAccessLevelForActor
 } from "matterhorn-sdk/browser";
-import type { MatterhornPermissionActor } from "matterhorn-sdk/browser";
-import type { MatterhornRoleRule } from "matterhorn-sdk/browser";
+import type { PermissionActor } from "matterhorn-sdk/browser";
+import type { RoleRule } from "matterhorn-sdk/browser";
 import type { MemberPreference } from "@entities/chat/model/localMemberPreferences";
 import type { Actor, ChatState, MediaRoom, Presence, RoleDefinition, RoleId, RoomMember, RoomRoleAccessLevel } from "@entities/chat/model/types";
 
@@ -110,7 +110,7 @@ function memberIdFromEntry(key: string, member?: (RoomMember | Presence) & { id?
 
 function roomMemberDisplayName(member: RoomMember, id: string) {
   const serviceName = member.kind === "bot" ? String(member.serviceDisplayName || "").trim() : "";
-  return serviceName || matterhornDisplayName({ member, fallbackId: id });
+  return serviceName || displayName({ member, fallbackId: id });
 }
 
 export function assignedRoleIds(memberId: string, baseRole?: string, state?: Partial<ChatState>) {
@@ -132,7 +132,7 @@ export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMemb
     const visible = item.visible === false ? false : true;
     members.set(id, {
       id,
-      name: current?.kind === "bot" ? current.name : matterhornDisplayName({ presence: item, fallback: current?.name, fallbackId: id }),
+      name: current?.kind === "bot" ? current.name : displayName({ presence: item, fallback: current?.name, fallbackId: id }),
       kind: current?.kind,
       baseRole: current?.baseRole,
       avatar: avatarFor(roomMembers?.[id], item, actor.memberId === id ? actor : undefined) || current?.avatar,
@@ -141,7 +141,7 @@ export function memberOptions(actor: Actor, roomMembers: Record<string, RoomMemb
   }
   members.set(actor.memberId, {
     id: actor.memberId,
-    name: matterhornDisplayName({ actor, fallback: members.get(actor.memberId)?.name, fallbackId: actor.memberId }),
+    name: displayName({ actor, fallback: members.get(actor.memberId)?.name, fallbackId: actor.memberId }),
     kind: members.get(actor.memberId)?.kind,
     baseRole: actor.role,
     avatar: avatarFor(roomMembers?.[actor.memberId], presence?.[actor.memberId], actor) || members.get(actor.memberId)?.avatar,
@@ -176,7 +176,7 @@ export function roomAccessLevelForRoles(room: MediaRoom, roleIds: string[], canM
 
 export function actorRoomAccessLevel(room: MediaRoom, actor: Actor, state: Partial<ChatState>, canManageRooms: boolean): RoomRoleAccessLevel {
   if (canManageRooms) return "editor";
-  const permissionActor: MatterhornPermissionActor = { ...actor };
+  const permissionActor: PermissionActor = { ...actor };
   return matterhornRoomAccessLevelForActor(room, permissionActor, state) as RoomRoleAccessLevel;
 }
 
@@ -203,7 +203,7 @@ export function roomAccessSummary(room: MediaRoom, roles: RoleDefinition[]) {
 
 export type ScopedRoomAccessDecision = RoomRoleAccessLevel | "inherit";
 
-function scopedRuleSpecificity(rule: MatterhornRoleRule, scopeType: string, scopeId: string) {
+function scopedRuleSpecificity(rule: RoleRule, scopeType: string, scopeId: string) {
   if (rule.scopeType === scopeType && rule.scopeId === scopeId) return 3;
   if (rule.scopeType === scopeType && rule.scopeId === "*") return 2;
   if (rule.scopeType === "*" && rule.scopeId === "*") return 1;
@@ -211,7 +211,7 @@ function scopedRuleSpecificity(rule: MatterhornRoleRule, scopeType: string, scop
 }
 
 export function scopedRoomAccessDecision(
-  rules: readonly MatterhornRoleRule[] | undefined,
+  rules: readonly RoleRule[] | undefined,
   scope: { scopeType: string; scopeId: string },
   operationTypes: readonly string[] = ["media.room.join", "matterhorn.scope.view"]
 ): ScopedRoomAccessDecision {
@@ -229,7 +229,7 @@ export function scopedRoomAccessDecision(
 export function scopedRoomAccessSummary(
   room: MediaRoom,
   roles: RoleDefinition[],
-  rulesByRole: Record<string, readonly MatterhornRoleRule[]> | undefined
+  rulesByRole: Record<string, readonly RoleRule[]> | undefined
 ) {
   if (!rulesByRole) return roomAccessSummary(room, roles);
   const scope = { scopeType: room.scopeType || "media-room", scopeId: room.scopeId || room.id };

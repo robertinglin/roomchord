@@ -1,20 +1,20 @@
-import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Room } from "matterhorn-sdk/client";
 import type {
-  MatterhornActiveRules,
-  MatterhornAutoModDecision,
-  MatterhornAutoModOverrideInput,
-  MatterhornAutoModPolicy,
-  MatterhornMemberModerationStatus,
-  MatterhornModerationAuditEntry,
-  MatterhornModerationAuditQuery,
-  MatterhornModerationReport
+  ActiveRules,
+  AutoModDecision,
+  AutoModOverrideInput,
+  AutoModPolicy,
+  MemberModerationStatus,
+  ModerationAuditEntry,
+  ModerationAuditQuery,
+  ModerationReport
 } from "matterhorn-sdk/browser";
 import type { Mosh } from "../../../../../types";
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
 
 type ModerationReason = { reason?: string };
 
-function requireCapability(live: MatterhornRoom<Mosh>, action: keyof Mosh.Actions) {
+function requireCapability(live: Room<Mosh>, action: keyof Mosh.Actions) {
   if (!live.can(action)) throw new Error(`You do not have permission to perform ${String(action)}.`);
 }
 
@@ -46,12 +46,12 @@ export function safetyActions(input: ChatActionHandlersInput) {
     await live.moderation.setSlowmode({ scopeId, intervalMs, revision: options.revision, reason: options.reason });
   }
 
-  async function getMemberModerationStatus(memberId?: string): Promise<MatterhornMemberModerationStatus> {
+  async function getMemberModerationStatus(memberId?: string): Promise<MemberModerationStatus> {
     if (memberId && memberId !== live.actor.memberId) requireCapability(live, "memberTimeout");
     return live.moderation.getStatus(memberId);
   }
 
-  async function activeRules(): Promise<MatterhornActiveRules | undefined> {
+  async function activeRules(): Promise<ActiveRules | undefined> {
     return live.moderation.rules.active();
   }
 
@@ -68,7 +68,7 @@ export function safetyActions(input: ChatActionHandlersInput) {
     await live.moderation.reports.submit({ targetMemberId, reason, ...options });
   }
 
-  async function moderationReportInbox(): Promise<MatterhornModerationReport[]> {
+  async function moderationReportInbox(): Promise<ModerationReport[]> {
     requireCapability(live, "memberTimeout");
     return live.moderation.reports.inbox();
   }
@@ -78,37 +78,37 @@ export function safetyActions(input: ChatActionHandlersInput) {
     await live.moderation.reports.resolve({ reportId, status, reason });
   }
 
-  async function moderationAudit(query?: MatterhornModerationAuditQuery): Promise<MatterhornModerationAuditEntry[]> {
+  async function moderationAudit(query?: ModerationAuditQuery): Promise<ModerationAuditEntry[]> {
     requireCapability(live, "memberTimeout");
     return live.moderation.audit.query(query);
   }
 
-  async function activeAutoMod(): Promise<MatterhornAutoModPolicy | undefined> {
+  async function activeAutoMod(): Promise<AutoModPolicy | undefined> {
     requireCapability(live, "memberTimeout");
     return live.moderation.automod.active();
   }
 
-  async function publishAutoMod(input: MatterhornAutoModPolicy & { reason?: string }) {
+  async function publishAutoMod(input: AutoModPolicy & { reason?: string }) {
     requireCapability(live, "memberTimeout");
     await live.moderation.automod.publish(input);
   }
 
-  async function overrideAutoMod(input: MatterhornAutoModOverrideInput) {
+  async function overrideAutoMod(input: AutoModOverrideInput) {
     requireCapability(live, "memberTimeout");
     await live.moderation.automod.override(input);
   }
 
-  async function redactAutoMod(input: Omit<MatterhornAutoModOverrideInput, "action">) {
+  async function redactAutoMod(input: Omit<AutoModOverrideInput, "action">) {
     requireCapability(live, "memberTimeout");
     await live.moderation.automod.redact(input);
   }
 
-  async function quarantineAutoMod(input: Omit<MatterhornAutoModOverrideInput, "action">) {
+  async function quarantineAutoMod(input: Omit<AutoModOverrideInput, "action">) {
     requireCapability(live, "memberTimeout");
     await live.moderation.automod.quarantine(input);
   }
 
-  async function evaluateAutoMod(input: { body: string; scopeId?: string }): Promise<MatterhornAutoModDecision> {
+  async function evaluateAutoMod(input: { body: string; scopeId?: string }): Promise<AutoModDecision> {
     return live.moderation.automod.evaluate(input);
   }
 

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import type { MatterhornRoom } from "matterhorn-sdk/client";
+import type { Room } from "matterhorn-sdk/client";
 import type {
-  MatterhornNotificationPreferencesClient,
-  MatterhornNotificationPreferencesDocument,
+  NotificationPreferencesClient,
+  NotificationPreferencesDocument,
   NotificationMode,
   NotificationMute,
   NotificationPreference,
@@ -12,7 +12,7 @@ import type {
 import type { Mosh } from "../../../../types";
 
 export type NotificationPreferencesController = {
-  client: MatterhornNotificationPreferencesClient;
+  client: NotificationPreferencesClient;
   error?: string;
   followed(threadId: string): boolean;
   preference(scope: NotificationScope): NotificationPreference | undefined;
@@ -23,9 +23,9 @@ export type NotificationPreferencesController = {
   setMute(scope: NotificationScope, mute: NotificationMute): Promise<void>;
 };
 
-export function useNotificationPreferences(live: MatterhornRoom<Mosh>): NotificationPreferencesController {
+export function useNotificationPreferences(live: Room<Mosh>): NotificationPreferencesController {
   const client = live.notificationPreferences;
-  const [document, setDocument] = useState<MatterhornNotificationPreferencesDocument>();
+  const [document, setDocument] = useState<NotificationPreferencesDocument>();
   const [error, setError] = useState<string>();
 
   useEffect(() => {

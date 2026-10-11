@@ -9,9 +9,9 @@ import {
   messageEmbeds
 } from "@entities/chat/model/chatViewModel";
 import type { ChatActionHandlersInput } from "@entities/chat/model/actions/types";
-import type { MatterhornReshareForForwardResult } from "matterhorn-sdk/browser";
+import type { ReshareForForwardResult } from "matterhorn-sdk/browser";
 
-type ForwardMessageResult = false | true | string | MatterhornReshareForForwardResult;
+type ForwardMessageResult = false | true | string | ReshareForForwardResult;
 type MessageDeleteResult = true | string;
 
 const DELETE_OPERATION_TIMEOUT_MS = 15_000;

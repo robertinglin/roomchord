@@ -1,5 +1,5 @@
 import React from "react";
-import type { MatterhornManagementAction, MatterhornManagementScope, MatterhornRoleRule } from "matterhorn-sdk/browser";
+import type { ManagementAction, ManagementScope, RoleRule } from "matterhorn-sdk/browser";
 import type { RoleDefinition, RoleId, RoomRoleAccess, RoomRoleAccessLevel } from "@entities/chat/model/types";
 import { RolePermissionEditor } from "@features/management/ui/manage/RolePermissionEditor";
 import { row, field, layout } from "@shared/ui/manage.styles";
@@ -30,11 +30,11 @@ export function RoleAccessEditor({
   roles: RoleDefinition[];
   value: RoomRoleAccess;
   onChange: (value: RoomRoleAccess) => void;
-  permissionActions?: MatterhornManagementAction[];
-  permissionScopes?: MatterhornManagementScope[];
-  scopedRulesByRole?: Record<string, MatterhornRoleRule[]>;
-  onScopedRulesChange?: (roleId: string, rules: MatterhornRoleRule[]) => void;
-  scopedPermissionScope?: MatterhornManagementScope;
+  permissionActions?: ManagementAction[];
+  permissionScopes?: ManagementScope[];
+  scopedRulesByRole?: Record<string, RoleRule[]>;
+  onScopedRulesChange?: (roleId: string, rules: RoleRule[]) => void;
+  scopedPermissionScope?: ManagementScope;
 }) {
   const scopedActions = permissionActions.filter((action) => /^(?:media\.room\.|media\.stage\.|screenshare\.|matterhorn\.scope\.)/u.test(action.operationType));
   const scopedScopes = scopedPermissionScope

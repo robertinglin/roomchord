@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import type { MatterhornManagementSnapshot } from "matterhorn-sdk/browser/management";
-import type { MatterhornActiveRules, MatterhornAutoModDecision, MatterhornAutoModOverrideInput, MatterhornAutoModPolicy, MatterhornManagementRole, MatterhornMemberModerationStatus, MatterhornModerationAuditEntry, MatterhornModerationReport } from "matterhorn-sdk/browser";
+import type { ManagementSnapshot } from "matterhorn-sdk/browser/management";
+import type { ActiveRules, AutoModDecision, AutoModOverrideInput, AutoModPolicy, ManagementRole, MemberModerationStatus, ModerationAuditEntry, ModerationReport } from "matterhorn-sdk/browser";
 import { joinRequestsForState, memberModerationFor, publicInvitesForState } from "@entities/chat/model/state";
 import { memberOptions } from "@entities/chat/model/roles";
 import { SafetyControls } from "@features/management/ui/manage/SafetyControls";
@@ -25,7 +25,7 @@ const USED_INVITE_STATUSES = new Set(["consumed", "expired", "exhausted"]);
 type Props = {
   actor: Actor;
   canManageMembers: boolean;
-  managementSnapshot?: MatterhornManagementSnapshot;
+  managementSnapshot?: ManagementSnapshot;
   state: ChatState;
   onApproveJoinRequest: (requestId: string) => void;
   onBanMember: (memberId: string) => void;
@@ -41,24 +41,24 @@ type Props = {
   onQuarantineMember?: (memberId: string, input: { durationMs?: number; permanent?: boolean; scopeId?: string; reason?: string }) => Promise<void>;
   onSetSlowmode?: (scopeId: string, intervalMs: number, input?: { reason?: string }) => Promise<void>;
   onReportMember?: (memberId: string, reason: string) => Promise<void>;
-  onGetStatus?: (memberId: string) => Promise<MatterhornMemberModerationStatus>;
+  onGetStatus?: (memberId: string) => Promise<MemberModerationStatus>;
   onClearTimeout?: (memberId: string, revision: number, reason?: string) => Promise<void>;
   onClearQuarantine?: (memberId: string, revision: number, reason?: string) => Promise<void>;
-  onActiveRules?: () => Promise<MatterhornActiveRules | undefined>;
+  onActiveRules?: () => Promise<ActiveRules | undefined>;
   onPublishRules?: (text: string, version: number, required?: boolean, reason?: string) => Promise<void>;
   onAcceptRules?: (version?: number) => Promise<void>;
-  onReportInbox?: () => Promise<MatterhornModerationReport[]>;
+  onReportInbox?: () => Promise<ModerationReport[]>;
   onResolveReport?: (reportId: string, status: "resolved" | "dismissed", reason?: string) => Promise<void>;
-  onAuditQuery?: () => Promise<MatterhornModerationAuditEntry[]>;
-  onActiveAutoMod?: () => Promise<MatterhornAutoModPolicy | undefined>;
-  onPublishAutoMod?: (input: MatterhornAutoModPolicy & { reason?: string }) => Promise<void>;
-  onOverrideAutoMod?: (input: MatterhornAutoModOverrideInput) => Promise<void>;
-  onRedactAutoMod?: (input: Omit<MatterhornAutoModOverrideInput, "action">) => Promise<void>;
-  onQuarantineAutoMod?: (input: Omit<MatterhornAutoModOverrideInput, "action">) => Promise<void>;
-  onEvaluateAutoMod?: (input: { body: string; scopeId?: string }) => Promise<MatterhornAutoModDecision>;
+  onAuditQuery?: () => Promise<ModerationAuditEntry[]>;
+  onActiveAutoMod?: () => Promise<AutoModPolicy | undefined>;
+  onPublishAutoMod?: (input: AutoModPolicy & { reason?: string }) => Promise<void>;
+  onOverrideAutoMod?: (input: AutoModOverrideInput) => Promise<void>;
+  onRedactAutoMod?: (input: Omit<AutoModOverrideInput, "action">) => Promise<void>;
+  onQuarantineAutoMod?: (input: Omit<AutoModOverrideInput, "action">) => Promise<void>;
+  onEvaluateAutoMod?: (input: { body: string; scopeId?: string }) => Promise<AutoModDecision>;
 };
 
-function adminMembers(actor: Actor, state: ChatState, managementSnapshot?: MatterhornManagementSnapshot): AdminMember[] {
+function adminMembers(actor: Actor, state: ChatState, managementSnapshot?: ManagementSnapshot): AdminMember[] {
   const authorityMembers = new Map((managementSnapshot?.members || []).map((member) => [member.memberId, member]));
   const currentAuthorityIds = new Set(
     (managementSnapshot?.members || [])
@@ -124,7 +124,7 @@ export function ManageAdminTab({
   const [inviteError, setInviteError] = useState("");
   const [inviteMessage, setInviteMessage] = useState("");
   const members = adminMembers(actor, state, managementSnapshot);
-  const inviteRoles: MatterhornManagementRole[] = (managementSnapshot?.roles || []).filter((role) => role.id !== "owner" && !role.disabledAt);
+  const inviteRoles: ManagementRole[] = (managementSnapshot?.roles || []).filter((role) => role.id !== "owner" && !role.disabledAt);
   const canCreateInvite = Boolean(onCreateInvite && canManageMembers && (actor.role === "admin" || actor.role === "owner") && (managementSnapshot?.canManageInvites ?? true));
   const invites = (managementSnapshot?.invites?.length
     ? managementSnapshot.invites.filter((invite) => invite.status !== "removed")

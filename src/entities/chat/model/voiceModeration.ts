@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import type {
-  MatterhornMediaModerationController,
-  MatterhornMediaModerationResult
+  MediaModerationController,
+  MediaModerationResult
 } from "matterhorn-sdk/browser/mediaModeration";
 import type { RelaySessionStatus } from "matterhorn-sdk/launcher/types";
-import type { MatterhornMedia } from "matterhorn-sdk/client";
+import type { Media } from "matterhorn-sdk/client";
 
 export type VoiceMemberModerationAction = "mute" | "deafen" | "kick" | "suppress";
 
@@ -13,7 +13,7 @@ export type VoiceStageAction = "open" | "close" | "requestSpeaker" | "approveSpe
 export type VoiceModerationState = {
   relayStatus: RelaySessionStatus;
   pending: boolean;
-  lastResult?: MatterhornMediaModerationResult;
+  lastResult?: MediaModerationResult;
   error?: string;
   begin: () => void;
   end: () => void;
@@ -26,7 +26,7 @@ export type VoiceModerationHandlers = {
   unavailableReason?: string;
   relayStatus: RelaySessionStatus;
   pending: boolean;
-  lastResult?: MatterhornMediaModerationResult;
+  lastResult?: MediaModerationResult;
   error?: string;
   clearError: () => void;
   canMemberAction: (roomId: string, memberId: string, action: VoiceMemberModerationAction) => boolean;
@@ -39,9 +39,9 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error || "Voice moderation failed.");
 }
 
-export function useVoiceModerationState(media: MatterhornMedia): VoiceModerationState | undefined {
+export function useVoiceModerationState(media: Media): VoiceModerationState | undefined {
   const [state, setState] = useState<Pick<VoiceModerationState, "relayStatus" | "pending" | "lastResult" | "error"> | undefined>(() => {
-    const controller = media?.moderation as MatterhornMediaModerationController | undefined;
+    const controller = media?.moderation as MediaModerationController | undefined;
     if (!controller) return undefined;
     return {
       relayStatus: media.getRelayStatus?.() || "closed",
@@ -50,7 +50,7 @@ export function useVoiceModerationState(media: MatterhornMedia): VoiceModeration
   });
 
   useEffect(() => {
-    const controller = media?.moderation as MatterhornMediaModerationController | undefined;
+    const controller = media?.moderation as MediaModerationController | undefined;
     if (!controller) {
       setState(undefined);
       return undefined;

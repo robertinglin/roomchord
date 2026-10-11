@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import type { MatterhornRoom, PersonalUnreadMarker } from "matterhorn-sdk/client";
+import type { Room, PersonalUnreadMarker } from "matterhorn-sdk/client";
 import type { Mosh } from "../../../../types";
 
-export function usePersonalUnread(live: MatterhornRoom<Mosh>, topic?: string) {
+export function usePersonalUnread(live: Room<Mosh>, topic?: string) {
   const [marker, setMarker] = useState<PersonalUnreadMarker | undefined>();
 
   useEffect(() => {
