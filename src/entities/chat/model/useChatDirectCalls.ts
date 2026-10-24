@@ -215,7 +215,7 @@ export function useChatDirectCalls(input: Input) {
 
   const publishLocalCallRoute = useCallback(() => {
     const direct = directRef.current;
-    if (!bridge || !canPublishCallRoute || !direct) return;
+    if (!bridge || !canPublishCallRoute || !direct || input.live.status !== "connected") return;
     const peerId = bridge.getMediaPeer?.()?.id;
     if (!peerId) {
       return;
@@ -236,6 +236,7 @@ export function useChatDirectCalls(input: Input) {
       return;
     }
     publishedKeyRef.current = nextKey;
+    // This route can be retried after recovery instead of holding an idle page open.
     void input.live.actions.updateMemberCall({
       clientId,
       peerId,
@@ -243,11 +244,11 @@ export function useChatDirectCalls(input: Input) {
       callPubkey,
       name: actorDisplayName,
       avatar: actorProfileAvatar
-    }).catch((publishError: unknown) => {
+    }, { requireCurrentAuthority: true }).catch((publishError: unknown) => {
       publishedKeyRef.current = "";
       setError(publishError instanceof Error ? publishError.message : "Could not publish call route.");
     });
-  }, [actorDisplayName, actorMemberId, actorProfileAvatar, bridge, canPublishCallRoute, clientId, input.live.actions, input.state]);
+  }, [actorDisplayName, actorMemberId, actorProfileAvatar, bridge, canPublishCallRoute, clientId, input.live, input.state]);
 
   useEffect(() => {
     if (!bridge) return undefined;
